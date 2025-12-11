@@ -9,6 +9,8 @@ const pool = new Pool({
 });
 
 exports.handler = async (event, context) => {
+  console.log("Databas URL är:", process.env.DATABASE_URL ? "Hittad (Börjar med " + process.env.DATABASE_URL.substring(0, 10) + ")" : "UNDEFINED / TOM!");
+  
   const headers = {
     'Content-Type': 'application/json'
   };
@@ -73,3 +75,4 @@ exports.handler = async (event, context) => {
     };
   }
 };
+
