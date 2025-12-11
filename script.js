@@ -546,7 +546,7 @@ function initDisplay() {
     loadDisplayData();
     
     // Uppdatera klockan varje sekund
-    setInterval(updateClock, 1000);
+    setInterval(updateClock, 60000);
     
     // VIKTIGT: Hämta ny data från databasen var 10:e sekund
     if (USE_CLOUD_DB) {
@@ -796,4 +796,5 @@ function generateScheduleImage() {
             exportBtn.innerText = originalText;
         });
     }, 50); 
+
 }
