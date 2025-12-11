@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Bemanningsplanering</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="script.js" defer></script>
+</head>
+<body class="admin-view" id="page-admin">
+<div class="admin-wrapper">
+<header class="admin-header">
+    <h1>Adminpanel</h1>
+    </header>
+
+    <div class="controls-bar">
+        <div class="week-nav-container">
+            <button id="prevWeekBtn" class="nav-btn">← Föregående</button>
+            <span id="currentWeekDisplay">Vecka ...</span>
+            <button id="nextWeekBtn" class="nav-btn">Nästa →</button>
+        </div>
+
+        <div class="nav-days-container">
+            <div class="nav-days" id="weekNav"></div>
+        </div>
+    </div>
+
+    <div class="admin-layout">
+        
+<div class="sidebar-roster">
+    <div class="roster-card">
+        <h3>Personal</h3>
+        
+        <div class="sidebar-add-row">
+            <input type="text" id="sidebarNewName" placeholder="Namn..." class="sidebar-input">
+            <button id="sidebarAddBtn" class="sidebar-add-btn">+</button>
+        </div>
+
+        <p class="roster-hint">Dra namn till schemat</p>
+        
+        <div id="draggableUserList" class="roster-list">
+            </div>
+    </div>
+</div>
+
+        <div class="schedule-card-wrapper">
+            <div class="schedule-card">
+                <div class="grid-container" id="scheduleContainer"></div>
+            </div>
+            
+            <div class="export-container">
+                <button id="printBtn" class="export-button">
+                    🖨️ Skriv ut
+                </button>
+                <button id="exportBtn" class="export-button">
+                    📷 Spara som bild
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
