@@ -175,28 +175,75 @@ document.addEventListener('DOMContentLoaded', async () => {
 /* =========================================
    5. LOGIN LOGIK (index.html)
    ========================================= */
+/* =========================================
+   ENKEL INLOGGNING (För Vercel)
+   ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
-    
-    // Hantera knappen
-    if (loginBtn) {
-        loginBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (window.netlifyIdentity) {
-                window.netlifyIdentity.open();
-            } else {
-                console.error("Netlify Identity script ej laddat.");
-            }
-        });
+    if (!loginBtn) return;
+
+    loginBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Fråga efter lösenord
+        const password = prompt("Ange admin-lösenord:");
+        
+        if (password) {
+            // Spara lösenordet i webbläsaren tillfälligt så vi kan använda det när vi sparar
+            sessionStorage.setItem('adminPassword', password);
+            window.location.href = "admin.html";
+        }
+    });
+}
+
+// Uppdaterad save-funktion som skickar med lösenordet
+async function saveData(type, data) {
+    // 1. Uppdatera lokalt minne
+    if (type === 'schedule') globalScheduleData = data;
+    if (type === 'users') globalUserList = data;
+
+    if (!USE_CLOUD_DB) {
+        const key = type === 'schedule' ? 'shiftData' : 'userList';
+        localStorage.setItem(key, JSON.stringify(data));
+        return;
     }
 
-    // Lyssna på inloggning
-    if (window.netlifyIdentity) {
-        window.netlifyIdentity.on('login', user => {
-            console.log("Inloggning lyckades!", user);
-            window.netlifyIdentity.close();
-            window.location.href = "admin.html";
+    // Hämta lösenordet vi sparade vid inloggning
+    const password = sessionStorage.getItem('adminPassword');
+    
+    if (!password) {
+        alert("Du måste logga in igen!");
+        window.location.href = "index.html";
+        return;
+    }
+
+    try {
+        // Notera: Adressen är nu /api/data-api (Vercel standard)
+        await fetch('/api/data-api', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${password}` // Skicka lösenordet
+            },
+            body: JSON.stringify({ type: type, data: data })
         });
+    } catch (e) {
+        console.error("Save failed", e);
+        alert("Kunde inte spara. Fel lösenord eller nätverksfel?");
+    }
+}
+
+// Uppdatera även fetchData att peka på rätt URL (/api/...)
+async function fetchData(type) {
+    if (!USE_CLOUD_DB) return JSON.parse(localStorage.getItem(type === 'schedule' ? 'shiftData' : 'userList')) || (type === 'users' ? [] : {});
+    
+    try {
+        // ÄNDRAD URL HÄR:
+        const response = await fetch(`/api/data-api?type=${type}`);
+        if (!response.ok) throw new Error('Kunde inte hämta data');
+        return await response.json();
+    } catch (error) {
+        console.error("Fetch error:", error);
+        return type === 'users' ? [] : {};
     }
 }
 
@@ -798,3 +845,4 @@ function generateScheduleImage() {
     }, 50); 
 
 }
+
