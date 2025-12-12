@@ -22,7 +22,7 @@ const days = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "S�
 let selectedWeek = 0;
 let selectedYear = 0;
 
-// Lokala variabler
+// Lokala variabler för snabb åtkomst
 let globalScheduleData = {};
 let globalUserList = [];
 
@@ -38,7 +38,6 @@ async function fetchData(type) {
     }
     
     try {
-        // Anropa Vercel API
         const response = await fetch(`/api/data-api?type=${type}`);
         if (!response.ok) throw new Error('Kunde inte hämta data');
         return await response.json();
@@ -60,7 +59,7 @@ async function saveData(type, data) {
         return;
     }
 
-    // 3. Hämta lösenordet från session (satt vid inloggning)
+    // 3. Hämta lösenordet från session
     const password = sessionStorage.getItem('adminPassword');
     
     if (!password) {
@@ -70,12 +69,11 @@ async function saveData(type, data) {
     }
 
     try {
-        // Skicka till Vercel API
         const response = await fetch('/api/data-api', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${password}` // Skicka lösenordet
+                'Authorization': `Bearer ${password}`
             },
             body: JSON.stringify({ type: type, data: data })
         });
@@ -87,7 +85,7 @@ async function saveData(type, data) {
 
     } catch (e) {
         console.error("Save failed", e);
-        alert("Kunde inte spara till databasen.");
+        // Visa inte alert för varje tecken vid snabbskrivning, logga bara
     }
 }
 
@@ -135,12 +133,13 @@ function getUsedUsersForDay(dayName, prefix) {
 document.addEventListener('DOMContentLoaded', async () => {
     const bodyId = document.body.id;
 
+    // Om vi är på inloggningssidan
     if (bodyId === 'page-login') {
         initLogin();
         return;
     }
 
-    // Hämta data
+    // Hämta data först (för Admin och Display)
     if (USE_CLOUD_DB) {
         try {
             [globalScheduleData, globalUserList] = await Promise.all([
@@ -155,32 +154,64 @@ document.addEventListener('DOMContentLoaded', async () => {
         globalUserList = JSON.parse(localStorage.getItem('userList')) || [];
     }
 
+    // Om vi är på Adminsidan
     if (bodyId === 'page-admin') {
-        // Enkel koll att man loggat in
+        initLogout(); // Aktivera logga ut-knappen
+
+        // Kolla att man är inloggad
         if (USE_CLOUD_DB && !sessionStorage.getItem('adminPassword')) {
              window.location.href = "index.html";
              return;
         }
         initAdmin();
-    } else if (bodyId === 'page-display') {
+    } 
+    // Om vi är på Displaysidan
+    else if (bodyId === 'page-display') {
         initDisplay();
     }
+    
+    // Initiera print-knapp om den finns
+    const printBtn = document.getElementById('printBtn');
+    if (printBtn) printBtn.addEventListener('click', () => window.print());
 });
 
 /* =========================================
-   5. LOGIN LOGIK
+   5. LOGIN & LOGOUT LOGIK
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
-    if (!loginBtn) return;
+    const passwordInput = document.getElementById('passwordInput');
 
-    loginBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const password = prompt("Ange admin-lösenord:");
+    if (!loginBtn || !passwordInput) return;
+
+    const performLogin = () => {
+        const password = passwordInput.value.trim();
         if (password) {
             sessionStorage.setItem('adminPassword', password);
             window.location.href = "admin.html";
+        } else {
+            passwordInput.style.borderColor = "#ff6b6b";
+            setTimeout(() => passwordInput.style.borderColor = "#eee", 500);
         }
+    };
+
+    loginBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        performLogin();
+    });
+
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') performLogin();
+    });
+}
+
+function initLogout() {
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (!logoutBtn) return;
+
+    logoutBtn.addEventListener('click', () => {
+        sessionStorage.removeItem('adminPassword');
+        window.location.href = "index.html";
     });
 }
 
@@ -311,10 +342,9 @@ function renderRoster() {
         delBtn.className = "remove-user-btn";
         delBtn.title = "Ta bort permanent";
         
-        // HÄR ÄR ÄNDRINGEN: Bekräfta-rutan är borttagen
+        // Tar bort direkt utan bekräftelse
         delBtn.onclick = (e) => {
             e.stopPropagation();
-            // Ta bort direkt och spara
             const newUsers = getUsers().filter(u => u !== user);
             saveData('users', newUsers);
             renderRoster(); 
@@ -345,7 +375,7 @@ function renderAdminGrid() {
     const weekPrefix = `y${selectedYear}w${selectedWeek}-`;
     const usedUsersSet = getUsedUsersForDay(dayName, weekPrefix);
 
-    // --- Header Raden (Tider) ---
+    // --- Header ---
     const headerRow = document.createElement('div');
     headerRow.className = 'header-row';
     headerRow.appendChild(document.createElement('div')); 
@@ -357,7 +387,7 @@ function renderAdminGrid() {
     });
     container.appendChild(headerRow);
 
-    // --- Stationsrader ---
+    // --- Rader ---
     stations.forEach(station => {
         const row = document.createElement('div');
         row.className = `station-row ${station.class}`;
@@ -373,13 +403,11 @@ function renderAdminGrid() {
             const block = document.createElement('div');
             block.className = 'shift-block'; 
             
-            // Unikt ID för just denna ruta
             const key = `${weekPrefix}${dayName}-${station.name}-${time}`;
             const currentText = scheduleData[key] || "";
-            
             if (!currentText.trim()) block.classList.add('empty');
 
-            // --- Drag & Drop Logik ---
+            // --- Drag & Drop ---
             block.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; block.classList.add('drag-over'); };
             block.ondragleave = () => { block.classList.remove('drag-over'); };
             block.ondrop = (e) => {
@@ -388,10 +416,9 @@ function renderAdminGrid() {
                 const droppedName = e.dataTransfer.getData("text/plain");
                 if (droppedName) {
                     let newVal = currentText.trim();
-                    // Lägg till med / om det redan finns text, annars ersätt
                     if (newVal === "" || newVal === droppedName) newVal = droppedName;
                     else if (!newVal.includes(droppedName)) newVal += " / " + droppedName;
-                    else return; // Namnet fanns redan
+                    else return;
                     
                     scheduleData[key] = newVal;
                     saveData('schedule', scheduleData);
@@ -399,65 +426,55 @@ function renderAdminGrid() {
                 }
             };
 
-            // --- Textfältet (ContentEditable) ---
+            // --- Textfält ---
             const textSpan = document.createElement('span');
             textSpan.className = 'shift-text';
             textSpan.innerText = currentText;
             textSpan.contentEditable = "true";
             
-            // HÄR ÄR FIXEN: Hantera när man skriver manuellt och klickar bort
+            // Spara vid blur (klick utanför)
             textSpan.onblur = (e) => {
                 const newText = e.target.innerText.trim();
-                
-                // Om inget ändrats, gör inget (sparar prestanda)
                 if (newText === currentText) return;
 
-                // 1. Kolla om det finns nya namn som inte finns i listan
-                // (T.ex om man skriver "NyPerson / GammalPerson")
+                // 1. Kolla nya namn
                 const namesInBox = newText.split('/').map(n => n.trim()).filter(n => n.length > 0);
-                let currentUsersList = [...getUsers()]; // Kopiera listan
+                let currentUsersList = [...getUsers()];
                 let usersUpdated = false;
 
                 namesInBox.forEach(name => {
-                    // Finns namnet redan? (okänsligt för stor/liten bokstav)
                     const exists = currentUsersList.some(u => u.toLowerCase() === name.toLowerCase());
                     if (!exists) {
-                        currentUsersList.push(name); // Lägg till nytt namn
+                        currentUsersList.push(name);
                         usersUpdated = true;
                     }
                 });
 
-                // 2. Om vi hittade nya namn, spara användarlistan först
                 if (usersUpdated) {
-                    currentUsersList.sort((a, b) => a.localeCompare(b, 'sv')); // Sortera bokstavsordning
+                    currentUsersList.sort((a, b) => a.localeCompare(b, 'sv'));
                     saveData('users', currentUsersList);
-                    // (Globala variabeln uppdateras automatiskt i saveData)
                 }
 
-                // 3. Spara själva schemat
+                // 2. Spara schema
                 scheduleData[key] = newText;
                 saveData('schedule', scheduleData);
-                
-                // 4. Rita om allt (så att ev. nya namn dyker upp i sidomenyn direkt)
                 renderAdminGrid(); 
             };
 
-            // Spara när man trycker Enter
             textSpan.onkeydown = (e) => { 
                 if (e.key === 'Enter') { 
                     e.preventDefault(); 
-                    e.target.blur(); // Detta triggar onblur ovan
+                    e.target.blur(); 
                 } 
             };
             
             block.appendChild(textSpan);
 
-            // --- Verktyg (Dropdown & Rensa) ---
+            // --- Verktyg ---
             const toolsDiv = document.createElement('div');
             toolsDiv.className = 'admin-tools';
-            
-            // Visa bara dropdown om det finns lediga personer
             const availableUsers = allUsers.filter(u => !usedUsersSet.has(u));
+            
             if (availableUsers.length > 0) {
                 const ddContainer = document.createElement('div');
                 ddContainer.className = 'dropdown-container';
@@ -485,7 +502,6 @@ function renderAdminGrid() {
                 toolsDiv.appendChild(ddContainer);
             }
 
-            // Visa kryss om rutan inte är tom
             if (currentText !== "") {
                 const clearBtn = document.createElement('button');
                 clearBtn.className = 'clear-btn';
@@ -503,6 +519,7 @@ function renderAdminGrid() {
         container.appendChild(row);
     });
 }
+
 /* =========================================
    7. DISPLAY LOGIK
    ========================================= */
@@ -577,16 +594,3 @@ function loadDisplayData() {
         container.appendChild(row);
     });
 }
-
-/* =========================================
-   8. EXPORT & UTSKRIFT (Kopiera från tidigare filer om behövs, 
-   här är endast placeholders för att inte göra filen för lång)
-   ========================================= */
-document.addEventListener('DOMContentLoaded', () => {
-    const exportBtn = document.getElementById('exportBtn');
-    if (exportBtn) exportBtn.addEventListener('click', () => alert("Export-funktionen (html2canvas) behöver implementeras igen eller kopieras från din gamla fil."));
-    const printBtn = document.getElementById('printBtn');
-    if (printBtn) printBtn.addEventListener('click', () => window.print());
-});
-
-
