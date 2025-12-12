@@ -1,79 +1,90 @@
-
+// api/data-api.js
 const { Pool } = require('pg');
 
-// Koppla upp mot Neon med adressen från Netlify-inställningarna
+// Koppling till Neon (hämtas från Environment Variables)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: { rejectUnauthorized: false } // Krävs ofta för Neon/moln-db
 });
 
-exports.handler = async (event, context) => {
-  console.log("Databas URL är:", process.env.DATABASE_URL ? "Hittad (Börjar med " + process.env.DATABASE_URL.substring(0, 10) + ")" : "UNDEFINED / TOM!");
+// Enkelt lösenordsskydd (hämtas från Environment Variables)
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+
+export default async function handler(req, res) {
+  // 1. Hantera CORS (så din frontend får prata med backend)
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  const { type } = req.query; // 'schedule' eller 'users'
   
-  const headers = {
-    'Content-Type': 'application/json'
-  };
+  // Kontrollera att type är giltig
+  if (type !== 'schedule' && type !== 'users') {
+     // Om det är en POST och type ligger i body istället
+     if (req.method !== 'POST' || !req.body || !req.body.type) {
+        return res.status(400).json({ error: "Invalid type parameter" });
+     }
+  }
 
   try {
-    // 1. GET: Hämta data (Schedule eller Users)
-    if (event.httpMethod === 'GET') {
-      const type = event.queryStringParameters.type || 'schedule';
-      
-      // Hämta från Neon-databasen
-      const result = await pool.query('SELECT value FROM kv_store WHERE key = $1', [type]);
-      
-      let data = type === 'users' ? [] : {};
+    // === GET: Hämta data ===
+    if (req.method === 'GET') {
+      const result = await pool.query('SELECT data FROM app_storage WHERE key = $1', [type]);
       if (result.rows.length > 0) {
-        data = result.rows[0].value;
+        return res.status(200).json(result.rows[0].data);
+      } else {
+        // Returnera tomt om inget finns
+        return res.status(200).json(type === 'users' ? [] : {});
       }
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify(data)
-      };
     }
 
-    // 2. POST: Spara data
-    if (event.httpMethod === 'POST') {
-      // Kolla att användaren är inloggad via Netlify Identity
-      const user = context.clientContext && context.clientContext.user;
-      if (!user) {
-        return { statusCode: 401, headers, body: "Unauthorized" };
+    // === POST: Spara data ===
+    if (req.method === 'POST') {
+      // 1. Kolla lösenord (Authorization header)
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.split(' ')[1]; // "Bearer <lösenord>"
+
+      if (token !== ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Fel lösenord" });
       }
 
-      const body = JSON.parse(event.body);
-      const type = body.type; 
-      const payload = body.data;
+      // 2. Hämta data från body
+      const bodyData = req.body; // Vercel parsar JSON automatiskt
+      const dataType = bodyData.type;
+      const dataPayload = bodyData.data;
 
-      // SQL "Upsert" (Uppdatera om finns, annars skapa ny)
-      const query = `
-        INSERT INTO kv_store (key, value)
-        VALUES ($1, $2)
-        ON CONFLICT (key)
-        DO UPDATE SET value = $2;
-      `;
+      if (!dataType || !dataPayload) {
+        return res.status(400).json({ error: "Missing data or type" });
+      }
 
-      await pool.query(query, [type, JSON.stringify(payload)]);
+      // 3. Spara till Neon (UPSERT - Uppdatera om finns, annars skapa)
+      // Vi använder JSON.stringify för att säkra att det sparas som JSONB korrekt om det behövs,
+      // men pg-biblioteket hanterar ofta objekt direkt mot JSONB-kolumner.
+      await pool.query(
+        `INSERT INTO app_storage (key, data) 
+         VALUES ($1, $2) 
+         ON CONFLICT (key) 
+         DO UPDATE SET data = $2`,
+        [dataType, JSON.stringify(dataPayload)]
+      );
 
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ message: "Saved to Neon successfully" })
-      };
+      return res.status(200).json({ success: true });
     }
 
-    return { statusCode: 405, headers, body: "Method Not Allowed" };
+    // Om annan metod
+    return res.status(405).json({ error: "Method not allowed" });
 
   } catch (error) {
-    console.error("Database Error:", error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: error.message })
-    };
+    console.error("Database error:", error);
+    return res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
-};
-
+}
