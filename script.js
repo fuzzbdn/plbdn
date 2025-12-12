@@ -601,6 +601,44 @@ function loadDisplayData() {
 /* =========================================
    8. EXPORT (SPARA SOM BILD)
    ========================================= */
+
+function printSchedule() {
+    const printBtn = document.getElementById('printBtn');
+    const originalText = printBtn.innerText;
+    printBtn.innerText = "Förbereder...";
+
+    // 1. Hämta den snygga HTML-koden (samma som för bild-exporten)
+    const content = getScheduleHtmlForPrint();
+
+    // 2. Öppna ett nytt fönster
+    const printWindow = window.open('', '', 'height=800,width=1200');
+
+    // 3. Skriv in innehållet i fönstret
+    printWindow.document.write('<html><head><title>Schema Utskrift</title>');
+    // Lägg till typsnitt
+    printWindow.document.write('<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">');
+    // Lägg till lite grundstil
+    printWindow.document.write('<style>');
+    printWindow.document.write('body { font-family: "Inter", sans-serif; margin: 0; padding: 20px; }');
+    printWindow.document.write('@page { size: landscape; margin: 1cm; }'); // Försök tvinga liggande
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(content);
+    printWindow.document.write('</body></html>');
+
+    printWindow.document.close();
+
+    // 4. Vänta en halv sekund (så typsnitt hinner laddas) och skriv ut
+    setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+        printBtn.innerText = originalText;
+    }, 500);
+}
+
+
+
 function generateScheduleImage() {
     const exportBtn = document.getElementById('exportBtn');
     const originalText = exportBtn.innerText;
@@ -717,3 +755,4 @@ function getScheduleHtmlForPrint() {
     
     return htmlContent;
 }
+
