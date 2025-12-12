@@ -279,8 +279,10 @@ function renderNav() {
 function renderRoster() {
     const listContainer = document.getElementById('draggableUserList');
     if (!listContainer) return; 
+    
     listContainer.innerHTML = '';
     const allUsers = getUsers();
+    
     const dayName = days[currentAdminDayIndex];
     const weekPrefix = `y${selectedYear}w${selectedWeek}-`;
     const usedUsers = getUsedUsersForDay(dayName, weekPrefix);
@@ -292,32 +294,40 @@ function renderRoster() {
 
     allUsers.forEach(user => {
         const isBusy = usedUsers.has(user);
+        
         const div = document.createElement('div');
         div.className = `draggable-item ${isBusy ? 'is-busy' : ''}`;
         
         const nameSpan = document.createElement('span');
-        nameSpan.innerText = user + (isBusy ? " ✓" : "");
-        if (isBusy) div.title = "Redan inbokad denna dag";
+        nameSpan.innerText = user;
+        if (isBusy) {
+            div.title = "Redan inbokad denna dag";
+            nameSpan.innerText += " ✓";
+        }
         div.appendChild(nameSpan);
 
         const delBtn = document.createElement('button');
         delBtn.innerHTML = "&times;";
         delBtn.className = "remove-user-btn";
         delBtn.title = "Ta bort permanent";
+        
+        // HÄR ÄR ÄNDRINGEN: Bekräfta-rutan är borttagen
         delBtn.onclick = (e) => {
             e.stopPropagation();
-            if(confirm(`Ta bort ${user}?`)) {
-                saveData('users', getUsers().filter(u => u !== user));
-                renderRoster(); 
-            }
+            // Ta bort direkt och spara
+            const newUsers = getUsers().filter(u => u !== user);
+            saveData('users', newUsers);
+            renderRoster(); 
         };
 
         div.appendChild(delBtn);
         div.draggable = true; 
+
         div.ondragstart = (e) => {
             e.dataTransfer.setData("text/plain", user);
             e.dataTransfer.effectAllowed = "copy";
         };
+
         listContainer.appendChild(div);
     });
 }
@@ -578,4 +588,5 @@ document.addEventListener('DOMContentLoaded', () => {
     const printBtn = document.getElementById('printBtn');
     if (printBtn) printBtn.addEventListener('click', () => window.print());
 });
+
 
