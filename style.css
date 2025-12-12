@@ -499,37 +499,42 @@ body.display-view .shift-card.empty {
 .dropdown-item:hover { background-color: #f1f8ff; color: #007bff; }
 
 /* =========================================
-   9. UTSKRIFT (PRINT)
+   UTSKRIFTS-REGLER (PRINT)
    ========================================= */
 @media print {
-    @page { 
-        size: A4 landscape; 
+    /* Dölj ALLT på sidan först */
+    body * {
+        visibility: hidden;
+    }
+
+    /* Återställ bakgrunden */
+    body {
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Visa BARA vår print-container och dess innehåll */
+    #print-container, #print-container * {
+        visibility: visible;
+    }
+
+    /* Positionera print-containern längst upp till vänster */
+    #print-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 20px;
+    }
+
+    /* Tvinga liggande A4 */
+    @page {
+        size: A4 landscape;
         margin: 1cm;
     }
-    body.admin-view *:not(.print-view) { visibility: hidden; }
-    .sidebar-roster, .admin-header, .controls-bar, .export-container { display: none !important; }
-    .admin-layout { display: block !important; margin: 0; padding: 0; }
-
-    .print-view .top-bar.print-header-bar,
-    .print-view .display-grid.print-grid {
-        visibility: visible !important;
-        margin: 0 auto !important; 
-        max-width: 100% !important;
-        box-shadow: none !important; 
-        padding: 0;
-    }
-
-    .display-grid { background: none !important; box-shadow: none !important; }
-    .station-label {
-        color: white !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    .shift-card { color: #000 !important; }
-    body.print-view { background: white !important; padding: 0; margin: 0; }
 }
-/* ... din befintliga CSS ... */
-
 /* =========================================
    10. LOGIN SIDA
    ========================================= */
@@ -644,3 +649,4 @@ body.display-view .shift-card.empty {
     transition: background 0.2s;
 }
 .logout-btn:hover { background: #ffcdd2; }
+
