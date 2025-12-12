@@ -9,17 +9,30 @@
     <script src="script.js" defer></script>
 </head>
 <body class="login-view" id="page-login">
-    <div class="login-container">
-        <h1>Bemanningsplanering</h1>
-        <p>Välj vy för att fortsätta</p>
-        
-        <div class="login-buttons">
-            <button id="loginBtn" class="action-btn primary">🔐 Admin Login</button>
-            <a href="display.html" class="action-btn secondary">📺 Visa Schema (Display)</a>
+    <div class="login-wrapper">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="icon-bg">🔐</div>
+                <h1>Bemanningsplanering</h1>
+                <p>Logga in för att administrera</p>
+            </div>
+            
+            <div class="login-form">
+                <div class="input-group">
+                    <input type="password" id="passwordInput" placeholder="Ange admin-lösenord">
+                </div>
+                
+                <button id="loginBtn" class="action-btn primary">Logga in</button>
+                
+                <div class="divider">
+                    <span>ELLER</span>
+                </div>
+
+                <a href="display.html" class="action-btn secondary">📺 Visa Schema (Display)</a>
+            </div>
         </div>
-        
-        <div id="statusMsg"></div>
     </div>
 </body>
 
 </html>
+
