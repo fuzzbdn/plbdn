@@ -327,7 +327,7 @@ function renderAdminGrid() {
     if (!container) return;
     container.innerHTML = '';
     
-    renderRoster();
+    renderRoster(); // Uppdatera sidomenyn
 
     const scheduleData = getScheduleData();
     const allUsers = getUsers();
@@ -335,6 +335,7 @@ function renderAdminGrid() {
     const weekPrefix = `y${selectedYear}w${selectedWeek}-`;
     const usedUsersSet = getUsedUsersForDay(dayName, weekPrefix);
 
+    // --- Header Raden (Tider) ---
     const headerRow = document.createElement('div');
     headerRow.className = 'header-row';
     headerRow.appendChild(document.createElement('div')); 
@@ -346,6 +347,7 @@ function renderAdminGrid() {
     });
     container.appendChild(headerRow);
 
+    // --- Stationsrader ---
     stations.forEach(station => {
         const row = document.createElement('div');
         row.className = `station-row ${station.class}`;
@@ -360,10 +362,14 @@ function renderAdminGrid() {
 
             const block = document.createElement('div');
             block.className = 'shift-block'; 
+            
+            // Unikt ID för just denna ruta
             const key = `${weekPrefix}${dayName}-${station.name}-${time}`;
             const currentText = scheduleData[key] || "";
+            
             if (!currentText.trim()) block.classList.add('empty');
 
+            // --- Drag & Drop Logik ---
             block.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; block.classList.add('drag-over'); };
             block.ondragleave = () => { block.classList.remove('drag-over'); };
             block.ondrop = (e) => {
@@ -372,9 +378,10 @@ function renderAdminGrid() {
                 const droppedName = e.dataTransfer.getData("text/plain");
                 if (droppedName) {
                     let newVal = currentText.trim();
+                    // Lägg till med / om det redan finns text, annars ersätt
                     if (newVal === "" || newVal === droppedName) newVal = droppedName;
                     else if (!newVal.includes(droppedName)) newVal += " / " + droppedName;
-                    else return;
+                    else return; // Namnet fanns redan
                     
                     scheduleData[key] = newVal;
                     saveData('schedule', scheduleData);
@@ -382,25 +389,64 @@ function renderAdminGrid() {
                 }
             };
 
+            // --- Textfältet (ContentEditable) ---
             const textSpan = document.createElement('span');
             textSpan.className = 'shift-text';
             textSpan.innerText = currentText;
             textSpan.contentEditable = "true";
             
+            // HÄR ÄR FIXEN: Hantera när man skriver manuellt och klickar bort
             textSpan.onblur = (e) => {
-                let newText = e.target.innerText.trim();
-                if(newText !== currentText) {
-                    scheduleData[key] = newText;
-                    saveData('schedule', scheduleData);
-                    renderAdminGrid(); 
+                const newText = e.target.innerText.trim();
+                
+                // Om inget ändrats, gör inget (sparar prestanda)
+                if (newText === currentText) return;
+
+                // 1. Kolla om det finns nya namn som inte finns i listan
+                // (T.ex om man skriver "NyPerson / GammalPerson")
+                const namesInBox = newText.split('/').map(n => n.trim()).filter(n => n.length > 0);
+                let currentUsersList = [...getUsers()]; // Kopiera listan
+                let usersUpdated = false;
+
+                namesInBox.forEach(name => {
+                    // Finns namnet redan? (okänsligt för stor/liten bokstav)
+                    const exists = currentUsersList.some(u => u.toLowerCase() === name.toLowerCase());
+                    if (!exists) {
+                        currentUsersList.push(name); // Lägg till nytt namn
+                        usersUpdated = true;
+                    }
+                });
+
+                // 2. Om vi hittade nya namn, spara användarlistan först
+                if (usersUpdated) {
+                    currentUsersList.sort((a, b) => a.localeCompare(b, 'sv')); // Sortera bokstavsordning
+                    saveData('users', currentUsersList);
+                    // (Globala variabeln uppdateras automatiskt i saveData)
                 }
+
+                // 3. Spara själva schemat
+                scheduleData[key] = newText;
+                saveData('schedule', scheduleData);
+                
+                // 4. Rita om allt (så att ev. nya namn dyker upp i sidomenyn direkt)
+                renderAdminGrid(); 
             };
-            textSpan.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } };
+
+            // Spara när man trycker Enter
+            textSpan.onkeydown = (e) => { 
+                if (e.key === 'Enter') { 
+                    e.preventDefault(); 
+                    e.target.blur(); // Detta triggar onblur ovan
+                } 
+            };
+            
             block.appendChild(textSpan);
 
-            // Tools
+            // --- Verktyg (Dropdown & Rensa) ---
             const toolsDiv = document.createElement('div');
             toolsDiv.className = 'admin-tools';
+            
+            // Visa bara dropdown om det finns lediga personer
             const availableUsers = allUsers.filter(u => !usedUsersSet.has(u));
             if (availableUsers.length > 0) {
                 const ddContainer = document.createElement('div');
@@ -429,6 +475,7 @@ function renderAdminGrid() {
                 toolsDiv.appendChild(ddContainer);
             }
 
+            // Visa kryss om rutan inte är tom
             if (currentText !== "") {
                 const clearBtn = document.createElement('button');
                 clearBtn.className = 'clear-btn';
@@ -446,7 +493,6 @@ function renderAdminGrid() {
         container.appendChild(row);
     });
 }
-
 /* =========================================
    7. DISPLAY LOGIK
    ========================================= */
@@ -532,3 +578,4 @@ document.addEventListener('DOMContentLoaded', () => {
     const printBtn = document.getElementById('printBtn');
     if (printBtn) printBtn.addEventListener('click', () => window.print());
 });
+
