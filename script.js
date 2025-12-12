@@ -22,7 +22,7 @@ const days = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "S�
 let selectedWeek = 0;
 let selectedYear = 0;
 
-// Lokala variabler för snabb åtkomst och prestanda
+// Lokala variabler för snabb åtkomst
 let globalScheduleData = {};
 let globalUserList = [];
 
@@ -48,7 +48,7 @@ async function fetchData(type) {
 }
 
 async function saveData(type, data) {
-    // 1. Uppdatera minnet direkt (för snabb UI-respons)
+    // 1. Uppdatera minnet direkt
     if (type === 'schedule') globalScheduleData = data;
     if (type === 'users') globalUserList = data;
 
@@ -59,7 +59,7 @@ async function saveData(type, data) {
         return;
     }
 
-    // 3. Hämta lösenordet från session (sattes vid inloggning)
+    // 3. Hämta lösenordet från session
     const password = sessionStorage.getItem('adminPassword');
     
     if (!password) {
@@ -127,18 +127,18 @@ function getUsedUsersForDay(dayName, prefix) {
 }
 
 /* =========================================
-   4. INITIERING (START)
+   4. INITIERING
    ========================================= */
 document.addEventListener('DOMContentLoaded', async () => {
     const bodyId = document.body.id;
 
-    // --- Inloggningssida ---
+    // --- Inloggning ---
     if (bodyId === 'page-login') {
         initLogin();
         return;
     }
 
-    // --- Hämta data (Admin & Display) ---
+    // --- Hämta Data ---
     if (USE_CLOUD_DB) {
         try {
             [globalScheduleData, globalUserList] = await Promise.all([
@@ -155,30 +155,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Admin Panel ---
     if (bodyId === 'page-admin') {
-        initLogout(); // Aktivera logga ut-knappen
+        initLogout(); 
 
-        // Säkerhetskoll
         if (USE_CLOUD_DB && !sessionStorage.getItem('adminPassword')) {
              window.location.href = "index.html";
              return;
         }
         initAdmin();
     } 
-    // --- Display (TV) ---
+    // --- Display ---
     else if (bodyId === 'page-display') {
         initDisplay();
     }
     
-    // --- Knappar för Export/Print ---
+    // --- Koppla knappar för Utskrift & Export ---
+    // VIKTIGT: Koppla till printSchedule, inte window.print()
     const printBtn = document.getElementById('printBtn');
-    if (printBtn) printBtn.addEventListener('click', () => window.print());
+    if (printBtn) printBtn.addEventListener('click', printSchedule);
 
     const exportBtn = document.getElementById('exportBtn');
     if (exportBtn) exportBtn.addEventListener('click', generateScheduleImage);
 });
 
 /* =========================================
-   5. LOGIN & LOGOUT LOGIK
+   5. LOGIN & LOGOUT
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -192,7 +192,6 @@ function initLogin() {
             sessionStorage.setItem('adminPassword', password);
             window.location.href = "admin.html";
         } else {
-            // Visuell feedback om tomt
             passwordInput.style.borderColor = "#ff6b6b";
             setTimeout(() => passwordInput.style.borderColor = "#eee", 500);
         }
@@ -345,7 +344,7 @@ function renderRoster() {
         delBtn.className = "remove-user-btn";
         delBtn.title = "Ta bort permanent";
         
-        // Tar bort direkt utan bekräftelse
+        // Raderar direkt utan bekräftelse
         delBtn.onclick = (e) => {
             e.stopPropagation();
             const newUsers = getUsers().filter(u => u !== user);
@@ -370,7 +369,7 @@ function renderAdminGrid() {
     if (!container) return;
     container.innerHTML = '';
     
-    renderRoster(); // Uppdatera sidomenyn
+    renderRoster(); // Uppdatera listan
 
     const scheduleData = getScheduleData();
     const allUsers = getUsers();
@@ -435,12 +434,12 @@ function renderAdminGrid() {
             textSpan.innerText = currentText;
             textSpan.contentEditable = "true";
             
-            // Spara vid blur (klick utanför eller tab)
+            // Smart Save & Auto Add User
             textSpan.onblur = (e) => {
                 const newText = e.target.innerText.trim();
-                if (newText === currentText) return; // Inget ändrades
+                if (newText === currentText) return;
 
-                // 1. Kolla om det är nya namn (Auto-Add)
+                // 1. Kolla om vi behöver lägga till nya användare
                 const namesInBox = newText.split('/').map(n => n.trim()).filter(n => n.length > 0);
                 let currentUsersList = [...getUsers()];
                 let usersUpdated = false;
@@ -461,19 +460,19 @@ function renderAdminGrid() {
                 // 2. Spara schemat
                 scheduleData[key] = newText;
                 saveData('schedule', scheduleData);
-                renderAdminGrid(); // Rita om för att uppdatera listor
+                renderAdminGrid(); 
             };
 
             textSpan.onkeydown = (e) => { 
                 if (e.key === 'Enter') { 
                     e.preventDefault(); 
-                    e.target.blur(); // Triggar spara-logiken ovan
+                    e.target.blur(); 
                 } 
             };
             
             block.appendChild(textSpan);
 
-            // --- Verktyg (Dropdown) ---
+            // --- Dropdown Verktyg ---
             const toolsDiv = document.createElement('div');
             toolsDiv.className = 'admin-tools';
             const availableUsers = allUsers.filter(u => !usedUsersSet.has(u));
@@ -524,14 +523,13 @@ function renderAdminGrid() {
 }
 
 /* =========================================
-   7. DISPLAY LOGIK (TV-SKÄRMEN)
+   7. DISPLAY LOGIK
    ========================================= */
 function initDisplay() {
     updateClock();
     loadDisplayData();
     setInterval(updateClock, 60000);
     
-    // Polling varje 10e sekund för att hålla displayen uppdaterad
     if (USE_CLOUD_DB) {
         setInterval(async () => {
             try {
@@ -599,28 +597,27 @@ function loadDisplayData() {
 }
 
 /* =========================================
-   8. EXPORT (SPARA SOM BILD)
+   8. EXPORT & UTSKRIFT (FUNGERARDE)
    ========================================= */
 
+// Funktion för "Skriv ut" (Öppnar nytt fönster)
 function printSchedule() {
     const printBtn = document.getElementById('printBtn');
     const originalText = printBtn.innerText;
     printBtn.innerText = "Förbereder...";
 
-    // 1. Hämta den snygga HTML-koden (samma som för bild-exporten)
+    // 1. Generera HTML
     const content = getScheduleHtmlForPrint();
 
-    // 2. Öppna ett nytt fönster
+    // 2. Öppna fönster
     const printWindow = window.open('', '', 'height=800,width=1200');
 
-    // 3. Skriv in innehållet i fönstret
+    // 3. Skriv innehåll och stil
     printWindow.document.write('<html><head><title>Schema Utskrift</title>');
-    // Lägg till typsnitt
     printWindow.document.write('<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">');
-    // Lägg till lite grundstil
     printWindow.document.write('<style>');
     printWindow.document.write('body { font-family: "Inter", sans-serif; margin: 0; padding: 20px; }');
-    printWindow.document.write('@page { size: landscape; margin: 1cm; }'); // Försök tvinga liggande
+    printWindow.document.write('@page { size: landscape; margin: 1cm; }'); 
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
     printWindow.document.write(content);
@@ -628,7 +625,7 @@ function printSchedule() {
 
     printWindow.document.close();
 
-    // 4. Vänta en halv sekund (så typsnitt hinner laddas) och skriv ut
+    // 4. Vänta och skriv ut
     setTimeout(() => {
         printWindow.focus();
         printWindow.print();
@@ -637,14 +634,12 @@ function printSchedule() {
     }, 500);
 }
 
-
-
+// Funktion för "Spara som bild"
 function generateScheduleImage() {
     const exportBtn = document.getElementById('exportBtn');
     const originalText = exportBtn.innerText;
     exportBtn.innerText = "Genererar bild..."; 
 
-    // Skapa en temporär container som är dold
     const tempContainer = document.createElement('div');
     tempContainer.id = "temp-export-container";
     Object.assign(tempContainer.style, {
@@ -652,13 +647,11 @@ function generateScheduleImage() {
         backgroundColor: '#fff', padding: '40px', fontFamily: "'Inter', sans-serif"
     });
 
-    // Fyll containern med print-vänlig HTML
     tempContainer.innerHTML = getScheduleHtmlForPrint();
     document.body.appendChild(tempContainer);
 
-    // Använd html2canvas
     if (typeof html2canvas === 'undefined') {
-        alert("html2canvas kunde inte laddas. Kontrollera din internetanslutning.");
+        alert("html2canvas saknas.");
         exportBtn.innerText = originalText;
         return;
     }
@@ -674,12 +667,12 @@ function generateScheduleImage() {
         exportBtn.innerText = originalText;
     }).catch(err => {
         console.error("Kunde inte skapa bild:", err);
-        alert("Fel vid bildgenerering.");
         if(document.body.contains(tempContainer)) document.body.removeChild(tempContainer);
         exportBtn.innerText = originalText;
     });
 }
 
+// Gemensam funktion för att skapa HTML för både Print och Bild
 function getScheduleHtmlForPrint() {
     const activeDayIndex = currentAdminDayIndex; 
     const activeDayName = days[activeDayIndex];
@@ -755,4 +748,3 @@ function getScheduleHtmlForPrint() {
     
     return htmlContent;
 }
-
