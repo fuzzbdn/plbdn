@@ -22,7 +22,7 @@ const days = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "S�
 let selectedWeek = 0;
 let selectedYear = 0;
 
-// Lokala variabler för snabb åtkomst
+// Lokala variabler för snabb åtkomst och prestanda
 let globalScheduleData = {};
 let globalUserList = [];
 
@@ -48,7 +48,7 @@ async function fetchData(type) {
 }
 
 async function saveData(type, data) {
-    // 1. Uppdatera minnet direkt
+    // 1. Uppdatera minnet direkt (för snabb UI-respons)
     if (type === 'schedule') globalScheduleData = data;
     if (type === 'users') globalUserList = data;
 
@@ -59,7 +59,7 @@ async function saveData(type, data) {
         return;
     }
 
-    // 3. Hämta lösenordet från session
+    // 3. Hämta lösenordet från session (sattes vid inloggning)
     const password = sessionStorage.getItem('adminPassword');
     
     if (!password) {
@@ -85,7 +85,6 @@ async function saveData(type, data) {
 
     } catch (e) {
         console.error("Save failed", e);
-        // Visa inte alert för varje tecken vid snabbskrivning, logga bara
     }
 }
 
@@ -128,18 +127,18 @@ function getUsedUsersForDay(dayName, prefix) {
 }
 
 /* =========================================
-   4. INITIERING
+   4. INITIERING (START)
    ========================================= */
 document.addEventListener('DOMContentLoaded', async () => {
     const bodyId = document.body.id;
 
-    // Om vi är på inloggningssidan
+    // --- Inloggningssida ---
     if (bodyId === 'page-login') {
         initLogin();
         return;
     }
 
-    // Hämta data först (för Admin och Display)
+    // --- Hämta data (Admin & Display) ---
     if (USE_CLOUD_DB) {
         try {
             [globalScheduleData, globalUserList] = await Promise.all([
@@ -154,25 +153,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         globalUserList = JSON.parse(localStorage.getItem('userList')) || [];
     }
 
-    // Om vi är på Adminsidan
+    // --- Admin Panel ---
     if (bodyId === 'page-admin') {
         initLogout(); // Aktivera logga ut-knappen
 
-        // Kolla att man är inloggad
+        // Säkerhetskoll
         if (USE_CLOUD_DB && !sessionStorage.getItem('adminPassword')) {
              window.location.href = "index.html";
              return;
         }
         initAdmin();
     } 
-    // Om vi är på Displaysidan
+    // --- Display (TV) ---
     else if (bodyId === 'page-display') {
         initDisplay();
     }
     
-    // Initiera print-knapp om den finns
+    // --- Knappar för Export/Print ---
     const printBtn = document.getElementById('printBtn');
     if (printBtn) printBtn.addEventListener('click', () => window.print());
+
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) exportBtn.addEventListener('click', generateScheduleImage);
 });
 
 /* =========================================
@@ -190,6 +192,7 @@ function initLogin() {
             sessionStorage.setItem('adminPassword', password);
             window.location.href = "admin.html";
         } else {
+            // Visuell feedback om tomt
             passwordInput.style.borderColor = "#ff6b6b";
             setTimeout(() => passwordInput.style.borderColor = "#eee", 500);
         }
@@ -432,12 +435,12 @@ function renderAdminGrid() {
             textSpan.innerText = currentText;
             textSpan.contentEditable = "true";
             
-            // Spara vid blur (klick utanför)
+            // Spara vid blur (klick utanför eller tab)
             textSpan.onblur = (e) => {
                 const newText = e.target.innerText.trim();
-                if (newText === currentText) return;
+                if (newText === currentText) return; // Inget ändrades
 
-                // 1. Kolla nya namn
+                // 1. Kolla om det är nya namn (Auto-Add)
                 const namesInBox = newText.split('/').map(n => n.trim()).filter(n => n.length > 0);
                 let currentUsersList = [...getUsers()];
                 let usersUpdated = false;
@@ -455,22 +458,22 @@ function renderAdminGrid() {
                     saveData('users', currentUsersList);
                 }
 
-                // 2. Spara schema
+                // 2. Spara schemat
                 scheduleData[key] = newText;
                 saveData('schedule', scheduleData);
-                renderAdminGrid(); 
+                renderAdminGrid(); // Rita om för att uppdatera listor
             };
 
             textSpan.onkeydown = (e) => { 
                 if (e.key === 'Enter') { 
                     e.preventDefault(); 
-                    e.target.blur(); 
+                    e.target.blur(); // Triggar spara-logiken ovan
                 } 
             };
             
             block.appendChild(textSpan);
 
-            // --- Verktyg ---
+            // --- Verktyg (Dropdown) ---
             const toolsDiv = document.createElement('div');
             toolsDiv.className = 'admin-tools';
             const availableUsers = allUsers.filter(u => !usedUsersSet.has(u));
@@ -521,14 +524,14 @@ function renderAdminGrid() {
 }
 
 /* =========================================
-   7. DISPLAY LOGIK
+   7. DISPLAY LOGIK (TV-SKÄRMEN)
    ========================================= */
 function initDisplay() {
     updateClock();
     loadDisplayData();
     setInterval(updateClock, 60000);
     
-    // Polling varje 10e sekund
+    // Polling varje 10e sekund för att hålla displayen uppdaterad
     if (USE_CLOUD_DB) {
         setInterval(async () => {
             try {
@@ -593,4 +596,124 @@ function loadDisplayData() {
         });
         container.appendChild(row);
     });
+}
+
+/* =========================================
+   8. EXPORT (SPARA SOM BILD)
+   ========================================= */
+function generateScheduleImage() {
+    const exportBtn = document.getElementById('exportBtn');
+    const originalText = exportBtn.innerText;
+    exportBtn.innerText = "Genererar bild..."; 
+
+    // Skapa en temporär container som är dold
+    const tempContainer = document.createElement('div');
+    tempContainer.id = "temp-export-container";
+    Object.assign(tempContainer.style, {
+        position: 'absolute', top: '-9999px', left: '0', width: '1600px', 
+        backgroundColor: '#fff', padding: '40px', fontFamily: "'Inter', sans-serif"
+    });
+
+    // Fyll containern med print-vänlig HTML
+    tempContainer.innerHTML = getScheduleHtmlForPrint();
+    document.body.appendChild(tempContainer);
+
+    // Använd html2canvas
+    if (typeof html2canvas === 'undefined') {
+        alert("html2canvas kunde inte laddas. Kontrollera din internetanslutning.");
+        exportBtn.innerText = originalText;
+        return;
+    }
+
+    html2canvas(tempContainer, { scale: 2, useCORS: true }).then(canvas => {
+        const activeDayName = days[currentAdminDayIndex];
+        const link = document.createElement('a');
+        link.download = `Schema-${activeDayName}-v${selectedWeek}.jpg`; 
+        link.href = canvas.toDataURL('image/jpeg', 0.9);
+        link.click();
+        
+        document.body.removeChild(tempContainer);
+        exportBtn.innerText = originalText;
+    }).catch(err => {
+        console.error("Kunde inte skapa bild:", err);
+        alert("Fel vid bildgenerering.");
+        if(document.body.contains(tempContainer)) document.body.removeChild(tempContainer);
+        exportBtn.innerText = originalText;
+    });
+}
+
+function getScheduleHtmlForPrint() {
+    const activeDayIndex = currentAdminDayIndex; 
+    const activeDayName = days[activeDayIndex];
+    const now = new Date();
+    
+    const COLOR_MAP = {
+        "color-bjorkliden": { solid: "#43a047", transparent: "rgba(67, 160, 71, 0.4)", border: "rgba(67, 160, 71, 0.6)" },
+        "color-kiruna":     { solid: "#546e7a", transparent: "rgba(84, 110, 122, 0.4)", border: "rgba(84, 110, 122, 0.6)" },
+        "color-bastutrask": { solid: "#d81b60", transparent: "rgba(216, 27, 96, 0.4)", border: "rgba(216, 27, 96, 0.6)" },
+        "color-boden":      { solid: "#fb8c00", transparent: "rgba(251, 140, 0, 0.4)", border: "rgba(251, 140, 0, 0.6)" },
+        "color-gallivare":  { solid: "#8e24aa", transparent: "rgba(142, 36, 170, 0.4)", border: "rgba(142, 36, 170, 0.6)" },
+        "color-alvsbyn":    { solid: "#039be5", transparent: "rgba(3, 155, 229, 0.4)", border: "rgba(3, 155, 229, 0.6)" },
+        "color-info":       { solid: "#00acc1", transparent: "rgba(0, 172, 193, 0.4)", border: "rgba(0, 172, 193, 0.6)" },
+        "color-pl":         { solid: "#3949ab", transparent: "rgba(57, 73, 171, 0.4)", border: "rgba(57, 73, 171, 0.6)" }
+    };
+
+    const dateFormatted = now.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' });
+    const mainTitleText = `Vi som jobbar ${activeDayName} ${dateFormatted} (v.${selectedWeek})`;
+
+    let htmlContent = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h1 style="font-size:2.2rem; color:#222; margin:0;">${mainTitleText}</h1>
+        </div>
+        <div style="display:grid; grid-template-columns: 150px 1fr 1fr 1fr; gap:10px; margin-bottom:10px; padding-bottom:5px; border-bottom:2px solid #eee; font-weight:bold; text-align:center;">
+            <div></div>
+            ${displayTimes.map(t => `<div>${t}</div>`).join('')}
+        </div>
+    `;
+
+    const scheduleData = getScheduleData();
+    const weekPrefix = `y${selectedYear}w${selectedWeek}-`; 
+
+    stations.forEach(station => {
+        const color = COLOR_MAP[station.class] || { solid: "#666", transparent: "#eee", border: "#ccc" };
+        const isInfo = station.name === 'Info';
+        const rowStyle = isInfo ? 'margin-top:50px;' : '';
+
+        const labelStyle = `
+            background-color: ${color.solid}; color: #fff; 
+            font-weight: bold; padding: 10px; border-radius: 4px;
+            display:flex; align-items:center; justify-content:center;
+            min-height:50px;
+        `;
+        
+        htmlContent += `
+            <div style="display:grid; grid-template-columns: 150px 1fr 1fr 1fr; gap:10px; margin-bottom:10px; ${rowStyle}">
+                <div style="${labelStyle}">${station.name}</div>
+        `;
+
+        dbTimes.forEach((dbTime, index) => {
+            const isTwoColStation = (station.name === "Info" || station.name === "PL");
+            if (isTwoColStation && index === 2) return; 
+
+            const key = `${weekPrefix}${activeDayName}-${station.name}-${dbTime}`;
+            const name = scheduleData[key] || "";
+            const isEmpty = (!name || name.trim() === "");
+
+            let cardStyle = `
+                display:flex; align-items:center; justify-content:center; text-align:center; 
+                min-height:50px; border-radius:4px; padding:10px; font-weight:bold; font-size:1.1rem;
+            `;
+
+            if (isEmpty) {
+                cardStyle += `background-color: #fff; border: 1px solid #eee;`;
+            } else {
+                cardStyle += `background-color: ${color.transparent}; border: 1px solid ${color.border}; color: #000;`;
+            }
+
+            htmlContent += `<div style="${cardStyle}">${name}</div>`;
+        });
+        htmlContent += `</div>`; 
+    });
+    
+    return htmlContent;
 }
