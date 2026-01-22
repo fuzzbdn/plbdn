@@ -175,16 +175,64 @@ function initLogin() {
 
     if (!loginBtn || !passwordInput) return;
 
-    const performLogin = () => {
+    // Gör funktionen 'async' så vi kan vänta på svar från servern
+    const performLogin = async () => {
         const password = passwordInput.value.trim();
-        if (password) {
-            sessionStorage.setItem('adminPassword', password);
-            window.location.href = "admin.html";
-        } else {
+        
+        // 1. Kolla först att rutan inte är tom
+        if (!password) {
             passwordInput.style.borderColor = "#ff6b6b";
             setTimeout(() => passwordInput.style.borderColor = "#eee", 500);
+            return;
+        }
+
+        // Byt text på knappen så man ser att något händer
+        const originalBtnText = loginBtn.innerText;
+        loginBtn.innerText = "Kontrollerar...";
+        loginBtn.disabled = true;
+
+        try {
+            // 2. Skicka en "test-förfrågan" till API:et med lösenordet
+            // Vi skickar typen 'verify' (eller en tom 'users'-save) bara för att trigga lösenordskollen på servern
+            const response = await fetch('/api/data-api', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${password}` // Här skickas lösenordet för kontroll
+                },
+                body: JSON.stringify({ type: 'verify', data: {} }) 
+            });
+
+            // 3. Om servern svarar OK (status 200-299)
+            if (response.ok) {
+                sessionStorage.setItem('adminPassword', password);
+                window.location.href = "admin.html";
+            } else {
+                // 4. Om servern svarar 401 (Unauthorized) eller annat fel
+                alert("Fel lösenord!");
+                passwordInput.value = "";
+                passwordInput.focus();
+            }
+
+        } catch (error) {
+            console.error("Login error:", error);
+            alert("Kunde inte nå servern.");
+        } finally {
+            // Återställ knappen
+            loginBtn.innerText = originalBtnText;
+            loginBtn.disabled = false;
         }
     };
+
+    loginBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        performLogin();
+    });
+
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') performLogin();
+    });
+}
 
     loginBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -713,3 +761,4 @@ function getScheduleHtmlForPrint() {
     
     return htmlContent;
 }
+
