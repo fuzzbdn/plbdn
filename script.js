@@ -167,58 +167,69 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* =========================================
-   5. LOGIN & LOGOUT
+   5. LOGIN & LOGOUT (UPPDATERAD)
    ========================================= */
 function initLogin() {
-
     const loginBtn = document.getElementById('loginBtn');
-
     const passwordInput = document.getElementById('passwordInput');
-
-
 
     if (!loginBtn || !passwordInput) return;
 
-
-
-    const performLogin = () => {
-
+    const performLogin = async () => {
         const password = passwordInput.value.trim();
-
-        if (password) {
-
-            sessionStorage.setItem('adminPassword', password);
-
-            window.location.href = "admin.html";
-
-        } else {
-
+        
+        // 1. Kolla om fältet är tomt
+        if (!password) {
             passwordInput.style.borderColor = "#ff6b6b";
-
             setTimeout(() => passwordInput.style.borderColor = "#eee", 500);
-
+            return;
         }
 
+        // Byt text på knappen för feedback
+        const originalText = loginBtn.innerText;
+        loginBtn.innerText = "Kontrollerar...";
+        loginBtn.disabled = true;
+
+        try {
+            // 2. Skicka "verify"-förfrågan till API:et
+            const response = await fetch('/api/data-api', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${password}` // Här skickas lösenordet
+                },
+                body: JSON.stringify({ type: 'verify', data: {} })
+            });
+
+            // 3. Om servern svarar OK (200)
+            if (response.ok) {
+                sessionStorage.setItem('adminPassword', password);
+                window.location.href = "admin.html";
+            } else {
+                // 4. Om servern svarar 401 (Fel lösenord)
+                alert("Fel lösenord!");
+                passwordInput.value = "";
+                passwordInput.focus();
+                passwordInput.style.borderColor = "#ff6b6b";
+            }
+        } catch (error) {
+            console.error("Login error:", error);
+            alert("Kunde inte nå servern. Kontrollera din anslutning.");
+        } finally {
+            // Återställ knappen
+            loginBtn.innerText = originalText;
+            loginBtn.disabled = false;
+        }
     };
 
-
-
     loginBtn.addEventListener('click', (e) => {
-
         e.preventDefault();
-
         performLogin();
-
     });
-
-
 
     passwordInput.addEventListener('keypress', (e) => {
-
         if (e.key === 'Enter') performLogin();
-
     });
-
 }
 
 function initLogout() {
@@ -738,4 +749,5 @@ function getScheduleHtmlForPrint() {
     
     return htmlContent;
 }
+
 
