@@ -689,7 +689,7 @@ body.display-view .shift-card.empty {
 /* Detta påverkar BÅDE stationsnamnet (vänster) och personalrutorna */
 .display-view .station-label, 
 .display-view .shift-card {
-    font-size: 1.7rem !important;  /* Ändra denna siffra för att öka/minska */
+    font-size: 1.5rem !important;  /* Ändra denna siffra för att öka/minska */
     font-weight: 800 !important;   /* Extra fet text */
     padding: 0px 5px !important;   /* Tar bort luft så texten får mer plats */
     line-height: 1.1 !important;   /* Minskar avståndet om texten hamnar på två rader */
@@ -697,8 +697,9 @@ body.display-view .shift-card.empty {
 
 /* Om du även vill att rubrikerna (Tiderna) ska vara lika stora */
 .display-view .time-header {
-    font-size: 1.7rem !important;
+    font-size: 1.5rem !important;
     font-weight: bold;
 }
+
 
 
