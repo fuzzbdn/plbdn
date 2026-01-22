@@ -682,5 +682,29 @@ body.display-view .shift-card.empty {
 }
 .logout-btn:hover { background: #ffcdd2; }
 
+/* =========================================
+   STRUL BRANDING (LOGIN)
+   ========================================= */
+
+.strul-title {
+    font-size: 3.5rem !important; /* Stor och maffig text */
+    font-weight: 900 !important;
+    color: #222;
+    margin: 10px 0 5px 0 !important;
+    letter-spacing: 2px;
+    line-height: 1;
+}
+
+.strul-desc {
+    font-size: 0.95rem !important;
+    color: #666;
+    font-weight: 500;
+    max-width: 300px; /* Tvingar texten att radbrytas snyggt om den blir för bred */
+    margin: 0 auto 20px auto !important;
+    line-height: 1.4;
+    text-transform: uppercase; /* Gör den lite mer "militärisk"/strikt */
+    letter-spacing: 0.5px;
+}
+
 
 
