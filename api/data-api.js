@@ -1,4 +1,3 @@
-// api/data-api.js
 const { Pool } = require('pg');
 
 // Koppling till Neon (hämtas från Environment Variables)
@@ -20,25 +19,24 @@ export default async function handler(req, res) {
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
   );
 
+  // Hantera preflight-förfrågningar (OPTIONS)
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
 
-  const { type } = req.query; // 'schedule' eller 'users'
-  
-  // Kontrollera att type är giltig
-  if (type !== 'schedule' && type !== 'users') {
-     // Om det är en POST och type ligger i body istället
-     if (req.method !== 'POST' || !req.body || !req.body.type) {
-        return res.status(400).json({ error: "Invalid type parameter" });
-     }
-  }
-
   try {
     // === GET: Hämta data ===
     if (req.method === 'GET') {
+      const { type } = req.query;
+
+      // Validera typ
+      if (type !== 'schedule' && type !== 'users') {
+        return res.status(400).json({ error: "Invalid type parameter" });
+      }
+
       const result = await pool.query('SELECT data FROM app_storage WHERE key = $1', [type]);
+      
       if (result.rows.length > 0) {
         return res.status(200).json(result.rows[0].data);
       } else {
@@ -47,7 +45,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // === POST: Spara data ===
+    // === POST: Spara data ELLER Verifiera lösenord ===
     if (req.method === 'POST') {
       // 1. Kolla lösenord (Authorization header)
       const authHeader = req.headers.authorization;
@@ -58,17 +56,23 @@ export default async function handler(req, res) {
       }
 
       // 2. Hämta data från body
-      const bodyData = req.body; // Vercel parsar JSON automatiskt
+      const bodyData = req.body; 
       const dataType = bodyData.type;
       const dataPayload = bodyData.data;
 
+      // --- VIKTIGT NYTT BLOCK: Hantera verifiering ---
+      // Om frontend bara frågar "är lösenordet rätt?", svara OK och avsluta här.
+      if (dataType === 'verify') {
+          return res.status(200).json({ success: true, message: "Lösenord godkänt" });
+      }
+      // -----------------------------------------------
+
+      // Validera data för sparning
       if (!dataType || !dataPayload) {
         return res.status(400).json({ error: "Missing data or type" });
       }
 
       // 3. Spara till Neon (UPSERT - Uppdatera om finns, annars skapa)
-      // Vi använder JSON.stringify för att säkra att det sparas som JSONB korrekt om det behövs,
-      // men pg-biblioteket hanterar ofta objekt direkt mot JSONB-kolumner.
       await pool.query(
         `INSERT INTO app_storage (key, data) 
          VALUES ($1, $2) 
@@ -80,7 +84,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true });
     }
 
-    // Om annan metod
+    // Om annan metod än GET eller POST används
     return res.status(405).json({ error: "Method not allowed" });
 
   } catch (error) {
