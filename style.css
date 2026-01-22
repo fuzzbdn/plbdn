@@ -383,12 +383,13 @@ body.display-view .shift-card.empty {
 }
 
 /* =========================================
-   7. FÄRGER (STANDARDFÄRGER)
+   7. FÄRGER (KORRIGERAD EFTER BILD: SVART TEXT)
    ========================================= */
-/* Björkliden - Orange/Guld */
+
+/* Björkliden - Orange/Guld (Svart text) */
 .color-bjorkliden .station-label { 
     background-color: #ffb300 !important; 
-    color: #000 !important; /* Svart text för läsbarhet */
+    color: #000 !important; 
 }
 .color-bjorkliden .shift-block, .color-bjorkliden .shift-card {
     background-color: rgba(255, 179, 0, 0.15) !important;
@@ -396,10 +397,10 @@ body.display-view .shift-card.empty {
     color: #000 !important;
 }
 
-/* Kiruna - Ljusgul */
+/* Kiruna - Ljusgul (Svart text) */
 .color-kiruna .station-label { 
     background-color: #fff176 !important; 
-    color: #000 !important; /* Svart text för läsbarhet */
+    color: #000 !important; 
 }
 .color-kiruna .shift-block, .color-kiruna .shift-card {
     background-color: rgba(255, 241, 118, 0.25) !important;
@@ -407,34 +408,43 @@ body.display-view .shift-card.empty {
     color: #000 !important;
 }
 
-/* Bastuträsk - Röd */
-.color-bastutrask .station-label { background-color: #e53935 !important; color: #fff !important; }
+/* Bastuträsk - Röd (Svart text) */
+.color-bastutrask .station-label { 
+    background-color: #e53935 !important; 
+    color: #000 !important; /* Ändrat till svart */
+}
 .color-bastutrask .shift-block, .color-bastutrask .shift-card {
     background-color: rgba(229, 57, 53, 0.15) !important;
     border: 1px solid rgba(229, 57, 53, 0.6) !important;
     color: #000 !important;
 }
 
-/* Boden - Gräsgrön */
-.color-boden .station-label { background-color: #7cb342 !important; color: #fff !important; }
+/* Boden - Gräsgrön (Svart text) */
+.color-boden .station-label { 
+    background-color: #7cb342 !important; 
+    color: #000 !important; /* Ändrat till svart */
+}
 .color-boden .shift-block, .color-boden .shift-card {
     background-color: rgba(124, 179, 66, 0.15) !important;
     border: 1px solid rgba(124, 179, 66, 0.6) !important;
     color: #000 !important;
 }
 
-/* Gällivare - Ljusblå */
-.color-gallivare .station-label { background-color: #64b5f6 !important; color: #000 !important; }
+/* Gällivare - Ljusblå (Svart text) */
+.color-gallivare .station-label { 
+    background-color: #64b5f6 !important; 
+    color: #000 !important; 
+}
 .color-gallivare .shift-block, .color-gallivare .shift-card {
     background-color: rgba(100, 181, 246, 0.15) !important;
     border: 1px solid rgba(100, 181, 246, 0.6) !important;
     color: #000 !important;
 }
 
-/* Älvsbyn - Grå */
+/* Älvsbyn - Grå (Svart text) */
 .color-alvsbyn .station-label { 
     background-color: #bdbdbd !important; 
-    color: #000 !important; /* Svart text för läsbarhet */
+    color: #000 !important; 
 }
 .color-alvsbyn .shift-block, .color-alvsbyn .shift-card {
     background-color: rgba(189, 189, 189, 0.20) !important;
@@ -442,16 +452,22 @@ body.display-view .shift-card.empty {
     color: #000 !important;
 }
 
-/* Info - Rosa/Cerise */
-.color-info .station-label { background-color: #ec407a !important; color: #fff !important; }
+/* Info - Rosa/Cerise (Svart text) */
+.color-info .station-label { 
+    background-color: #ec407a !important; 
+    color: #000 !important; /* Ändrat till svart */
+}
 .color-info .shift-block, .color-info .shift-card {
     background-color: rgba(236, 64, 122, 0.15) !important;
     border: 1px solid rgba(236, 64, 122, 0.6) !important;
     color: #000 !important;
 }
 
-/* PL - Mörkblå */
-.color-pl .station-label { background-color: #0277bd !important; color: #fff !important; }
+/* PL - Mörkblå (Vit text - matchar bilden) */
+.color-pl .station-label { 
+    background-color: #0277bd !important; 
+    color: #fff !important; /* Behåller vit då den är mörkblå på bilden */
+}
 .color-pl .shift-block, .color-pl .shift-card {
     background-color: rgba(2, 119, 189, 0.15) !important;
     border: 1px solid rgba(2, 119, 189, 0.6) !important;
@@ -665,5 +681,6 @@ body.display-view .shift-card.empty {
     transition: background 0.2s;
 }
 .logout-btn:hover { background: #ffcdd2; }
+
 
 
