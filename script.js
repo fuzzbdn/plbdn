@@ -181,7 +181,15 @@ document.addEventListener('DOMContentLoaded', async () => {
    5. LOGIN & AUTH (MOT NEON SQL)
    ========================================= */
 function initLogin() {
-    const loginBtn = document.getElementById('loginBtn');
+   const userDisplay = document.getElementById('currentUserDisplay');
+    const loggedInUser = sessionStorage.getItem('adminUser');
+    if (userDisplay && loggedInUser) {
+        userDisplay.innerText = `Inloggad: ${loggedInUser}`;
+    } 
+   
+   
+   
+   const loginBtn = document.getElementById('loginBtn');
     const usernameInput = document.getElementById('usernameInput'); 
     const passwordInput = document.getElementById('passwordInput');
 
@@ -879,3 +887,4 @@ function getScheduleHtmlForPrint() {
     
     return htmlContent;
 }
+
