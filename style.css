@@ -720,17 +720,18 @@ body.display-view .shift-card.empty {
 .logout-btn:hover { background: #ffcdd2; }
 
 /* =========================================
-   11. DISPLAY "COMMAND CENTER" (STORBILD)
+   11. DISPLAY "MODERN LIGHT" (TOTAL REMAKE)
    ========================================= */
 
-/* 1. Grundlayout - Fyll hela skärmen */
+/* 1. Grundlayout - Mjuk och modern */
 body.display-view {
-    background-color: #1a1a1a !important; /* Mörk bakgrund (skönare för ögonen på TV) */
-    color: #fff !important;
+    background-color: #f0f2f5 !important; /* Mjuk ljusgrå bakgrund (Facebook/Google stil) */
+    color: #1a1a1a !important; /* Mörkgrå text (mjukare än svart) */
     margin: 0 !important;
-    padding: 2vh 2vw !important; /* Liten marginal runt kanten */
+    padding: 2vh 3vw !important;
     height: 100vh !important;
-    overflow: hidden !important; /* Ingen scroll */
+    overflow: hidden !important;
+    font-family: 'Inter', sans-serif !important;
     display: flex !important;
     flex-direction: column !important;
 }
@@ -742,121 +743,153 @@ body.display-view {
     flex-direction: column;
 }
 
-/* 2. Header (Rubrik & Klocka) */
+/* 2. Header - Svävande och ren */
 .display-view .top-bar {
+    background: #ffffff;
+    padding: 1.5vh 2vw;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05); /* Mjuk skugga */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: none !important; /* Ta bort breddbegränsning */
+    max-width: none !important;
     width: 100%;
     margin-bottom: 2vh !important;
-    padding-bottom: 1vh;
-    border-bottom: 2px solid #333;
 }
 
 .display-view #mainTitle {
-    font-size: 4vh !important; /* Storlek baserad på skärmhöjd */
-    color: #fff !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    font-size: 3.5vh !important;
+    font-weight: 800 !important;
+    color: #2c3e50 !important;
+    margin: 0 !important;
+    letter-spacing: -0.5px;
 }
 
 .display-view #clock {
-    font-size: 5vh !important; /* Klockan ska vara enorm */
+    font-size: 4.5vh !important;
     font-weight: 900 !important;
-    color: #ff9800 !important; /* STRUL Orange */
-    font-family: 'JetBrains Mono', monospace, sans-serif; /* Teknisk font om möjligt */
+    color: #2c3e50 !important;
+    background: #f8f9fa;
+    padding: 0.2vh 1.5vw;
+    border-radius: 8px;
 }
 
-/* 3. Grid-containern - Fyll resten av höjden */
+/* 3. Grid-containern */
 .display-view #mainContainer {
-    flex-grow: 1; /* Ta all återstående plats */
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* Sprid ut raderna jämnt */
+    justify-content: space-evenly; /* Fördela höjden snyggt */
     background: transparent !important;
     box-shadow: none !important;
     padding: 0 !important;
     max-width: none !important;
 }
 
-/* Rubrikraden (Förmiddag, Eftermiddag, Natt) */
+/* Rubrikraden (Tiderna) */
 .display-view .time-header-row {
     display: grid;
-    grid-template-columns: 180px 1fr 1fr 1fr; /* Lite bredare kolumn för stationsnamn */
-    gap: 1vw;
+    grid-template-columns: 220px 1fr 1fr 1fr; /* Bredare för stationsnamn */
+    gap: 1.5vw;
     margin-bottom: 1vh;
+    padding: 0 10px;
 }
 
 .display-view .time-header {
-    font-size: 2.5vh !important;
-    color: #aaa !important;
+    font-size: 2.2vh !important;
+    font-weight: 700 !important;
+    color: #6c757d !important; /* Diskret grå */
     text-transform: uppercase;
-    letter-spacing: 2px;
-    border-bottom: none !important;
+    letter-spacing: 1px;
+    text-align: center;
+    border: none !important;
 }
 
 /* 4. Raderna (Stationerna) */
 .display-view .display-row {
     display: grid;
-    grid-template-columns: 180px 1fr 1fr 1fr;
-    gap: 1vw;
-    height: 100%; /* Försök fylla höjden */
-    align-items: stretch !important; /* Dra ut boxarna på höjden */
-    margin-bottom: 1.5vh;
+    grid-template-columns: 220px 1fr 1fr 1fr;
+    gap: 1.5vw;
+    align-items: stretch !important;
+    margin-bottom: 1.2vh;
+    min-height: 8vh; /* Garantera viss höjd */
 }
 
-/* Stationsnamnet (Etiketten) */
+/* Stationsnamnet (Etiketten) - Nu som en "Tag" */
 .display-view .station-label {
-    font-size: 3vh !important; /* Dynamisk storlek */
-    border-radius: 8px !important;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    font-size: 2.8vh !important;
+    border-radius: 12px !important;
+    justify-content: flex-start !important; /* Vänsterställd text */
+    padding-left: 1.5vw !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    background-color: #fff !important; /* Vit bakgrund */
+    color: #333 !important;
+    border-left: 8px solid; /* Färgen ligger som en tjock linje till vänster */
 }
 
-/* 5. Korten (Namnen) */
+/* 5. Korten (Namnen) - Svävande vita kort */
 .display-view .shift-card {
-    background-color: #2a2a2a !important; /* Mörkgråa kort */
-    color: #fff !important;
-    border: 1px solid #444 !important;
-    border-radius: 8px !important;
-    font-size: 3.2vh !important; /* REJÄL textstorlek */
+    background-color: #ffffff !important;
+    color: #2c3e50 !important;
+    border: none !important; /* Ingen ram runt hela */
+    border-radius: 12px !important;
+    font-size: 3vh !important;
     font-weight: 700 !important;
-    padding: 0 !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03); /* Mycket subtil skugga */
+    transition: transform 0.2s;
+    
+    /* Centrera text */
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
 }
 
-/* Tomma kort - Gör dem svaga/osynliga men behåll platsen */
+/* Tomma kort - "Ghost"-effekt */
 .display-view .shift-card.empty {
-    background-color: #222 !important;
-    border: 1px dashed #333 !important;
-    opacity: 0.3;
+    background-color: rgba(255,255,255,0.4) !important;
+    box-shadow: none !important;
+    border: 2px dashed #e0e0e0 !important;
 }
 
-/* Justera specialavstånd för Info och PL */
+/* Specialregler för Info och PL */
 .display-view .display-row.color-info {
-    margin-top: 4vh !important; /* Extra mellanrum */
-    position: relative;
-}
-/* En liten avdelare ovanför Info */
-.display-view .display-row.color-info::before {
-    content: '';
-    position: absolute;
-    top: -2vh;
-    left: 0;
-    width: 100%;
-    height: 1px;
-    background: #333;
+    margin-top: 3vh !important;
 }
 
-/* FÄRGER - Gör dem lite mer "Neon" för mörkt tema */
-.display-view .color-bjorkliden .station-label { background-color: #ffb300 !important; color: #000 !important; }
-.display-view .color-kiruna .station-label     { background-color: #ffeb3b !important; color: #000 !important; }
-.display-view .color-bastutrask .station-label { background-color: #f44336 !important; color: #fff !important; }
-.display-view .color-boden .station-label      { background-color: #64dd17 !important; color: #000 !important; } /* Neon-grön */
-.display-view .color-gallivare .station-label  { background-color: #2979ff !important; color: #fff !important; }
-.display-view .color-alvsbyn .station-label    { background-color: #9e9e9e !important; color: #000 !important; }
-.display-view .color-info .station-label       { background-color: #ff4081 !important; color: #fff !important; }
-.display-view .color-pl .station-label         { background-color: #3d5afe !important; color: #fff !important; }
+
+/* =========================================
+   FÄRG-HANTERING (ACCENT STRIPS)
+   Här sätter vi färgen på den vänstra kanten (border-left)
+   ========================================= */
+
+/* Björkliden (Orange) */
+.display-view .color-bjorkliden .station-label { border-left-color: #ffb300 !important; }
+.display-view .color-bjorkliden .shift-card { border-bottom: 4px solid #ffb300 !important; } /* Liten färgklick i botten på kortet */
+
+/* Kiruna (Gul) */
+.display-view .color-kiruna .station-label { border-left-color: #fdd835 !important; }
+.display-view .color-kiruna .shift-card { border-bottom: 4px solid #fdd835 !important; }
+
+/* Bastuträsk (Röd) */
+.display-view .color-bastutrask .station-label { border-left-color: #e53935 !important; }
+.display-view .color-bastutrask .shift-card { border-bottom: 4px solid #e53935 !important; }
+
+/* Boden (Grön) */
+.display-view .color-boden .station-label { border-left-color: #7cb342 !important; }
+.display-view .color-boden .shift-card { border-bottom: 4px solid #7cb342 !important; }
+
+/* Gällivare (Blå) */
+.display-view .color-gallivare .station-label { border-left-color: #1e88e5 !important; }
+.display-view .color-gallivare .shift-card { border-bottom: 4px solid #1e88e5 !important; }
+
+/* Älvsbyn (Grå) */
+.display-view .color-alvsbyn .station-label { border-left-color: #757575 !important; }
+.display-view .color-alvsbyn .shift-card { border-bottom: 4px solid #757575 !important; }
+
+/* Info (Rosa) */
+.display-view .color-info .station-label { border-left-color: #ec407a !important; }
+.display-view .color-info .shift-card { border-bottom: 4px solid #ec407a !important; }
+
+/* PL (Mörkblå) */
+.display-view .color-pl .station-label { border-left-color: #0d47a1 !important; }
+.display-view .color-pl .shift-card { border-bottom: 4px solid #0d47a1 !important; }
