@@ -287,6 +287,8 @@ function initAdmin() {
 /* --- TEMA-VÄLJARE (ADMIN) --- */
 /* Ersätt hela funktionen initThemeSelector i script.js med denna */
 
+/* Ersätt initThemeSelector i script.js */
+
 async function initThemeSelector() {
     const select = document.getElementById('themeSelect');
     const saveBtn = document.getElementById('saveThemeBtn');
@@ -301,27 +303,37 @@ async function initThemeSelector() {
         }
     } catch(e) { console.log("Inga sparade inställningar än"); }
 
-    // 2. Koppla sparandet till KNAPPEN (click) istället för listan
+    // --- NY DEL: Återställ knappen direkt när man ändrar i listan ---
+    select.addEventListener('change', () => {
+        saveBtn.innerText = "Spara tema";
+        saveBtn.style.backgroundColor = ""; // Tar bort grön färg (återgår till standard)
+        saveBtn.style.color = "";
+    });
+    // -------------------------------------------------------------
+
+    // 2. Spara när man klickar på knappen
     saveBtn.addEventListener('click', async () => {
         const newTheme = select.value;
         const currentSettings = (await fetchData('settings')) || {};
         
-        // Uppdatera objektet
+        // Uppdatera och spara
         currentSettings.theme = newTheme;
-        
-        // Spara till databasen
         await saveData('settings', currentSettings);
         
-        // Visuell feedback på knappen
-        const originalText = saveBtn.innerText;
+        // Visuell feedback "Sparat!"
         saveBtn.innerText = "Sparat!";
-        saveBtn.style.backgroundColor = "#4CAF50"; // Grön färg
+        saveBtn.style.backgroundColor = "#4CAF50"; // Grön
         saveBtn.style.color = "#fff";
         
+        // Återställ efter 2 sekunder (om man inte rört listan under tiden)
         setTimeout(() => {
-            saveBtn.innerText = originalText;
-            saveBtn.style.backgroundColor = ""; // Återgå till original
-            saveBtn.style.color = "";
+            // Vi kollar så att texten fortfarande är "Sparat!" innan vi återställer
+            // (Om användaren har ändrat i listan under dessa 2 sekunder har 'change'-eventet ovan redan återställt den)
+            if (saveBtn.innerText === "Sparat!") {
+                saveBtn.innerText = "Spara tema";
+                saveBtn.style.backgroundColor = "";
+                saveBtn.style.color = "";
+            }
         }, 2000);
     });
 }
@@ -824,6 +836,7 @@ function getScheduleHtmlForPrint() {
     
     return htmlContent;
 }
+
 
 
 
