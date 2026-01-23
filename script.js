@@ -26,36 +26,53 @@ let globalScheduleData = {};
 let globalUserList = [];
 
 /* =========================================
-   2. API & DATABAS (VERCEL + NEON)
+   2. API & DATABAS (VERCEL + NEON + LOCALSTORAGE)
    ========================================= */
 
 async function fetchData(type) {
+    // Hantera LocalStorage (om moln-DB är avstängd)
     if (!USE_CLOUD_DB) {
-        const key = type === 'schedule' ? 'shiftData' : 'userList';
+        let key = '';
+        let defaultVal = {};
+        
+        if (type === 'schedule') { key = 'shiftData'; defaultVal = {}; }
+        else if (type === 'users') { key = 'userList'; defaultVal = []; }
+        else if (type === 'settings') { key = 'siteSettings'; defaultVal = { theme: 'light' }; } // NYTT: Settings
+
         const local = localStorage.getItem(key);
-        return local ? JSON.parse(local) : (type === 'users' ? [] : {});
+        return local ? JSON.parse(local) : defaultVal;
     }
     
+    // Hantera Cloud DB
     try {
         const response = await fetch(`/api/data-api?type=${type}`);
         if (!response.ok) throw new Error('Kunde inte hämta data');
         return await response.json();
     } catch (error) {
-        console.error("Fetch error:", error);
-        return type === 'users' ? [] : {};
+        console.error(`Fetch error (${type}):`, error);
+        if (type === 'users') return [];
+        if (type === 'settings') return { theme: 'light' }; // Fallback
+        return {};
     }
 }
 
 async function saveData(type, data) {
+    // Uppdatera globala variabler direkt för snabb UI-respons
     if (type === 'schedule') globalScheduleData = data;
     if (type === 'users') globalUserList = data;
 
+    // Hantera LocalStorage
     if (!USE_CLOUD_DB) {
-        const key = type === 'schedule' ? 'shiftData' : 'userList';
+        let key = '';
+        if (type === 'schedule') key = 'shiftData';
+        else if (type === 'users') key = 'userList';
+        else if (type === 'settings') key = 'siteSettings'; // NYTT: Settings
+
         localStorage.setItem(key, JSON.stringify(data));
         return;
     }
 
+    // Hantera Cloud DB
     const password = sessionStorage.getItem('adminPassword');
     
     if (!password) {
@@ -133,6 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    // Hämta grunddata (schema + användare)
     if (USE_CLOUD_DB) {
         try {
             [globalScheduleData, globalUserList] = await Promise.all([
@@ -143,8 +161,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log("Kunde inte hämta initial data.");
         }
     } else {
-        globalScheduleData = JSON.parse(localStorage.getItem('shiftData')) || {};
-        globalUserList = JSON.parse(localStorage.getItem('userList')) || [];
+        globalScheduleData = await fetchData('schedule');
+        globalUserList = await fetchData('users');
     }
 
     if (bodyId === 'page-admin') {
@@ -154,6 +172,7 @@ document.addEventListener('DOMContentLoaded', async () => {
              return;
         }
         initAdmin();
+        initThemeSelector(); // <--- NYTT: Starta tema-väljaren
     } else if (bodyId === 'page-display') {
         initDisplay();
     }
@@ -167,7 +186,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* =========================================
-   5. LOGIN & LOGOUT (UPPDATERAD)
+   5. LOGIN & LOGOUT
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -178,35 +197,30 @@ function initLogin() {
     const performLogin = async () => {
         const password = passwordInput.value.trim();
         
-        // 1. Kolla om fältet är tomt
         if (!password) {
             passwordInput.style.borderColor = "#ff6b6b";
             setTimeout(() => passwordInput.style.borderColor = "#eee", 500);
             return;
         }
 
-        // Byt text på knappen för feedback
         const originalText = loginBtn.innerText;
         loginBtn.innerText = "Kontrollerar...";
         loginBtn.disabled = true;
 
         try {
-            // 2. Skicka "verify"-förfrågan till API:et
             const response = await fetch('/api/data-api', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${password}` // Här skickas lösenordet
+                    'Authorization': `Bearer ${password}`
                 },
                 body: JSON.stringify({ type: 'verify', data: {} })
             });
 
-            // 3. Om servern svarar OK (200)
             if (response.ok) {
                 sessionStorage.setItem('adminPassword', password);
                 window.location.href = "admin.html";
             } else {
-                // 4. Om servern svarar 401 (Fel lösenord)
                 alert("Fel lösenord!");
                 passwordInput.value = "";
                 passwordInput.focus();
@@ -216,7 +230,6 @@ function initLogin() {
             console.error("Login error:", error);
             alert("Kunde inte nå servern. Kontrollera din anslutning.");
         } finally {
-            // Återställ knappen
             loginBtn.innerText = originalText;
             loginBtn.disabled = false;
         }
@@ -269,6 +282,31 @@ function initAdmin() {
     setupSidebarAddUser();
     renderNav();
     renderAdminGrid();
+}
+
+/* --- NY FUNKTION: TEMA-VÄLJARE (ADMIN) --- */
+async function initThemeSelector() {
+    const select = document.getElementById('themeSelect');
+    if (!select) return;
+
+    // 1. Hämta nuvarande inställning
+    try {
+        const settings = await fetchData('settings'); 
+        if (settings && settings.theme) {
+            select.value = settings.theme;
+        }
+    } catch(e) { console.log("Inga sparade inställningar än"); }
+
+    // 2. Spara när man ändrar
+    select.addEventListener('change', async () => {
+        const newTheme = select.value;
+        const currentSettings = (await fetchData('settings')) || {};
+        currentSettings.theme = newTheme;
+        
+        await saveData('settings', currentSettings);
+        // Tillval: Visa bekräftelse, men ofta räcker det att det bara sparas
+        // alert(`Tema ändrat till: ${newTheme}`);
+    });
 }
 
 function setupSidebarAddUser() {
@@ -544,6 +582,8 @@ function renderAdminGrid() {
 function initDisplay() {
     updateClock();
     loadDisplayData();
+    updateDisplayTheme(); // <--- Hämta tema direkt vid start
+
     setInterval(updateClock, 60000);
     
     if (USE_CLOUD_DB) {
@@ -551,8 +591,28 @@ function initDisplay() {
             try {
                 globalScheduleData = await fetchData('schedule');
                 loadDisplayData();
+                updateDisplayTheme(); // <--- Kolla tema vid varje uppdatering
             } catch (e) { console.error("Update fail", e); }
         }, 10000); 
+    }
+}
+
+/* --- NY FUNKTION: UPPDATERA TEMA PÅ DISPLAY --- */
+async function updateDisplayTheme() {
+    try {
+        const settings = await fetchData('settings');
+        const activeTheme = (settings && settings.theme) ? settings.theme : 'light';
+        
+        const body = document.body;
+        if (activeTheme === 'dark') {
+            body.classList.add('theme-dark');
+            body.classList.remove('theme-light');
+        } else {
+            body.classList.add('theme-light');
+            body.classList.remove('theme-dark');
+        }
+    } catch (e) {
+        console.error("Kunde inte hämta tema", e);
     }
 }
 
@@ -613,28 +673,18 @@ function loadDisplayData() {
 }
 
 /* =========================================
-   8. EXPORT & UTSKRIFT (Print på samma sida)
+   8. EXPORT & UTSKRIFT
    ========================================= */
 
-// Funktion för att skriva ut via webbläsaren men med rätt layout
 function printSchedule() {
-    // 1. Skapa eller hämta print-containern
     let printContainer = document.getElementById('print-container');
     if (!printContainer) {
         printContainer = document.createElement('div');
         printContainer.id = 'print-container';
-        // Dölj den normalt (i skärmläge) via CSS-klass eller inline
-        // Men vi litar på att style.css sköter @media print
         document.body.appendChild(printContainer);
     }
-
-    // 2. Fyll den med det snygga innehållet
     printContainer.innerHTML = getScheduleHtmlForPrint();
-
-    // 3. Trigga utskriften
     window.print();
-    
-    // Containern kan ligga kvar, den syns inte förrän @media print kickar in
 }
 
 function generateScheduleImage() {
@@ -749,5 +799,3 @@ function getScheduleHtmlForPrint() {
     
     return htmlContent;
 }
-
-
