@@ -13,24 +13,24 @@
 <body class="admin-view" id="page-admin">
 <div class="admin-wrapper">
     
-<header class="admin-header">
-    <div class="header-content">
-        <h1>Adminpanel</h1>
-        
-        <div style="display:flex; align-items:center; gap:15px;">
-            <span id="currentUserDisplay" style="font-weight:600; color:#555; margin-right:5px;"></span>
-
-            <button id="manageAdminsBtn" class="logout-btn" style="background:#e3f2fd; color:#0d47a1;">
-                👤 Admins
-            </button>
+    <header class="admin-header">
+        <div class="header-content">
+            <h1>Adminpanel</h1>
             
-            <button id="logoutBtn" class="logout-btn">
-                Logga ut
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-            </button>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <span id="currentUserDisplay" style="font-weight:600; color:#555; margin-right:5px;"></span>
+
+                <button id="manageAdminsBtn" class="logout-btn" style="background:#e3f2fd; color:#0d47a1;">
+                    👤 Admins
+                </button>
+                
+                <button id="logoutBtn" class="logout-btn">
+                    Logga ut
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </button>
+            </div>
         </div>
-    </div>
-</header>
+    </header>
 
     <div class="controls-bar">
         <div class="week-nav-container">
@@ -70,33 +70,34 @@
                     </div>
             </div>
             
-<div class="export-container" style="display: flex; align-items: center; justify-content: space-between; margin-top: 20px;">
-    
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="font-weight:bold; color:#444;">Tema:</span>
-        <select id="themeSelect" style="padding: 10px; border-radius: 4px; border: 1px solid #ccc; background: #fff; cursor: pointer; height: 100%; font-family: inherit;">
-            <option value="light">Ljust (Standard)</option>
-            <option value="dark">Mörkt (Dark Mode)</option>
-            <option value="jul">Norrsken (Aurora)</option>
-            <option value="pask">Påsktema (Pastell)</option>
-            <option value="matrix">Matrix (Hacker)</option>
-        </select>
-
-        <button id="saveThemeBtn" class="export-button" style="margin-left: 0;">
-            Spara tema
-        </button>
-    </div>
-
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <button id="printBtn" class="export-button">
-            🖨️ Skriv ut
-        </button>
-
-        <button id="exportBtn" class="export-button">
-            📷 Spara som bild
-        </button>
-    </div>
-</div>
+            <div class="export-container" style="display: flex; align-items: center; justify-content: space-between; margin-top: 20px;">
+                
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-weight:bold; color:#444;">Tema:</span>
+                    <select id="themeSelect" style="padding: 10px; border-radius: 4px; border: 1px solid #ccc; background: #fff; cursor: pointer; height: 100%; font-family: inherit;">
+                        <option value="light">Ljust (Standard)</option>
+                        <option value="dark">Mörkt (Dark Mode)</option>
+                        <option value="jul">Norrsken (Aurora)</option>
+                        <option value="pask">Påsktema (Pastell)</option>
+                        <option value="matrix">Matrix (Hacker)</option>
+                    </select>
+            
+                    <button id="saveThemeBtn" class="export-button" style="margin-left: 0;">
+                        Spara tema
+                    </button>
+                </div>
+            
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button id="printBtn" class="export-button">
+                        🖨️ Skriv ut
+                    </button>
+            
+                    <button id="exportBtn" class="export-button">
+                        📷 Spara som bild
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -105,7 +106,3 @@
 
 </body>
 </html>
-
-
-
-
