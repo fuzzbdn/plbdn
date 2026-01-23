@@ -22,16 +22,14 @@ let selectedWeek = 0;
 let selectedYear = 0;
 
 let globalScheduleData = {};
-let globalUserList = []; // Detta är listan på personal man kan schemalägga (inte admins)
+let globalUserList = []; // Personal-lista
 
 /* =========================================
    2. DATA-API (SCHEMAN & PERSONAL)
-   OBS: Detta hanterar schema-data, inte inloggningskonton.
    ========================================= */
 
 async function fetchData(type) {
     if (!USE_CLOUD_DB) {
-        // Fallback till LocalStorage om ingen DB finns
         let key = type === 'schedule' ? 'shiftData' : (type === 'users' ? 'userList' : 'siteSettings');
         const local = localStorage.getItem(key);
         return local ? JSON.parse(local) : (type === 'users' ? [] : {});
@@ -50,7 +48,6 @@ async function fetchData(type) {
 }
 
 async function saveData(type, data) {
-    // Uppdatera globala variabler direkt för snabb UI-respons
     if (type === 'schedule') globalScheduleData = data;
     if (type === 'users') globalUserList = data;
 
@@ -60,16 +57,13 @@ async function saveData(type, data) {
         return;
     }
 
-    // Säkerhetskoll: Försök inte spara om man inte är inloggad
     if (sessionStorage.getItem('isLoggedIn') !== 'true') {
         console.warn("Ej inloggad, sparar inte till molnet.");
         return;
     }
 
     try {
-        // Vi skickar användarnamnet i headern för spårbarhet (valfritt)
         const currentUser = sessionStorage.getItem('adminUser') || 'unknown';
-        
         const response = await fetch('/api/data-api', {
             method: 'POST',
             headers: {
@@ -80,10 +74,9 @@ async function saveData(type, data) {
         });
 
         if (!response.ok) throw new Error("Serverfel vid sparning");
-
     } catch (e) {
         console.error("Save failed", e);
-        alert("Kunde inte spara ändringar till servern. Kontrollera anslutningen.");
+        alert("Kunde inte spara ändringar till servern.");
     }
 }
 
@@ -131,13 +124,12 @@ function getUsedUsersForDay(dayName, prefix) {
 document.addEventListener('DOMContentLoaded', async () => {
     const bodyId = document.body.id;
 
-    // Sidan: LOGIN
     if (bodyId === 'page-login') {
         initLogin();
         return;
     }
 
-    // Hämta grunddata (Schema & Personal) oavsett sida
+    // Hämta data
     if (USE_CLOUD_DB) {
         try {
             [globalScheduleData, globalUserList] = await Promise.all([
@@ -150,26 +142,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         globalUserList = await fetchData('users');
     }
 
-    // Sidan: ADMIN
+    // Admin
     if (bodyId === 'page-admin') {
-        // KONTROLL: Är man inloggad?
         if (sessionStorage.getItem('isLoggedIn') !== 'true') {
              window.location.href = "index.html"; 
              return;
         }
-
         initLogout(); 
         initAdmin();
         initThemeSelector(); 
-        setupAdminManagement(); // Aktivera knappen för användarhantering
+        setupAdminManagement(); 
     } 
-    
-    // Sidan: DISPLAY
+    // Display
     else if (bodyId === 'page-display') {
         initDisplay();
     }
     
-    // Globala Knappar
+    // Knappar
     const printBtn = document.getElementById('printBtn');
     if (printBtn) printBtn.addEventListener('click', printSchedule);
 
@@ -178,10 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* =========================================
-   5. LOGIN & AUTH (MOT NEON SQL)
-   ========================================= */
-/* =========================================
-   5. LOGIN & AUTH (MOT NEON SQL)
+   5. LOGIN & AUTH
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -204,7 +190,6 @@ function initLogin() {
         loginBtn.disabled = true;
 
         try {
-            // Anropa backend API (api/auth.js)
             const response = await fetch('/api/auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -218,10 +203,8 @@ function initLogin() {
             const result = await response.json();
 
             if (result.success) {
-                // Spara session
                 sessionStorage.setItem('adminUser', result.user);
                 sessionStorage.setItem('isLoggedIn', 'true');
-                
                 window.location.href = "admin.html";
             } else {
                 alert("Fel användarnamn eller lösenord!");
@@ -259,7 +242,6 @@ function initLogout() {
    6. ADMIN - FUNKTIONALITET
    ========================================= */
 
-// Hantera Admins (Lägg till/Ta bort via SQL)
 function setupAdminManagement() {
     const adminBtn = document.getElementById('manageAdminsBtn');
     if (!adminBtn) return;
@@ -267,7 +249,7 @@ function setupAdminManagement() {
     adminBtn.addEventListener('click', async () => {
         const currentUser = sessionStorage.getItem('adminUser');
         
-        // 1. Hämta lista
+        // Hämta lista
         let admins = [];
         try {
             const res = await fetch('/api/auth', {
@@ -277,16 +259,12 @@ function setupAdminManagement() {
             });
             admins = await res.json();
         } catch(e) { 
-            console.error("Kunde inte hämta adminlista", e);
             alert("Kunde inte hämta listan.");
             return;
         }
         
         let listString = admins.map(a => `- ${a.username}`).join('\n');
-        
-        let userAction = prompt(
-            `HANTERA ADMINS:\n${listString}\n\nSkriv 'ny' för att skapa, 'radera' för att ta bort.`
-        );
+        let userAction = prompt(`HANTERA ADMINS:\n${listString}\n\nSkriv 'ny' för att skapa, 'radera' för att ta bort.`);
 
         if (!userAction) return;
 
@@ -301,7 +279,6 @@ function setupAdminManagement() {
                     body: JSON.stringify({ action: 'add', username: newUser, password: newPass })
                 });
                 const result = await res.json();
-                
                 if (result.success) alert(`Admin ${newUser} skapad!`);
                 else alert("Kunde inte skapa. (Finns namnet redan?)");
             }
@@ -319,7 +296,6 @@ function setupAdminManagement() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'remove', username: delUser })
                 });
-                
                 if (res.ok) alert(`Admin ${delUser} borttagen.`);
                 else alert("Kunde inte ta bort användaren.");
             }
@@ -342,18 +318,26 @@ function closeAllDropdowns() {
 }
 
 function initAdmin() {
+    // --- VISA INLOGGAD ANVÄNDARE (HÄR SKA DET LIGGA!) ---
+    const userDisplay = document.getElementById('currentUserDisplay');
+    const loggedInUser = sessionStorage.getItem('adminUser');
+    
+    if (userDisplay && loggedInUser) {
+        userDisplay.innerText = `Inloggad: ${loggedInUser}`;
+    }
+    // ----------------------------------------------------
+
     const now = new Date();
     const iso = getISOWeekAndYear(now);
     selectedWeek = iso.week;
     selectedYear = iso.year;
 
     setupWeekNav();
-    setupSidebarAddUser(); // Hanterar "Personal"-listan (inte admins)
+    setupSidebarAddUser(); 
     renderNav();
     renderAdminGrid();
 }
 
-// Tema-väljare med Spara-knapp
 async function initThemeSelector() {
     const select = document.getElementById('themeSelect');
     const saveBtn = document.getElementById('saveThemeBtn');
@@ -367,14 +351,12 @@ async function initThemeSelector() {
         }
     } catch(e) { }
 
-    // Återställ knappen vid ändring
     select.addEventListener('change', () => {
         saveBtn.innerText = "Spara tema";
         saveBtn.style.backgroundColor = ""; 
         saveBtn.style.color = "";
     });
 
-    // Spara vid klick
     saveBtn.addEventListener('click', async () => {
         const newTheme = select.value;
         const currentSettings = (await fetchData('settings')) || {};
@@ -587,7 +569,6 @@ function renderAdminGrid() {
                 const newText = e.target.innerText.trim();
                 if (newText === currentText) return;
 
-                // Lägg till nya namn i personal-listan automatiskt
                 const namesInBox = newText.split('/').map(n => n.trim()).filter(n => n.length > 0);
                 let currentUsersList = [...getUsers()];
                 let usersUpdated = false;
@@ -613,7 +594,7 @@ function renderAdminGrid() {
             textSpan.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } };
             block.appendChild(textSpan);
 
-            // Tools (Dropdown & Clear)
+            // Tools
             const toolsDiv = document.createElement('div');
             toolsDiv.className = 'admin-tools';
             const availableUsers = allUsers.filter(u => !usedUsersSet.has(u));
@@ -882,5 +863,3 @@ function getScheduleHtmlForPrint() {
     
     return htmlContent;
 }
-
-
