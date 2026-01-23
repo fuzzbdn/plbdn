@@ -1,13 +1,14 @@
 /* =========================================
-   DISPLAY.CSS - MODERN LIGHT & DARK THEME
+   DISPLAY.CSS - KOMPLETT MED ALLA TEMAN
    ========================================= */
 
-/* 1. TEMA-VARIABLER
-   Här definierar vi färgerna. :root är standard (Ljust).
-   body.theme-dark skriver över dessa med mörka färger.
-*/
+/* -----------------------------------------
+   1. GRUNDINSTÄLLNINGAR & FONT
+----------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+/* Standard CSS-variabler (Ljust tema) */
 :root {
-    /* Ljust tema (Standard) */
     --bg-color: #f0f2f5;           /* Ljusgrå bakgrund */
     --text-color: #1a1a1a;         /* Mörkgrå text */
     --header-bg: #ffffff;          /* Vit header/label */
@@ -19,35 +20,103 @@
     --clock-bg: #f8f9fa;           /* Bakgrund för klockan */
     --empty-border: #e0e0e0;       /* Ram runt tomma rutor */
     --empty-bg: rgba(255,255,255,0.4); /* Genomskinlighet tomma rutor */
+    --font-stack: 'Inter', sans-serif; /* Standard typsnitt */
 }
 
+/* -----------------------------------------
+   2. TEMA-DEFINITIONER
+----------------------------------------- */
+
+/* --- Mörkt tema (Dark Mode) --- */
 body.theme-dark {
-    /* Mörkt tema (Dark Mode) */
-    --bg-color: #121212;           /* Nästan svart bakgrund */
-    --text-color: #e0e0e0;         /* Ljusgrå text */
-    --header-bg: #1e1e1e;          /* Mörkgrå header/label */
-    --header-text: #ffffff;        /* Vit rubrik */
-    --card-bg: #2d2d2d;            /* Mörkgrå kort */
-    --card-text: #ffffff;          /* Vit text på korten */
-    --sub-text: #aaaaaa;           /* Ljusare grå rubriker */
-    --shadow: 0 4px 20px rgba(0,0,0,0.5); /* Hårdare skugga */
-    --clock-bg: #333333;           /* Mörk bakgrund klocka */
-    --empty-border: #444444;       /* Mörk ram tomma rutor */
-    --empty-bg: rgba(255,255,255,0.05); /* Väldigt svag fyllning */
+    --bg-color: #121212;
+    --text-color: #e0e0e0;
+    --header-bg: #1e1e1e;
+    --header-text: #ffffff;
+    --card-bg: #2d2d2d;
+    --card-text: #ffffff;
+    --sub-text: #aaaaaa;
+    --shadow: 0 4px 20px rgba(0,0,0,0.5);
+    --clock-bg: #333333;
+    --empty-border: #444444;
+    --empty-bg: rgba(255,255,255,0.05);
 }
 
-/* 2. GRUNDLAYOUT */
+/* --- Jultema (Mysigt rött och guld) --- */
+body.theme-jul {
+    --bg-color: #741b1b;           /* Djup julröd bakgrund */
+    --text-color: #f8f4e3;         /* Gräddvit text */
+    --header-bg: #f8f4e3;          /* Gräddvita headers för kontrast */
+    --header-text: #3e0c0c;        /* Mörkröd text i headers */
+    --card-bg: #ffffff;            /* Vita kort */
+    --card-text: #3e0c0c;          /* Mörkröd text på kort */
+    --sub-text: #d4af37;           /* Guldiga underrubriker */
+    --shadow: 0 4px 25px rgba(0,0,0,0.3);
+    --clock-bg: #5c1515;           /* Mörkare röd klockbakgrund */
+    --empty-border: #9e2a2a;
+    --empty-bg: rgba(255,255,255,0.1);
+}
+/* VIKTIGT FÖR JUL: Skriv över alla stationsfärger till enhetlig Guld */
+body.theme-jul .station-label,
+body.theme-jul .shift-card {
+    border-color: #d4af37 !important; /* Tvinga guld-accent överallt */
+}
+
+
+/* --- Påsktema (Ljusa pastellfärger) --- */
+body.theme-pask {
+    --bg-color: #fffbea;           /* Ljus pastellgul bakgrund */
+    --text-color: #5a4a42;         /* Mjuk brun text */
+    --header-bg: #e3f2fd;          /* Ljus pastellblå header */
+    --header-text: #1565c0;        /* Mörkare blå rubrik */
+    --card-bg: #ffffff;            /* Vita kort */
+    --card-text: #333333;
+    --sub-text: #8d6e63;           /* Ljusbrun underrubrik */
+    --shadow: 0 4px 15px rgba(100, 181, 246, 0.2); /* Mjuk blå skugga */
+    --clock-bg: #f3e5f5;           /* Ljus pastellrosa klocka */
+    --empty-border: #ffe0b2;       /* Ljus orange kant */
+    --empty-bg: rgba(255, 255, 255, 0.6);
+}
+/* Notera: Påsktemat behåller originalfärgerna på stationerna då de redan är "påsiga" */
+
+
+/* --- Matrix-tema (Cyberpunk neon) --- */
+body.theme-matrix {
+    --bg-color: #000000;           /* Helt svart bakgrund */
+    --text-color: #00ff41;         /* Klassisk Matrix-grön text */
+    --header-bg: #0d0d0d;          /* Nästan svart header */
+    --header-text: #00ff41;
+    --card-bg: #0a0a0a;            /* Mycket mörka kort */
+    --card-text: #00ff41;
+    --sub-text: #008f11;           /* Mörkare grön för underrubriker */
+    --shadow: 0 0 15px rgba(0, 255, 65, 0.3); /* Grön "glöd" istället för skugga */
+    --clock-bg: #001a05;
+    --empty-border: #003300;
+    --empty-bg: rgba(0, 50, 0, 0.2);
+    --font-stack: 'JetBrains Mono', monospace; /* Byt till hacker-typsnitt! */
+}
+/* VIKTIGT FÖR MATRIX: Skriv över alla stationsfärger till neon-grön */
+body.theme-matrix .station-label,
+body.theme-matrix .shift-card {
+    border-color: #00ff41 !important; /* Tvinga matris-grön överallt */
+}
+
+
+/* -----------------------------------------
+   3. GRUNDLAYOUT
+----------------------------------------- */
 body.display-view {
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
     padding: 2vh 3vw;
     height: 100vh;
-    overflow: hidden; /* Dölj scrollbars för TV-känsla */
-    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    font-family: var(--font-stack); /* Använder nu variabel för font */
     display: flex;
     flex-direction: column;
-    transition: background-color 0.3s ease, color 0.3s ease; /* Mjuk övergång vid temabyte */
+    /* Mjuk övergång för ALLA egenskaper som ändras vid temabyte */
+    transition: all 0.5s ease; 
 }
 
 .display-wrapper {
@@ -57,7 +126,9 @@ body.display-view {
     flex-direction: column;
 }
 
-/* 3. HEADER (TOP BAR) */
+/* -----------------------------------------
+   4. HEADER (TOP BAR)
+----------------------------------------- */
 .top-bar {
     background: var(--header-bg);
     padding: 1.5vh 2vw;
@@ -68,7 +139,7 @@ body.display-view {
     align-items: center;
     width: 100%;
     margin-bottom: 2vh;
-    transition: background-color 0.3s ease;
+    transition: all 0.5s ease;
 }
 
 #mainTitle {
@@ -87,21 +158,24 @@ body.display-view {
     padding: 0.2vh 1.5vw;
     border-radius: 8px;
     white-space: nowrap;
+    transition: all 0.5s ease;
 }
 
-/* 4. GRID-CONTAINER */
+/* -----------------------------------------
+   5. GRID-CONTAINER
+----------------------------------------- */
 #mainContainer {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-evenly; /* Fördela höjden snyggt */
+    justify-content: space-evenly;
     padding: 0;
 }
 
 /* Rubrikraden (Tiderna) */
 .time-header-row {
     display: grid;
-    grid-template-columns: 220px 1fr 1fr 1fr; /* 220px för namn, resten delas lika */
+    grid-template-columns: 220px 1fr 1fr 1fr;
     gap: 1.5vw;
     margin-bottom: 1vh;
     padding: 0 10px;
@@ -123,10 +197,12 @@ body.display-view {
     gap: 1.5vw;
     align-items: stretch;
     margin-bottom: 1.2vh;
-    min-height: 8vh; /* Garantera att rader inte kollapsar */
+    min-height: 8vh;
 }
 
-/* 5. KORT OCH ETIKETTER */
+/* -----------------------------------------
+   6. KORT OCH ETIKETTER
+----------------------------------------- */
 .station-label {
     background-color: var(--header-bg);
     color: var(--card-text);
@@ -135,12 +211,12 @@ body.display-view {
     border-radius: 12px;
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* Vänsterställd text */
+    justify-content: flex-start;
     padding-left: 1.5vw;
     box-shadow: var(--shadow);
-    border-left: 10px solid; /* Färgen sätts längre ner */
+    border-left: 10px solid; 
     height: 100%;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: all 0.5s ease;
 }
 
 .shift-card {
@@ -155,51 +231,53 @@ body.display-view {
     justify-content: center;
     text-align: center;
     height: 100%;
-    transition: transform 0.2s, background-color 0.3s ease;
+    transition: all 0.5s ease;
+    border-bottom: 4px solid; /* Förbereder för färg */
 }
 
-/* Tomma rutor (Ghost-effekt) */
+/* Tomma rutor */
 .shift-card.empty {
     background-color: var(--empty-bg) !important;
     border: 2px dashed var(--empty-border) !important;
     box-shadow: none !important;
-    color: transparent; /* Dölj ev. mellanslag */
+    color: transparent;
 }
 
-/* 6. FÄRG-ACCENTER (STATIONER)
-   Här kopplar vi klassnamnen från script.js till färger.
-   Station-label får vänsterkant, Kort får underkant.
-*/
+/* -----------------------------------------
+   7. FÄRG-ACCENTER (STANDARD)
+   Dessa används för Ljust, Mörkt och Påsktema.
+   Jul och Matrix skriver över dessa högre upp i filen.
+----------------------------------------- */
 
 /* Björkliden - Orange/Guld */
 .color-bjorkliden .station-label { border-left-color: #ffb300; }
-.color-bjorkliden .shift-card { border-bottom: 4px solid #ffb300; }
+.color-bjorkliden .shift-card { border-bottom-color: #ffb300; }
 
 /* Kiruna - Gul */
 .color-kiruna .station-label { border-left-color: #fdd835; }
-.color-kiruna .shift-card { border-bottom: 4px solid #fdd835; }
+.color-kiruna .shift-card { border-bottom-color: #fdd835; }
 
 /* Bastuträsk - Röd */
 .color-bastutrask .station-label { border-left-color: #e53935; }
-.color-bastutrask .shift-card { border-bottom: 4px solid #e53935; }
+.color-bastutrask .shift-card { border-bottom-color: #e53935; }
 
 /* Boden - Grön */
 .color-boden .station-label { border-left-color: #7cb342; }
-.color-boden .shift-card { border-bottom: 4px solid #7cb342; }
+.color-boden .shift-card { border-bottom-color: #7cb342; }
 
 /* Gällivare - Ljusblå */
 .color-gallivare .station-label { border-left-color: #1e88e5; }
-.color-gallivare .shift-card { border-bottom: 4px solid #1e88e5; }
+.color-gallivare .shift-card { border-bottom-color: #1e88e5; }
 
 /* Älvsbyn - Grå */
 .color-alvsbyn .station-label { border-left-color: #757575; }
-.color-alvsbyn .shift-card { border-bottom: 4px solid #757575; }
+.color-alvsbyn .shift-card { border-bottom-color: #757575; }
 
-/* Info - Rosa (Extra mellanrum ovanför) */
+/* Info - Rosa */
 .color-info .station-label { border-left-color: #ec407a; }
-.color-info .shift-card { border-bottom: 4px solid #ec407a; }
-.display-row.color-info { margin-top: 3vh; } /* Separera Info lite */
+.color-info .shift-card { border-bottom-color: #ec407a; }
+.display-row.color-info { margin-top: 3vh; }
 
 /* PL - Mörkblå */
 .color-pl .station-label { border-left-color: #0d47a1; }
-.color-pl .shift-card { border-bottom: 4px solid #0d47a1; }
+.color-pl .shift-card { border-bottom-color: #0d47a1; }
