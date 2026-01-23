@@ -285,11 +285,15 @@ function initAdmin() {
 }
 
 /* --- TEMA-VÄLJARE (ADMIN) --- */
+/* I script.js - Ersätt den gamla initThemeSelector med denna */
+
 async function initThemeSelector() {
     const select = document.getElementById('themeSelect');
-    if (!select) return;
+    const saveBtn = document.getElementById('saveThemeBtn');
+    
+    if (!select || !saveBtn) return;
 
-    // 1. Hämta nuvarande inställning
+    // 1. Hämta nuvarande inställning och visa i listan
     try {
         const settings = await fetchData('settings'); 
         if (settings && settings.theme) {
@@ -297,13 +301,26 @@ async function initThemeSelector() {
         }
     } catch(e) { console.log("Inga sparade inställningar än"); }
 
-    // 2. Spara när man ändrar
-    select.addEventListener('change', async () => {
+    // 2. Spara när man klickar på knappen (inte vid 'change')
+    saveBtn.addEventListener('click', async () => {
         const newTheme = select.value;
         const currentSettings = (await fetchData('settings')) || {};
+        
+        // Uppdatera objektet
         currentSettings.theme = newTheme;
         
+        // Spara till databasen
         await saveData('settings', currentSettings);
+        
+        // Visuell feedback till användaren
+        const originalText = saveBtn.innerText;
+        saveBtn.innerText = "Sparat!";
+        saveBtn.style.backgroundColor = "#45a049";
+        
+        setTimeout(() => {
+            saveBtn.innerText = originalText;
+            saveBtn.style.backgroundColor = "#4CAF50";
+        }, 2000);
     });
 }
 
@@ -805,3 +822,4 @@ function getScheduleHtmlForPrint() {
     
     return htmlContent;
 }
+
