@@ -1,0 +1,81 @@
+/* =========================================
+   DISPLAY.CSS - MODERN LIGHT VIEW
+   ========================================= */
+body.display-view {
+    background-color: #f0f2f5;
+    color: #1a1a1a;
+    margin: 0;
+    padding: 2vh 3vw;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.display-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; }
+
+/* Header */
+.top-bar {
+    background: #ffffff;
+    padding: 1.5vh 2vw;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 2vh;
+}
+#mainTitle { font-size: 3.5vh; font-weight: 800; color: #2c3e50; margin: 0; letter-spacing: -0.5px; }
+#clock { font-size: 4.5vh; font-weight: 900; color: #2c3e50; background: #f8f9fa; padding: 0.2vh 1.5vw; border-radius: 8px; }
+
+/* Grid */
+#mainContainer { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
+
+.time-header-row { display: grid; grid-template-columns: 220px 1fr 1fr 1fr; gap: 1.5vw; margin-bottom: 1vh; padding: 0 10px; }
+.time-header { font-size: 2.2vh; font-weight: 700; color: #6c757d; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+
+.display-row { display: grid; grid-template-columns: 220px 1fr 1fr 1fr; gap: 1.5vw; align-items: stretch; margin-bottom: 1.2vh; min-height: 8vh; }
+
+/* Labels & Cards */
+.station-label {
+    font-size: 2.8vh; font-weight: bold; border-radius: 12px;
+    display: flex; align-items: center; justify-content: flex-start;
+    padding-left: 1.5vw; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    background-color: #fff; color: #333; border-left: 8px solid;
+    height: 100%;
+}
+
+.shift-card {
+    background-color: #ffffff; color: #2c3e50; border-radius: 12px;
+    font-size: 3vh; font-weight: 700; box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    transition: transform 0.2s; height: 100%;
+}
+.shift-card.empty { background-color: rgba(255,255,255,0.4); box-shadow: none; border: 2px dashed #e0e0e0; }
+
+/* Color Accents (Left Borders) */
+.color-bjorkliden .station-label { border-left-color: #ffb300; }
+.color-bjorkliden .shift-card { border-bottom: 4px solid #ffb300; }
+
+.color-kiruna .station-label { border-left-color: #fdd835; }
+.color-kiruna .shift-card { border-bottom: 4px solid #fdd835; }
+
+.color-bastutrask .station-label { border-left-color: #e53935; }
+.color-bastutrask .shift-card { border-bottom: 4px solid #e53935; }
+
+.color-boden .station-label { border-left-color: #7cb342; }
+.color-boden .shift-card { border-bottom: 4px solid #7cb342; }
+
+.color-gallivare .station-label { border-left-color: #1e88e5; }
+.color-gallivare .shift-card { border-bottom: 4px solid #1e88e5; }
+
+.color-alvsbyn .station-label { border-left-color: #757575; }
+.color-alvsbyn .shift-card { border-bottom: 4px solid #757575; }
+
+.color-info .station-label { border-left-color: #ec407a; }
+.color-info .shift-card { border-bottom: 4px solid #ec407a; }
+.display-row.color-info { margin-top: 3vh; }
+
+.color-pl .station-label { border-left-color: #0d47a1; }
+.color-pl .shift-card { border-bottom: 4px solid #0d47a1; }
