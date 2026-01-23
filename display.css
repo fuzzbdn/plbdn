@@ -42,26 +42,80 @@ body.theme-dark {
     --empty-bg: rgba(255,255,255,0.05);
 }
 
-/* --- Jultema (Mysigt rött och guld) --- */
+/* --- NORRSKEN TEMA (Ersätter Jultema) --- */
 body.theme-jul {
-    --bg-color: #741b1b;           /* Djup julröd bakgrund */
-    --text-color: #f8f4e3;         /* Gräddvit text */
-    --header-bg: #f8f4e3;          /* Gräddvita headers för kontrast */
-    --header-text: #3e0c0c;        /* Mörkröd text i headers */
-    --card-bg: #ffffff;            /* Vita kort */
-    --card-text: #3e0c0c;          /* Mörkröd text på kort */
-    --sub-text: #d4af37;           /* Guldiga underrubriker */
-    --shadow: 0 4px 25px rgba(0,0,0,0.3);
-    --clock-bg: #5c1515;           /* Mörkare röd klockbakgrund */
-    --empty-border: #9e2a2a;
-    --empty-bg: rgba(255,255,255,0.1);
-}
-/* VIKTIGT FÖR JUL: Skriv över alla stationsfärger till enhetlig Guld */
-body.theme-jul .station-label,
-body.theme-jul .shift-card {
-    border-color: #d4af37 !important; /* Tvinga guld-accent överallt */
+    /* En mörk gradient som påminner om natthimlen i norr */
+    background: linear-gradient(135deg, #0b1026 0%, #1b2744 60%, #00332a 100%);
+    color: #e0f7fa; /* Isig ljusblå textfärg */
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* Rubriker får en lysande norrskens-effekt */
+body.theme-jul h1 {
+    color: #50fa7b !important; /* Neon-aurora-grön */
+    text-shadow: 0 0 15px #50fa7b, 0 0 30px #008cff; /* Glöd i grönt och blått */
+    letter-spacing: 1px;
+}
+
+/* Klocka och veckonavigering */
+body.theme-jul .week-controls,
+body.theme-jul .clock-container,
+body.theme-jul #currentDate {
+     color: #8be9fd !important; /* Ljus cyan/isblå */
+     text-shadow: 0 0 5px rgba(139, 233, 253, 0.5);
+}
+
+/* Själva schematabellen - gör den halvgenomskinlig */
+body.theme-jul .schedule-grid {
+    background: rgba(13, 17, 34, 0.85) !important; /* Mörk, transparent bakgrund */
+    border: 1px solid #50fa7b; /* Tunn grön ram */
+    box-shadow: 0 0 25px rgba(80, 250, 123, 0.2); /* Subtil grön omgivande glöd */
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Rubrikerna i tabellen (Tid, Förmiddag etc.) */
+body.theme-jul .grid-header-cell {
+    background-color: rgba(80, 250, 123, 0.15) !important;
+    color: #50fa7b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 2px solid rgba(80, 250, 123, 0.3);
+}
+
+/* Stationskolumnen längst till vänster */
+body.theme-jul .grid-station-cell {
+    background-color: rgba(0, 0, 0, 0.4) !important;
+    border-right: 2px solid rgba(189, 147, 249, 0.5) !important; /* En gnutta lila */
+    color: #fff;
+}
+
+/* Rutorna där namnen står */
+body.theme-jul .schedule-slot {
+    border: 1px solid rgba(139, 233, 253, 0.2); /* Mycket diskreta kanter */
+    background: rgba(139, 233, 253, 0.05); /* Knappt synlig fyllning */
+    transition: all 0.3s ease;
+}
+
+/* När man hovrar över en ruta */
+body.theme-jul .schedule-slot:hover {
+     background: rgba(80, 250, 123, 0.1); /* Lyser upp lite grönt */
+     border-color: #50fa7b;
+}
+
+/* Namnen på personerna */
+body.theme-jul .schedule-entry {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff !important;
+    box-shadow: inset 0 0 10px rgba(80, 250, 123, 0.1);
+}
+
+/* Gör att de små färgade strecken för varje station lyser i mörkret */
+body.theme-jul .station-label {
+    box-shadow: 0 0 8px currentColor;
+    font-weight: 600;
+}
 
 /* --- Påsktema (Ljusa pastellfärger) --- */
 body.theme-pask {
@@ -281,3 +335,4 @@ body.display-view {
 /* PL - Mörkblå */
 .color-pl .station-label { border-left-color: #0d47a1; }
 .color-pl .shift-card { border-bottom-color: #0d47a1; }
+
