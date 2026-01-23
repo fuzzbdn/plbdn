@@ -285,7 +285,7 @@ function initAdmin() {
 }
 
 /* --- TEMA-VÄLJARE (ADMIN) --- */
-/* I script.js - Ersätt den gamla initThemeSelector med denna */
+/* Ersätt hela funktionen initThemeSelector i script.js med denna */
 
 async function initThemeSelector() {
     const select = document.getElementById('themeSelect');
@@ -301,22 +301,29 @@ async function initThemeSelector() {
         }
     } catch(e) { console.log("Inga sparade inställningar än"); }
 
-    // 2. Spara när man klickar på knappen (inte vid 'change')
-/* Liten justering i event-lyssnaren i script.js */
-saveBtn.addEventListener('click', async () => {
-    // ... (din spar-kod här) ...
-    await saveData('settings', currentSettings);
-    
-    // Visuell feedback
-    const originalText = saveBtn.innerText;
-    saveBtn.innerText = "Sparat!";
-    saveBtn.style.backgroundColor = "#4CAF50"; // Bli grön temporärt
-    
-    setTimeout(() => {
-        saveBtn.innerText = originalText;
-        saveBtn.style.backgroundColor = ""; // Återgå till CSS-standard (mörkgrå)
-    }, 2000);
-});
+    // 2. Koppla sparandet till KNAPPEN (click) istället för listan
+    saveBtn.addEventListener('click', async () => {
+        const newTheme = select.value;
+        const currentSettings = (await fetchData('settings')) || {};
+        
+        // Uppdatera objektet
+        currentSettings.theme = newTheme;
+        
+        // Spara till databasen
+        await saveData('settings', currentSettings);
+        
+        // Visuell feedback på knappen
+        const originalText = saveBtn.innerText;
+        saveBtn.innerText = "Sparat!";
+        saveBtn.style.backgroundColor = "#4CAF50"; // Grön färg
+        saveBtn.style.color = "#fff";
+        
+        setTimeout(() => {
+            saveBtn.innerText = originalText;
+            saveBtn.style.backgroundColor = ""; // Återgå till original
+            saveBtn.style.color = "";
+        }, 2000);
+    });
 }
 
 function setupSidebarAddUser() {
@@ -817,5 +824,6 @@ function getScheduleHtmlForPrint() {
     
     return htmlContent;
 }
+
 
 
