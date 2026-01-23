@@ -37,7 +37,7 @@ async function fetchData(type) {
         
         if (type === 'schedule') { key = 'shiftData'; defaultVal = {}; }
         else if (type === 'users') { key = 'userList'; defaultVal = []; }
-        else if (type === 'settings') { key = 'siteSettings'; defaultVal = { theme: 'light' }; } // NYTT: Settings
+        else if (type === 'settings') { key = 'siteSettings'; defaultVal = { theme: 'light' }; } 
 
         const local = localStorage.getItem(key);
         return local ? JSON.parse(local) : defaultVal;
@@ -66,7 +66,7 @@ async function saveData(type, data) {
         let key = '';
         if (type === 'schedule') key = 'shiftData';
         else if (type === 'users') key = 'userList';
-        else if (type === 'settings') key = 'siteSettings'; // NYTT: Settings
+        else if (type === 'settings') key = 'siteSettings'; 
 
         localStorage.setItem(key, JSON.stringify(data));
         return;
@@ -172,7 +172,7 @@ document.addEventListener('DOMContentLoaded', async () => {
              return;
         }
         initAdmin();
-        initThemeSelector(); // <--- NYTT: Starta tema-väljaren
+        initThemeSelector(); // Starta tema-väljaren
     } else if (bodyId === 'page-display') {
         initDisplay();
     }
@@ -284,7 +284,7 @@ function initAdmin() {
     renderAdminGrid();
 }
 
-/* --- NY FUNKTION: TEMA-VÄLJARE (ADMIN) --- */
+/* --- TEMA-VÄLJARE (ADMIN) --- */
 async function initThemeSelector() {
     const select = document.getElementById('themeSelect');
     if (!select) return;
@@ -304,8 +304,6 @@ async function initThemeSelector() {
         currentSettings.theme = newTheme;
         
         await saveData('settings', currentSettings);
-        // Tillval: Visa bekräftelse, men ofta räcker det att det bara sparas
-        // alert(`Tema ändrat till: ${newTheme}`);
     });
 }
 
@@ -582,7 +580,7 @@ function renderAdminGrid() {
 function initDisplay() {
     updateClock();
     loadDisplayData();
-    updateDisplayTheme(); // <--- Hämta tema direkt vid start
+    updateDisplayTheme(); // Hämta tema direkt vid start
 
     setInterval(updateClock, 60000);
     
@@ -591,26 +589,34 @@ function initDisplay() {
             try {
                 globalScheduleData = await fetchData('schedule');
                 loadDisplayData();
-                updateDisplayTheme(); // <--- Kolla tema vid varje uppdatering
+                updateDisplayTheme(); // Kolla tema vid varje uppdatering
             } catch (e) { console.error("Update fail", e); }
         }, 10000); 
     }
 }
 
-/* --- NY FUNKTION: UPPDATERA TEMA PÅ DISPLAY --- */
+/* --- UPPDATERAD FUNKTION: HANTERA ALLA TEMAN (JUL, PÅSK, MATRIX ETC) --- */
 async function updateDisplayTheme() {
     try {
         const settings = await fetchData('settings');
+        // Standard är 'light'
         const activeTheme = (settings && settings.theme) ? settings.theme : 'light';
         
+        // Lista på alla kända tema-klasser för att kunna rensa bort gamla
+        const knownThemes = ['theme-dark', 'theme-jul', 'theme-pask', 'theme-matrix'];
+        
         const body = document.body;
-        if (activeTheme === 'dark') {
-            body.classList.add('theme-dark');
-            body.classList.remove('theme-light');
-        } else {
-            body.classList.add('theme-light');
-            body.classList.remove('theme-dark');
+
+        // 1. Rensa bort alla gamla teman
+        knownThemes.forEach(themeClass => {
+            body.classList.remove(themeClass);
+        });
+
+        // 2. Lägg till det aktiva temat (om det inte är light som är standard)
+        if (activeTheme !== 'light') {
+            body.classList.add(`theme-${activeTheme}`);
         }
+
     } catch (e) {
         console.error("Kunde inte hämta tema", e);
     }
