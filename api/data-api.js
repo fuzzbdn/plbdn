@@ -30,18 +30,27 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const { type } = req.query;
 
-      // Validera typ
-      if (type !== 'schedule' && type !== 'users') {
+      // --- ÄNDRING 1: Tillåt 'settings' här ---
+      // Vi kollar nu om typen är någon av de tillåtna
+      const allowedTypes = ['schedule', 'users', 'settings'];
+      
+      if (!allowedTypes.includes(type)) {
         return res.status(400).json({ error: "Invalid type parameter" });
       }
+      // ----------------------------------------
 
       const result = await pool.query('SELECT data FROM app_storage WHERE key = $1', [type]);
       
       if (result.rows.length > 0) {
         return res.status(200).json(result.rows[0].data);
       } else {
-        // Returnera tomt om inget finns
-        return res.status(200).json(type === 'users' ? [] : {});
+        // --- ÄNDRING 2: Snyggare hantering av standardvärden ---
+        let defaultData = {};
+        if (type === 'users') defaultData = [];
+        if (type === 'settings') defaultData = { theme: 'light' }; // Standardtema om inget finns sparat
+        
+        return res.status(200).json(defaultData);
+        // -------------------------------------------------------
       }
     }
 
@@ -60,17 +69,19 @@ export default async function handler(req, res) {
       const dataType = bodyData.type;
       const dataPayload = bodyData.data;
 
-      // --- VIKTIGT NYTT BLOCK: Hantera verifiering ---
-      // Om frontend bara frågar "är lösenordet rätt?", svara OK och avsluta här.
+      // Hantera verifiering (Login)
       if (dataType === 'verify') {
           return res.status(200).json({ success: true, message: "Lösenord godkänt" });
       }
-      // -----------------------------------------------
 
       // Validera data för sparning
       if (!dataType || !dataPayload) {
         return res.status(400).json({ error: "Missing data or type" });
       }
+
+      // OBS: POST-delen behöver ingen ändring!
+      // Eftersom den sparar baserat på `dataType` som skickas från frontend,
+      // kommer den automatiskt spara 'settings' när frontend skickar det.
 
       // 3. Spara till Neon (UPSERT - Uppdatera om finns, annars skapa)
       await pool.query(
