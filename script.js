@@ -1,7 +1,6 @@
 /* =========================================
    1. KONFIGURATION & DATA
    ========================================= */
-// Sätt till true för att använda databasen (Vercel + Neon)
 const USE_CLOUD_DB = true; 
 
 const stations = [
@@ -23,35 +22,28 @@ let selectedWeek = 0;
 let selectedYear = 0;
 
 let globalScheduleData = {};
-let globalUserList = [];
+let globalUserList = []; // Detta är listan på personal man kan schemalägga (inte admins)
 
 /* =========================================
-   2. API & DATABAS (VERCEL + NEON + LOCALSTORAGE)
+   2. DATA-API (SCHEMAN & PERSONAL)
+   OBS: Detta hanterar schema-data, inte inloggningskonton.
    ========================================= */
 
 async function fetchData(type) {
-    // Hantera LocalStorage (om moln-DB är avstängd)
     if (!USE_CLOUD_DB) {
-        let key = '';
-        let defaultVal = {};
-        
-        if (type === 'schedule') { key = 'shiftData'; defaultVal = {}; }
-        else if (type === 'users') { key = 'userList'; defaultVal = []; }
-        else if (type === 'settings') { key = 'siteSettings'; defaultVal = { theme: 'light' }; } 
-        else if (type === 'admin_accounts') { key = 'adminAccounts'; defaultVal = []; }
-
+        // Fallback till LocalStorage om ingen DB finns
+        let key = type === 'schedule' ? 'shiftData' : (type === 'users' ? 'userList' : 'siteSettings');
         const local = localStorage.getItem(key);
-        return local ? JSON.parse(local) : defaultVal;
+        return local ? JSON.parse(local) : (type === 'users' ? [] : {});
     }
     
-    // Hantera Cloud DB
     try {
         const response = await fetch(`/api/data-api?type=${type}`);
         if (!response.ok) throw new Error('Kunde inte hämta data');
         return await response.json();
     } catch (error) {
         console.error(`Fetch error (${type}):`, error);
-        if (type === 'users' || type === 'admin_accounts') return [];
+        if (type === 'users') return [];
         if (type === 'settings') return { theme: 'light' };
         return {};
     }
@@ -62,44 +54,36 @@ async function saveData(type, data) {
     if (type === 'schedule') globalScheduleData = data;
     if (type === 'users') globalUserList = data;
 
-    // Hantera LocalStorage
     if (!USE_CLOUD_DB) {
-        let key = '';
-        if (type === 'schedule') key = 'shiftData';
-        else if (type === 'users') key = 'userList';
-        else if (type === 'settings') key = 'siteSettings';
-        else if (type === 'admin_accounts') key = 'adminAccounts';
-
+        let key = type === 'schedule' ? 'shiftData' : (type === 'users' ? 'userList' : 'siteSettings');
         localStorage.setItem(key, JSON.stringify(data));
         return;
     }
 
-    // Hantera Cloud DB
-    const password = sessionStorage.getItem('adminPassword');
-    
-    if (!password) {
-        alert("Du måste logga in igen!");
-        window.location.href = "index.html";
+    // Säkerhetskoll: Försök inte spara om man inte är inloggad
+    if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+        console.warn("Ej inloggad, sparar inte till molnet.");
         return;
     }
 
     try {
+        // Vi skickar användarnamnet i headern för spårbarhet (valfritt)
+        const currentUser = sessionStorage.getItem('adminUser') || 'unknown';
+        
         const response = await fetch('/api/data-api', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${password}`
+                'X-User': currentUser 
             },
             body: JSON.stringify({ type: type, data: data })
         });
 
-        if (!response.ok) {
-            if (response.status === 401) alert("Fel lösenord! Logga in på nytt.");
-            else throw new Error("Serverfel vid sparning");
-        }
+        if (!response.ok) throw new Error("Serverfel vid sparning");
 
     } catch (e) {
         console.error("Save failed", e);
+        alert("Kunde inte spara ändringar till servern. Kontrollera anslutningen.");
     }
 }
 
@@ -142,53 +126,50 @@ function getUsedUsersForDay(dayName, prefix) {
 }
 
 /* =========================================
-   4. INITIERING
+   4. INITIERING (MAIN ENTRY POINT)
    ========================================= */
 document.addEventListener('DOMContentLoaded', async () => {
     const bodyId = document.body.id;
 
+    // Sidan: LOGIN
     if (bodyId === 'page-login') {
         initLogin();
         return;
     }
 
-    // Hämta grunddata (schema + användare)
+    // Hämta grunddata (Schema & Personal) oavsett sida
     if (USE_CLOUD_DB) {
         try {
             [globalScheduleData, globalUserList] = await Promise.all([
                 fetchData('schedule'),
                 fetchData('users')
             ]);
-        } catch (e) {
-            console.log("Kunde inte hämta initial data.");
-        }
+        } catch (e) { console.log("Init data fetch failed"); }
     } else {
         globalScheduleData = await fetchData('schedule');
         globalUserList = await fetchData('users');
     }
 
-    // ADMIN-SIDAN
+    // Sidan: ADMIN
     if (bodyId === 'page-admin') {
-        initLogout(); 
-        
-        // SÄKERHETSKONTROLL: Är användaren inloggad?
-        const savedUser = sessionStorage.getItem('adminUser');
-        const savedPass = sessionStorage.getItem('adminPassword');
-
-        if (!savedUser || !savedPass) {
-             window.location.href = "index.html"; // Skicka tillbaka till login
+        // KONTROLL: Är man inloggad?
+        if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+             window.location.href = "index.html"; 
              return;
         }
 
+        initLogout(); 
         initAdmin();
         initThemeSelector(); 
+        setupAdminManagement(); // Aktivera knappen för användarhantering
     } 
-    // DISPLAY-SIDAN
+    
+    // Sidan: DISPLAY
     else if (bodyId === 'page-display') {
         initDisplay();
     }
     
-    // Koppla knappar för export
+    // Globala Knappar
     const printBtn = document.getElementById('printBtn');
     if (printBtn) printBtn.addEventListener('click', printSchedule);
 
@@ -197,7 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* =========================================
-   5. LOGIN & LOGOUT (DATABAS)
+   5. LOGIN & AUTH (MOT NEON SQL)
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -220,24 +201,24 @@ function initLogin() {
         loginBtn.disabled = true;
 
         try {
-            // Hämta konton från DB
-            let adminList = await fetchData('admin_accounts');
+            // Anropa backend API (api/auth.js)
+            const response = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    action: 'login', 
+                    username: username, 
+                    password: password 
+                })
+            });
 
-            // --- NÖD-INLOGGNING (Om DB är tom) ---
-            if (!adminList || !Array.isArray(adminList) || adminList.length === 0) {
-                console.log("Databas tom. Använder nöd-konto.");
-                adminList = [{ user: "admin", pass: "start123" }];
-            }
+            const result = await response.json();
 
-            // Matcha användare
-            const validAccount = adminList.find(account => 
-                account.user.toLowerCase() === username.toLowerCase() && 
-                account.pass === password
-            );
-
-            if (validAccount) {
-                sessionStorage.setItem('adminUser', validAccount.user);
-                sessionStorage.setItem('adminPassword', validAccount.pass);
+            if (result.success) {
+                // Spara session
+                sessionStorage.setItem('adminUser', result.user);
+                sessionStorage.setItem('isLoggedIn', 'true');
+                
                 window.location.href = "admin.html";
             } else {
                 alert("Fel användarnamn eller lösenord!");
@@ -248,7 +229,7 @@ function initLogin() {
 
         } catch (error) {
             console.error("Login error:", error);
-            alert("Kunde inte nå databasen.");
+            alert("Kunde inte nå servern.");
         } finally {
             loginBtn.innerText = originalText;
             loginBtn.disabled = false;
@@ -265,15 +246,84 @@ function initLogout() {
     if (!logoutBtn) return;
 
     logoutBtn.addEventListener('click', () => {
-        sessionStorage.removeItem('adminPassword');
+        sessionStorage.removeItem('isLoggedIn');
         sessionStorage.removeItem('adminUser');
         window.location.href = "index.html";
     });
 }
 
 /* =========================================
-   6. ADMIN LOGIK
+   6. ADMIN - FUNKTIONALITET
    ========================================= */
+
+// Hantera Admins (Lägg till/Ta bort via SQL)
+function setupAdminManagement() {
+    const adminBtn = document.getElementById('manageAdminsBtn');
+    if (!adminBtn) return;
+
+    adminBtn.addEventListener('click', async () => {
+        const currentUser = sessionStorage.getItem('adminUser');
+        
+        // 1. Hämta lista
+        let admins = [];
+        try {
+            const res = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'list' })
+            });
+            admins = await res.json();
+        } catch(e) { 
+            console.error("Kunde inte hämta adminlista", e);
+            alert("Kunde inte hämta listan.");
+            return;
+        }
+        
+        let listString = admins.map(a => `- ${a.username}`).join('\n');
+        
+        let userAction = prompt(
+            `HANTERA ADMINS:\n${listString}\n\nSkriv 'ny' för att skapa, 'radera' för att ta bort.`
+        );
+
+        if (!userAction) return;
+
+        // SKAPA NY
+        if (userAction.toLowerCase() === 'ny') {
+            const newUser = prompt("Ange nytt användarnamn:");
+            const newPass = prompt("Ange lösenord:");
+            if (newUser && newPass) {
+                const res = await fetch('/api/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'add', username: newUser, password: newPass })
+                });
+                const result = await res.json();
+                
+                if (result.success) alert(`Admin ${newUser} skapad!`);
+                else alert("Kunde inte skapa. (Finns namnet redan?)");
+            }
+        } 
+        // RADERA
+        else if (userAction.toLowerCase() === 'radera' || userAction.toLowerCase() === 'ta bort') {
+            const delUser = prompt("Vilken användare ska tas bort?");
+            if (delUser) {
+                if (delUser.toLowerCase() === currentUser.toLowerCase()) {
+                    alert("Du kan inte radera dig själv!");
+                    return;
+                }
+                const res = await fetch('/api/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'remove', username: delUser })
+                });
+                
+                if (res.ok) alert(`Admin ${delUser} borttagen.`);
+                else alert("Kunde inte ta bort användaren.");
+            }
+        }
+    });
+}
+
 let currentAdminDayIndex = getCurrentDayIndex();
 if (currentAdminDayIndex < 0) currentAdminDayIndex = 0; 
 
@@ -295,103 +345,45 @@ function initAdmin() {
     selectedYear = iso.year;
 
     setupWeekNav();
-    setupSidebarAddUser();
-    setupAdminManagement(); // Ny funktion för användarhantering
+    setupSidebarAddUser(); // Hanterar "Personal"-listan (inte admins)
     renderNav();
     renderAdminGrid();
 }
 
-/* --- Hantera Admin-användare (Knapp) --- */
-function setupAdminManagement() {
-    const adminBtn = document.getElementById('manageAdminsBtn');
-    if (!adminBtn) return;
-
-    adminBtn.addEventListener('click', async () => {
-        const currentUser = sessionStorage.getItem('adminUser');
-        
-        let admins = await fetchData('admin_accounts') || [];
-        
-        // Visa lista och val
-        let listString = admins.map(a => `- ${a.user}`).join('\n');
-        
-        let action = prompt(
-            `ADMINISTRATÖRER:\n${listString}\n\nSkriv 'ny' för att lägga till, 'radera' för att ta bort.`
-        );
-
-        if (!action) return;
-
-        if (action.toLowerCase() === 'ny') {
-            const newUser = prompt("Ange nytt användarnamn:");
-            const newPass = prompt("Ange lösenord:");
-            if (newUser && newPass) {
-                if (admins.find(a => a.user.toLowerCase() === newUser.toLowerCase())) {
-                    alert("Användaren finns redan!");
-                    return;
-                }
-                admins.push({ user: newUser, pass: newPass });
-                await saveData('admin_accounts', admins);
-                alert(`Admin ${newUser} skapad!`);
-            }
-        } 
-        else if (action.toLowerCase() === 'radera' || action.toLowerCase() === 'ta bort') {
-            const delUser = prompt("Vilken användare ska tas bort?");
-            if (delUser) {
-                if (delUser.toLowerCase() === currentUser.toLowerCase()) {
-                    alert("Du kan inte radera dig själv!");
-                    return;
-                }
-                const initialLen = admins.length;
-                const newAdmins = admins.filter(a => a.user.toLowerCase() !== delUser.toLowerCase());
-                
-                if (newAdmins.length === initialLen) {
-                    alert("Användaren hittades inte.");
-                } else {
-                    await saveData('admin_accounts', newAdmins);
-                    alert(`Admin ${delUser} borttagen.`);
-                }
-            }
-        }
-    });
-}
-
-/* --- TEMA-VÄLJARE (MED KNAPP & FEEDBACK) --- */
+// Tema-väljare med Spara-knapp
 async function initThemeSelector() {
     const select = document.getElementById('themeSelect');
     const saveBtn = document.getElementById('saveThemeBtn');
     
     if (!select || !saveBtn) return;
 
-    // 1. Hämta nuvarande inställning och visa i listan
     try {
         const settings = await fetchData('settings'); 
         if (settings && settings.theme) {
             select.value = settings.theme;
         }
-    } catch(e) { console.log("Inga sparade inställningar än"); }
+    } catch(e) { }
 
-    // Återställ knappen direkt när man ändrar i listan
+    // Återställ knappen vid ändring
     select.addEventListener('change', () => {
         saveBtn.innerText = "Spara tema";
         saveBtn.style.backgroundColor = ""; 
         saveBtn.style.color = "";
     });
 
-    // 2. Spara när man klickar på knappen
+    // Spara vid klick
     saveBtn.addEventListener('click', async () => {
         const newTheme = select.value;
         const currentSettings = (await fetchData('settings')) || {};
         
-        // Uppdatera och spara
         currentSettings.theme = newTheme;
         await saveData('settings', currentSettings);
         
-        // Visuell feedback "Sparat!"
         saveBtn.innerText = "Sparat!";
         saveBtn.style.backgroundColor = "#4CAF50"; 
         saveBtn.style.color = "#fff";
         
         setTimeout(() => {
-            // Återställ om den fortfarande står på "Sparat!"
             if (saveBtn.innerText === "Sparat!") {
                 saveBtn.innerText = "Spara tema";
                 saveBtn.style.backgroundColor = "";
@@ -416,7 +408,7 @@ function setupSidebarAddUser() {
                 input.value = '';
                 renderRoster(); 
             } else {
-                alert('Namnet finns redan!');
+                alert('Namnet finns redan i listan!');
             }
         }
     }
@@ -563,6 +555,7 @@ function renderAdminGrid() {
             const currentText = scheduleData[key] || "";
             if (!currentText.trim()) block.classList.add('empty');
 
+            // Drag & Drop
             block.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; block.classList.add('drag-over'); };
             block.ondragleave = () => { block.classList.remove('drag-over'); };
             block.ondrop = (e) => {
@@ -581,6 +574,7 @@ function renderAdminGrid() {
                 }
             };
 
+            // Text Input
             const textSpan = document.createElement('span');
             textSpan.className = 'shift-text';
             textSpan.innerText = currentText;
@@ -590,6 +584,7 @@ function renderAdminGrid() {
                 const newText = e.target.innerText.trim();
                 if (newText === currentText) return;
 
+                // Lägg till nya namn i personal-listan automatiskt
                 const namesInBox = newText.split('/').map(n => n.trim()).filter(n => n.length > 0);
                 let currentUsersList = [...getUsers()];
                 let usersUpdated = false;
@@ -612,15 +607,10 @@ function renderAdminGrid() {
                 renderAdminGrid(); 
             };
 
-            textSpan.onkeydown = (e) => { 
-                if (e.key === 'Enter') { 
-                    e.preventDefault(); 
-                    e.target.blur(); 
-                } 
-            };
-            
+            textSpan.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } };
             block.appendChild(textSpan);
 
+            // Tools (Dropdown & Clear)
             const toolsDiv = document.createElement('div');
             toolsDiv.className = 'admin-tools';
             const availableUsers = allUsers.filter(u => !usedUsersSet.has(u));
