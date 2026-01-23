@@ -56,15 +56,20 @@
             <div class="schedule-card">
                 <div class="grid-container" id="scheduleContainer"></div>
             </div>
-            <div class="theme-selector" style="margin-left: 20px; display:inline-block;">
-                <label for="themeSelect" style="font-weight:bold; margin-right:5px;">Skärmtema:</label>
+            <div class="theme-selector" style="margin-left: 20px; display:inline-flex; align-items:center; gap: 10px;">
+                <label for="themeSelect" style="font-weight:bold;">Skärmtema:</label>
+                
                 <select id="themeSelect" style="padding: 8px; border-radius: 4px;">
                     <option value="light">Ljust (Standard)</option>
                     <option value="dark">Mörkt (Dark Mode)</option>
-                    <option value="jul">Mörkt (Dark Mode)</option>
-                    <option value="pask">Mörkt (Dark Mode)</option>
-                    <option value="matrix">Mörkt (Dark Mode)</option>
+                    <option value="jul">Jultema (Rött & Guld)</option>
+                    <option value="pask">Påsktema (Pastell)</option>
+                    <option value="matrix">Matrix (Hacker)</option>
                 </select>
+            
+                <button id="saveThemeBtn" style="padding: 8px 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                    Spara tema
+                </button>
             </div>
             <div class="export-container">
                 <button id="printBtn" class="export-button">
@@ -81,6 +86,7 @@
 </body>
 
 </html>
+
 
 
 
