@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>STRUL - Ledningscentral</title>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="base.css">
     <link rel="stylesheet" href="login.css">
+    
     <script src="script.js" defer></script>
 </head>
 <body class="login-view" id="page-login">
@@ -46,4 +49,49 @@
                           <line x1="300" y1="210" x2="380" y2="210" />
 
                           <path d="M 300 120 C 250 120, 250 80, 200 100 C 150 120, 180 180, 220 150 C 260 120, 280 180, 300 150" />
-                          <path d="M 300 210 C 260 210, 240 250,
+                          <path d="M 300 210 C 260 210, 240 250, 200 220 C 160 190, 190 130, 230 160 C 270 190, 280 140, 300 180" />
+                          <path d="M 300 135 C 270 135, 150 150, 150 200 C 150 250, 250 250, 300 195" />
+                           <path d="M 180 120 C 140 140, 140 200, 180 220 C 220 240, 260 200, 220 180" />
+                      </g>
+
+                      <g stroke="#ff6600" stroke-width="3" fill="none" filter="url(#orangeGlow)" stroke-linecap="round">
+                          <path d="M 50 165 L 130 165 C 160 165, 130 100, 180 100 C 230 100, 200 230, 250 230 C 280 230, 260 165, 300 165 L 440 165" />
+                      </g>
+                  </g>
+
+                  <g transform="translate(480, 200)">
+                    <text font-family="'Inter', sans-serif" font-weight="900" font-size="80" fill="#ffffff" letter-spacing="4" filter="url(#blueGlow)">STRUL</text>
+                    <text x="5" y="45" font-family="'JetBrains Mono', monospace" font-size="14" fill="#00a8ff" letter-spacing="1">
+                      STRATEGISK TIDSPLANERING &amp;
+                    </text>
+                      <text x="5" y="65" font-family="'JetBrains Mono', monospace" font-size="14" fill="#00a8ff" letter-spacing="1">
+                      RESURSUTNYTTJANDE
+                    </text>
+                  </g>
+                </svg>
+            </div>
+
+            <div class="form-section">
+                <div class="input-wrapper">
+                    <input type="text" id="usernameInput" placeholder="ANVÄNDARNAMN" autocomplete="off" style="margin-bottom: 15px;">
+                    
+                    <input type="password" id="passwordInput" placeholder="LÖSENORD" autocomplete="off">
+                    
+                    <div class="input-status"></div>
+                </div>
+
+                <button id="loginBtn" class="login-btn">
+                    <span>LOGGA IN</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+            </div>
+
+            <div class="footer-links">
+                <a href="display.html" class="display-link">[ VISA STATUSSKÄRM ]</a>
+            </div>
+
+        </div> <div class="scan-lines"></div>
+    </div>
+
+</body>
+</html>
