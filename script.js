@@ -188,61 +188,72 @@ document.addEventListener('DOMContentLoaded', async () => {
 /* =========================================
    5. LOGIN & LOGOUT
    ========================================= */
+/* =========================================
+   LOGIN-HANTERING (Databas)
+   ========================================= */
+
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
+    const usernameInput = document.getElementById('usernameInput'); 
     const passwordInput = document.getElementById('passwordInput');
 
-    if (!loginBtn || !passwordInput) return;
+    if (!loginBtn || !passwordInput || !usernameInput) return;
 
     const performLogin = async () => {
+        const username = usernameInput.value.trim();
         const password = passwordInput.value.trim();
         
-        if (!password) {
-            passwordInput.style.borderColor = "#ff6b6b";
-            setTimeout(() => passwordInput.style.borderColor = "#eee", 500);
+        if (!username || !password) {
+            alert("Ange både användarnamn och lösenord.");
             return;
         }
 
         const originalText = loginBtn.innerText;
-        loginBtn.innerText = "Kontrollerar...";
+        loginBtn.innerText = "Hämtar användare...";
         loginBtn.disabled = true;
 
         try {
-            const response = await fetch('/api/data-api', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${password}`
-                },
-                body: JSON.stringify({ type: 'verify', data: {} })
-            });
+            // 1. Hämta listan med administratörer från Databasen
+            let adminList = await fetchData('admin_accounts');
 
-            if (response.ok) {
-                sessionStorage.setItem('adminPassword', password);
+            // --- SÄKERHETS-FALLBACK (Om databasen är tom första gången) ---
+            if (!adminList || Array.isArray(adminList) === false || adminList.length === 0) {
+                console.log("Databasen saknar admins. Använder nöd-konto.");
+                // Detta konto fungerar BARA om databasen är helt tom på admins
+                adminList = [{ user: "admin", pass: "start123" }];
+            }
+            // -------------------------------------------------------------
+
+            // 2. Kontrollera om inmatade uppgifter matchar någon i listan
+            const validAccount = adminList.find(account => 
+                account.user.toLowerCase() === username.toLowerCase() && 
+                account.pass === password
+            );
+
+            if (validAccount) {
+                // Spara session
+                sessionStorage.setItem('adminUser', validAccount.user);
+                sessionStorage.setItem('adminPassword', validAccount.pass);
+                
                 window.location.href = "admin.html";
             } else {
-                alert("Fel lösenord!");
+                alert("Fel användarnamn eller lösenord!");
                 passwordInput.value = "";
-                passwordInput.focus();
                 passwordInput.style.borderColor = "#ff6b6b";
             }
+
         } catch (error) {
             console.error("Login error:", error);
-            alert("Kunde inte nå servern. Kontrollera din anslutning.");
+            alert("Kunde inte nå databasen.");
         } finally {
             loginBtn.innerText = originalText;
             loginBtn.disabled = false;
         }
     };
 
-    loginBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        performLogin();
-    });
-
-    passwordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') performLogin();
-    });
+    loginBtn.addEventListener('click', (e) => { e.preventDefault(); performLogin(); });
+    passwordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performLogin(); });
+    usernameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performLogin(); });
 }
 
 function initLogout() {
@@ -836,6 +847,7 @@ function getScheduleHtmlForPrint() {
     
     return htmlContent;
 }
+
 
 
 
