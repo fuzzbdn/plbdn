@@ -61,30 +61,33 @@
                     </div>
             </div>
             
-            <div class="export-container" style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-                
-                <span style="font-weight:bold; color:#444;">Tema:</span>
-                <select id="themeSelect" style="padding: 10px; border-radius: 4px; border: 1px solid #ccc; background: #fff; cursor: pointer; height: 100%; font-family: inherit;">
-                    <option value="light">Ljust (Standard)</option>
-                    <option value="dark">Mörkt (Dark Mode)</option>
-                    <option value="jul">Norrsken (Aurora)</option>
-                    <option value="pask">Påsktema (Pastell)</option>
-                    <option value="matrix">Matrix (Hacker)</option>
-                </select>
+<div class="export-container" style="display: flex; align-items: center; justify-content: space-between; margin-top: 20px;">
+    
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-weight:bold; color:#444;">Tema:</span>
+        <select id="themeSelect" style="padding: 10px; border-radius: 4px; border: 1px solid #ccc; background: #fff; cursor: pointer; height: 100%; font-family: inherit;">
+            <option value="light">Ljust (Standard)</option>
+            <option value="dark">Mörkt (Dark Mode)</option>
+            <option value="jul">Norrsken (Aurora)</option>
+            <option value="pask">Påsktema (Pastell)</option>
+            <option value="matrix">Matrix (Hacker)</option>
+        </select>
 
-                <button id="saveThemeBtn" class="export-button" style="margin-left: 0;">
-                    Spara tema
-                </button>
+        <button id="saveThemeBtn" class="export-button" style="margin-left: 0;">
+            Spara tema
+        </button>
+    </div>
 
-                <button id="printBtn" class="export-button">
-                    🖨️ Skriv ut
-                </button>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <button id="printBtn" class="export-button">
+            🖨️ Skriv ut
+        </button>
 
-                <button id="exportBtn" class="export-button">
-                    📷 Spara som bild
-                </button>
-            </div>
-        </div>
+        <button id="exportBtn" class="export-button">
+            📷 Spara som bild
+        </button>
+    </div>
+</div>
     </div>
 
 </div>
@@ -93,3 +96,4 @@
 
 </body>
 </html>
+
