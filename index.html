@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>STRUL - Logga in</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
 </head>
@@ -13,48 +13,40 @@
         <div class="login-card">
             <div class="login-header">
                 <div class="icon-bg logo-container">
-                    <svg class="strul-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3" fill="rgba(2, 119, 189, 0.1)"></circle>
-                        <path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"></path>
+                   <svg class="strul-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12,2C6.5,2,2,6.5,2,12s4.5,10,10,10s10-4.5,10-10S17.5,2,12,2z M12,20c-4.4,0-8-3.6-8-8s3.6-8,8-8s8,3.6,8,8 S16.4,20,12,20z" opacity="0.5"/>
+                        <path d="M12.5,7H11v6l5.2,3.2l0.8-1.3l-4.5-2.7V7z" opacity="0.5"/>
                         
-                        <path d="M12 9V4"></path>
-                        <circle cx="12" cy="3" r="2"></circle>
-                        
-                        <path d="M12 15v5"></path>
-                        <circle cx="12" cy="21" r="2"></circle>
-                        
-                        <path d="M9 12H4"></path>
-                        <circle cx="3" cy="12" r="2"></circle>
-                        
-                        <path d="M15 12h5"></path>
-                        <circle cx="21" cy="12" r="2"></circle>
-                        
-                        <path d="M14.5 10.5l3 -3"></path>
-                        <circle cx="18.5" cy="6.5" r="1.5"></circle>
-                        
-                        <path d="M9.5 13.5l-3 3"></path>
-                        <circle cx="5.5" cy="17.5" r="1.5"></circle>
+                        <path d="M16,11c0-1.5-1.1-2.8-2.6-3.3C13.1,6.7,12.6,6,12,6c-0.6,0-1.1,0.7-1.4,1.7C9.1,8.2,8,9.5,8,11v3c0,1,0.6,1.9,1.5,2.5 C9.2,17.4,9,18.2,9,19c0,0.6,0.4,1,1,1h4c0.6,0,1-0.4,1-1c0-0.8-0.2-1.6-0.5-2.5c0.9-0.5,1.5-1.5,1.5-2.5V11z M10,16.5 C9.7,16.5,9.5,16.3,9.5,16c0-0.3,0.2-0.5,0.5-0.5s0.5,0.2,0.5,0.5C10.5,16.3,10.3,16.5,10,16.5z M14,16.5c-0.3,0-0.5-0.2-0.5-0.5 c0-0.3,0.2-0.5,0.5-0.5s0.5,0.2,0.5,0.5C14.5,16.3,14.3,16.5,14,16.5z M14.5,13h-5v-2h5V13z"/>
+                        <path d="M10,18.8c-0.4,0.1-0.8,0.2-1.2,0.2C8.2,19,7,19.4,7,20h10c0-0.6-1.2-1-1.8-1c-0.4,0-0.8-0.1-1.2-0.2"/>
                     </svg>
                 </div>
                 
                 <h1 class="strul-title">STRUL</h1>
                 <p class="strul-desc">Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen</p>
-                
             </div>
             
             <div class="login-form">
-                <div class="input-group">
-                    <input type="password" id="passwordInput" placeholder="Ange admin-lösenord">
+                <div class="input-group password-group">
+                    <input type="password" id="passwordInput" placeholder="Ange lösenord">
                 </div>
                 
-                <button id="loginBtn" class="action-btn primary">Logga in</button>
+                <button id="loginBtn" class="action-btn primary">
+                    <span>Logga in</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="btn-icon">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
                 
                 <div class="divider">
                     <span>ELLER</span>
                 </div>
 
-                <a href="display.html" class="action-btn secondary">📺 Visa Schema (Display)</a>
+                <a href="display.html" class="action-btn secondary">Visa Schema (Display)</a>
             </div>
+        </div>
+        <div class="login-footer">
+            © 2024 STRUL Ledningssystem. Alla rättigheter förbehållna.
         </div>
     </div>
 </body>
