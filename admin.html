@@ -12,15 +12,16 @@
 </head>
 <body class="admin-view" id="page-admin">
 <div class="admin-wrapper">
-<header class="admin-header">
-    <div class="header-content">
-        <h1>Adminpanel</h1>
-        <button id="logoutBtn" class="logout-btn">
-            Logga ut
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-        </button>
-    </div>
-</header>
+    
+    <header class="admin-header">
+        <div class="header-content">
+            <h1>Adminpanel</h1>
+            <button id="logoutBtn" class="logout-btn">
+                Logga ut
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            </button>
+        </div>
+    </header>
 
     <div class="controls-bar">
         <div class="week-nav-container">
@@ -32,49 +33,53 @@
         <div class="nav-days-container">
             <div class="nav-days" id="weekNav"></div>
         </div>
+        <div id="currentDateDisplay"></div>
     </div>
 
     <div class="admin-layout">
         
-<div class="sidebar-roster">
-    <div class="roster-card">
-        <h3>Personal</h3>
-        
-        <div class="sidebar-add-row">
-            <input type="text" id="sidebarNewName" placeholder="Namn..." class="sidebar-input">
-            <button id="sidebarAddBtn" class="sidebar-add-btn">+</button>
+        <div class="sidebar-roster">
+            <div class="roster-card">
+                <h3>Personal</h3>
+                
+                <div class="sidebar-add-row">
+                    <input type="text" id="sidebarNewName" placeholder="Namn..." class="sidebar-input">
+                    <button id="sidebarAddBtn" class="sidebar-add-btn">+</button>
+                </div>
+
+                <p class="roster-hint">Dra namn till schemat</p>
+                
+                <div id="draggableUserList" class="roster-list">
+                    </div>
+            </div>
         </div>
 
-        <p class="roster-hint">Dra namn till schemat</p>
-        
-        <div id="draggableUserList" class="roster-list">
-            </div>
-    </div>
-</div>
-
         <div class="schedule-card-wrapper">
+            
             <div class="schedule-card">
-                <div class="grid-container" id="scheduleContainer"></div>
+                <div class="grid-container" id="scheduleContainer">
+                    </div>
             </div>
-            <div class="theme-selector" style="margin-left: 20px; display:inline-flex; align-items:center; gap: 10px;">
-                <label for="themeSelect" style="font-weight:bold;">Skärmtema:</label>
+            
+            <div class="export-container" style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 20px;">
                 
-                <select id="themeSelect" style="padding: 8px; border-radius: 4px;">
+                <span style="font-weight:bold; color:#444;">Tema:</span>
+                <select id="themeSelect" style="padding: 10px; border-radius: 4px; border: 1px solid #ccc; background: #fff; cursor: pointer; height: 100%; font-family: inherit;">
                     <option value="light">Ljust (Standard)</option>
                     <option value="dark">Mörkt (Dark Mode)</option>
-                    <option value="jul">Jultema (Rött & Guld)</option>
+                    <option value="jul">Norrsken (Aurora)</option>
                     <option value="pask">Påsktema (Pastell)</option>
                     <option value="matrix">Matrix (Hacker)</option>
                 </select>
-            
-                <button id="saveThemeBtn" style="padding: 8px 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+
+                <button id="saveThemeBtn" class="export-button" style="margin-left: 0;">
                     Spara tema
                 </button>
-            </div>
-            <div class="export-container">
+
                 <button id="printBtn" class="export-button">
                     🖨️ Skriv ut
                 </button>
+
                 <button id="exportBtn" class="export-button">
                     📷 Spara som bild
                 </button>
@@ -83,10 +88,8 @@
     </div>
 
 </div>
+
+<div id="print-container"></div>
+
 </body>
-
 </html>
-
-
-
-
