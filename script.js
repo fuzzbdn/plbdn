@@ -302,26 +302,21 @@ async function initThemeSelector() {
     } catch(e) { console.log("Inga sparade inställningar än"); }
 
     // 2. Spara när man klickar på knappen (inte vid 'change')
-    saveBtn.addEventListener('click', async () => {
-        const newTheme = select.value;
-        const currentSettings = (await fetchData('settings')) || {};
-        
-        // Uppdatera objektet
-        currentSettings.theme = newTheme;
-        
-        // Spara till databasen
-        await saveData('settings', currentSettings);
-        
-        // Visuell feedback till användaren
-        const originalText = saveBtn.innerText;
-        saveBtn.innerText = "Sparat!";
-        saveBtn.style.backgroundColor = "#45a049";
-        
-        setTimeout(() => {
-            saveBtn.innerText = originalText;
-            saveBtn.style.backgroundColor = "#4CAF50";
-        }, 2000);
-    });
+/* Liten justering i event-lyssnaren i script.js */
+saveBtn.addEventListener('click', async () => {
+    // ... (din spar-kod här) ...
+    await saveData('settings', currentSettings);
+    
+    // Visuell feedback
+    const originalText = saveBtn.innerText;
+    saveBtn.innerText = "Sparat!";
+    saveBtn.style.backgroundColor = "#4CAF50"; // Bli grön temporärt
+    
+    setTimeout(() => {
+        saveBtn.innerText = originalText;
+        saveBtn.style.backgroundColor = ""; // Återgå till CSS-standard (mörkgrå)
+    }, 2000);
+});
 }
 
 function setupSidebarAddUser() {
@@ -822,4 +817,5 @@ function getScheduleHtmlForPrint() {
     
     return htmlContent;
 }
+
 
