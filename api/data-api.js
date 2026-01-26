@@ -8,11 +8,11 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Din hemliga nyckel
-const JWT_SECRET = process.env.JWT_SECRET || "hemlig_nyckel_12345";
+// Din hemliga nyckel (läggs helst i Vercel Environment Variables)
+const JWT_SECRET = process.env.JWT_SECRET || "en_hemlig_nyckel_som_ingen_kan_gissa_12345";
 
 module.exports = async function handler(req, res) {
-  // CORS-headers
+  // --- 1. CORS-headers ---
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
@@ -30,28 +30,34 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET') {
       const { type } = req.query;
 
-      // Hämta admins (Kräver token)
+      // HÄMTA ADMINS (Skyddad rutt - kräver inloggning)
       if (type === 'admins') {
           const authHeader = req.headers.authorization;
           const token = authHeader && authHeader.split(' ')[1];
+          
           if (!token) return res.status(401).json({ error: "Ingen behörighet" });
           
           try {
               jwt.verify(token, JWT_SECRET);
-              const result = await pool.query('SELECT username FROM admin_users');
+              
+              // Hämta username, förnamn och efternamn (Sorterat A-Ö)
+              const result = await pool.query('SELECT username, first_name, last_name FROM admin_users ORDER BY username ASC');
               return res.status(200).json(result.rows);
           } catch (err) {
               return res.status(403).json({ error: "Ogiltig session" });
           }
       }
       
-      // Hämta publik data (Schema etc.)
+      // HÄMTA PUBLIK DATA (Schema, settings, personal, meddelande)
       const result = await pool.query('SELECT data FROM app_storage WHERE key = $1', [type]);
+      
       if (result.rows.length > 0) {
         return res.status(200).json(result.rows[0].data);
       } else {
+        // Standardvärden om inget finns
         if (type === 'settings') return res.status(200).json({ theme: 'light' });
         if (type === 'users') return res.status(200).json([]);
+        if (type === 'message') return res.status(200).json({ text: '', show: false });
         return res.status(200).json({});
       }
     }
@@ -64,10 +70,6 @@ module.exports = async function handler(req, res) {
 
       // --- LOGGA IN ---
       if (action === 'login') {
-        
-      
-
-        // Vanlig inloggning för andra användare
         const result = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username]);
         const user = result.rows[0];
 
@@ -76,11 +78,12 @@ module.exports = async function handler(req, res) {
         const validPass = await bcrypt.compare(password, user.password);
         if (!validPass) return res.status(401).json({ success: false, error: "Fel användarnamn/lösenord" });
 
+        // Skapa säker token
         const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
         return res.status(200).json({ success: true, token: token, user: user.username });
       }
 
-      // --- HÄRIFRÅN KRÄVS TOKEN (Spara schema, skapa ny admin) ---
+      // --- AUTENTISERINGSKONTROLL (Krävs för allt nedanför) ---
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.split(' ')[1];
       let decodedUser = null;
@@ -92,24 +95,33 @@ module.exports = async function handler(req, res) {
           return res.status(401).json({ error: "Session utlöpt" });
       }
 
-      // SKAPA NY ADMIN
+      // --- SKAPA NY ADMIN (Nu med För- och Efternamn) ---
       if (action === 'add_admin') {
+          // Hämta namn från anropet
+          const { firstName, lastName } = req.body;
+
           const salt = await bcrypt.genSalt(10);
           const hashedPassword = await bcrypt.hash(password, salt);
+          
           try {
-              await pool.query('INSERT INTO admin_users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
+              await pool.query(
+                  'INSERT INTO admin_users (username, password, first_name, last_name) VALUES ($1, $2, $3, $4)', 
+                  [username, hashedPassword, firstName, lastName]
+              );
               return res.status(200).json({ success: true });
-          } catch (e) { return res.status(400).json({ error: "Användare finns redan" }); }
+          } catch (e) { 
+              return res.status(400).json({ error: "Användaren finns redan" }); 
+          }
       }
 
-      // TA BORT ADMIN
+      // --- TA BORT ADMIN ---
       if (action === 'remove_admin') {
           if (decodedUser.username === username) return res.status(400).json({ error: "Kan ej radera sig själv" });
           await pool.query('DELETE FROM admin_users WHERE username = $1', [username]);
           return res.status(200).json({ success: true });
       }
 
-      // SPARA SCHEMA/DATA
+      // --- SPARA DATA (Schema, Settings, Meddelande etc) ---
       if (type && data) {
           await pool.query(
             `INSERT INTO app_storage (key, data) VALUES ($1, $2) 
@@ -126,8 +138,6 @@ module.exports = async function handler(req, res) {
 
   } catch (error) {
     console.error("API Error:", error);
-    // Detta hjälper dig se om tabeller saknas
     return res.status(500).json({ error: "Serverfel: " + error.message });
   }
 };
-
