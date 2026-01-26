@@ -179,8 +179,9 @@ async function initSettings(currentSettings) {
             
             const editBtn = st.isSpacer ? '' : `<button class="list-btn" onclick="startEditStation(${i})">✏️</button>`;
 
+            // HÄR ÄR ÄNDRINGEN (Location 1): background:#fff istället för #f9f9f9
             return `
-                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; align-items:center; ${st.isSpacer?'background:#f9f9f9;color:#888;':''}">
+                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; align-items:center; ${st.isSpacer?'background:#fff;color:#888;':''}">
                     <div style="display:flex; align-items:center;">
                         ${upBtn} ${downBtn}
                         <span style="margin-left:10px;">${content}</span>
@@ -423,7 +424,8 @@ function renderAdminGrid() {
     let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${s.time}</div>`).join('')}</div>`;
 
     globalStations.forEach(st => {
-        if(st.isSpacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#f5f5f5;"></div>`; return; }
+        // HÄR ÄR ÄNDRINGEN (Location 2): background:#fff istället för #f5f5f5
+        if(st.isSpacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#fff;"></div>`; return; }
         
         html += `<div class="station-row"><div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
         globalShifts.forEach(sh => {
