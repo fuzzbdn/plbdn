@@ -4,37 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Bemanningsplanering</title>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="base.css">
     <link rel="stylesheet" href="admin.css">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="script.js" defer></script>
 </head>
 <body class="admin-view" id="page-admin">
+
 <div class="admin-wrapper">
     
-<header class="admin-header">
+    <header class="admin-header">
         <div class="header-content">
-            <div style="display:flex; align-items:center; gap:25px;">
+            
+            <div style="display:flex; align-items:center; gap:20px;">
                 <h1>Adminpanel</h1>
-                <div class="header-datepicker">
-                    <label for="adminDatePicker">Planeringsdatum:</label>
+                <div class="header-datepicker" style="display:flex; align-items:center; gap:10px;">
+                    <label for="adminDatePicker" style="font-size:0.9rem; color:#666;">Planeringsdatum:</label>
                     <input type="date" id="adminDatePicker">
                 </div>
             </div>
+
+            <div id="currentDateDisplay" style="font-size: 1.2rem; font-weight: 800; color: #333;"></div>
             
             <div style="display:flex; align-items:center; gap:15px;">
-                <span id="currentUserDisplay" style="font-weight:600; color:#555;"></span>
+                <span id="currentUserDisplay" style="font-weight:500; color:#555;"></span>
                 <button id="logoutBtn" class="logout-btn">Logga ut</button>
             </div>
+
         </div>
     </header>
 
-    <div class="status-bar">
-        <div id="currentDateDisplay"></div>
-    </div>
-
-    <div class="admin-layout">
+    <div class="admin-layout" style="margin-top: 20px;">
+        
         <aside class="sidebar-roster">
             <div class="roster-card">
                 <h3>Personal</h3>
@@ -57,17 +61,16 @@
                 </div>
                 <div class="action-buttons">
                     <button id="publishBtn" class="export-button" style="background-color: #2e7d32;">📡 Publicera</button>
-                    
                     <button id="printBtn" class="export-button">🖨️ Skriv ut</button>
                     <button id="exportBtn" class="export-button">📷 Spara som bild</button>
                 </div>
             </footer>
         </main>
+
     </div>
 </div>
+
 <div id="print-container"></div>
+
 </body>
 </html>
-
-
-
