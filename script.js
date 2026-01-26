@@ -23,6 +23,7 @@ let globalStations = [], globalShifts = [];
 let selectedWeek = 0, selectedYear = 0, currentAdminDayIndex = 0;
 let globalScheduleData = {}, globalUserList = [];
 
+// Edit-variabler
 let editingStationIndex = null;
 let editingShiftIndex = null;
 let editingAdminId = null;
@@ -114,7 +115,6 @@ function initLogin() {
 
     if(loginBtn) loginBtn.onclick = doLogin;
     
-    // FIX: Enter fungerar i båda fälten
     const handleEnter = (e) => { if(e.key==='Enter') doLogin(); };
     if(userIn) userIn.onkeydown = handleEnter;
     if(passIn) passIn.onkeydown = handleEnter;
@@ -143,7 +143,7 @@ function initReset() {
 }
 
 /* =========================================
-   5. INSTÄLLNINGAR (MED SORTERING & EDIT)
+   5. INSTÄLLNINGAR
    ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
@@ -158,7 +158,7 @@ async function initSettings(currentSettings) {
     if(msg) { msgIn.value = msg.text||""; msgCheck.checked = msg.show||false; }
     document.getElementById('saveMessageBtn').onclick = () => saveData('message', { text: msgIn.value, show: msgCheck.checked });
 
-    // --- PLATSER (STATIONER) ---
+    // STATIONER
     const stName = document.getElementById('newStationName');
     const stColor = document.getElementById('newStationColor');
     const stBtn = document.getElementById('addStationBtn');
@@ -169,38 +169,30 @@ async function initSettings(currentSettings) {
         if(!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
         
         cont.innerHTML = globalStations.map((st, i) => {
-            const upBtn = i > 0 ? `<button class="list-btn" onclick="moveStation(${i}, -1)" title="Flytta upp">⬆️</button>` : `<span style="display:inline-block;width:28px;"></span>`;
-            const downBtn = i < globalStations.length - 1 ? `<button class="list-btn" onclick="moveStation(${i}, 1)" title="Flytta ner">⬇️</button>` : `<span style="display:inline-block;width:28px;"></span>`;
+            const upBtn = i>0 ? `<button class="list-btn" onclick="moveStation(${i},-1)">⬆️</button>` : `<span style="width:28px;display:inline-block;"></span>`;
+            const downBtn = i<globalStations.length-1 ? `<button class="list-btn" onclick="moveStation(${i},1)">⬇️</button>` : `<span style="width:28px;display:inline-block;"></span>`;
             
-            const content = st.isSpacer 
-                ? `<i>--- Mellanrum ---</i>` 
-                : `<div style="display:flex; align-items:center; gap:10px;"><div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc;"></div><strong>${st.name}</strong></div>`;
-            
-            const editBtn = st.isSpacer ? '' : `<button class="list-btn" onclick="startEditStation(${i})">✏️</button>`;
-
+            if(st.isSpacer) return `
+                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; background:#f9f9f9; color:#888; align-items:center;">
+                    <div>${upBtn} ${downBtn} <i>--- Mellanrum ---</i></div>
+                    <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
+                </div>`;
             return `
-                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; align-items:center; ${st.isSpacer?'background:#f9f9f9;color:#888;':''}">
-                    <div style="display:flex; align-items:center;">
+                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:10px;">
                         ${upBtn} ${downBtn}
-                        <span style="margin-left:10px;">${content}</span>
+                        <div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc;"></div>
+                        <strong>${st.name}</strong>
                     </div>
-                    <div>
-                        ${editBtn}
-                        <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
-                    </div>
+                    <div><button class="list-btn" onclick="startEditStation(${i})">✏️</button><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div>
                 </div>`;
         }).join('');
     };
 
-    window.moveStation = async (index, direction) => {
-        const newIndex = index + direction;
-        if (newIndex < 0 || newIndex >= globalStations.length) return;
-        
-        // Byt plats i arrayen
-        const temp = globalStations[index];
-        globalStations[index] = globalStations[newIndex];
-        globalStations[newIndex] = temp;
-        
+    window.moveStation = async (index, dir) => {
+        const newIdx = index + dir;
+        if(newIdx < 0 || newIdx >= globalStations.length) return;
+        [globalStations[index], globalStations[newIdx]] = [globalStations[newIdx], globalStations[index]];
         await saveData('config_stations', globalStations);
         renderStations();
     };
@@ -210,14 +202,11 @@ async function initSettings(currentSettings) {
         stName.value = globalStations[i].name;
         stColor.value = globalStations[i].color;
         stBtn.innerText = "💾";
-        stBtn.style.background = "#2196F3"; // Blå för editering, grön annars
+        stBtn.style.background = "#2196F3";
         stCancel.style.display = "block";
     };
 
-    const resetSt = () => {
-        editingStationIndex = null; stName.value = ""; stBtn.innerText = "+"; stBtn.style.background = ""; // Återgår till CSS-klassen (grön)
-        stCancel.style.display = "none";
-    };
+    const resetSt = () => { editingStationIndex = null; stName.value = ""; stBtn.innerText = "+"; stBtn.style.background = ""; stCancel.style.display = "none"; };
     stCancel.onclick = resetSt;
 
     stBtn.onclick = async () => {
@@ -226,8 +215,7 @@ async function initSettings(currentSettings) {
         if(editingStationIndex !== null) globalStations[editingStationIndex] = item;
         else globalStations.push(item);
         await saveData('config_stations', globalStations);
-        resetSt();
-        renderStations();
+        resetSt(); renderStations();
     };
 
     document.getElementById('addSpacerBtn').onclick = async () => {
@@ -236,15 +224,10 @@ async function initSettings(currentSettings) {
         renderStations();
     };
 
-    window.deleteStation = async (i) => {
-        if(!confirm("Ta bort?")) return;
-        globalStations.splice(i, 1);
-        await saveData('config_stations', globalStations);
-        renderStations();
-    };
+    window.deleteStation = async (i) => { if(confirm("Ta bort?")) { globalStations.splice(i, 1); await saveData('config_stations', globalStations); renderStations(); }};
     renderStations();
 
-    // --- PASS (SHIFTS) ---
+    // PASS
     const shLabel = document.getElementById('newShiftLabel');
     const shTime = document.getElementById('newShiftTime');
     const shBtn = document.getElementById('addShiftBtn');
@@ -255,47 +238,29 @@ async function initSettings(currentSettings) {
         document.getElementById('shiftListContainer').innerHTML = globalShifts.map((sh, i) => `
             <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee;">
                 <div><strong>${sh.label}</strong> <span style="color:#666;">(${sh.time})</span></div>
-                <div>
-                    <button class="list-btn" onclick="startEditShift(${i})">✏️</button>
-                    <button class="list-btn" onclick="deleteShift(${i})">🗑️</button>
-                </div>
+                <div><button class="list-btn" onclick="startEditShift(${i})">✏️</button><button class="list-btn" onclick="deleteShift(${i})">🗑️</button></div>
             </div>`).join('');
     };
 
     window.startEditShift = (i) => {
-        editingShiftIndex = i;
-        shLabel.value = globalShifts[i].label;
-        shTime.value = globalShifts[i].time;
-        shBtn.innerText = "Spara";
-        shBtn.style.background = "#2196F3";
-        shCancel.style.display = "block";
+        editingShiftIndex = i; shLabel.value = globalShifts[i].label; shTime.value = globalShifts[i].time;
+        shBtn.innerText = "Spara"; shBtn.style.background = "#2196F3"; shCancel.style.display = "block";
     };
 
-    const resetSh = () => {
-        editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = ""; // Återgår till grön
-        shCancel.style.display = "none";
-    };
+    const resetSh = () => { editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = ""; shCancel.style.display = "none"; };
     shCancel.onclick = resetSh;
 
     shBtn.onclick = async () => {
         if(!shLabel.value || !shTime.value) return alert("Fyll i allt");
         const item = { label: shLabel.value, time: shTime.value };
-        if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item;
-        else globalShifts.push(item);
-        await saveData('config_shifts', globalShifts);
-        resetSh();
-        renderShifts();
+        if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item; else globalShifts.push(item);
+        await saveData('config_shifts', globalShifts); resetSh(); renderShifts();
     };
 
-    window.deleteShift = async (i) => {
-        if(!confirm("Ta bort?")) return;
-        globalShifts.splice(i, 1);
-        await saveData('config_shifts', globalShifts);
-        renderShifts();
-    };
+    window.deleteShift = async (i) => { if(confirm("Ta bort?")) { globalShifts.splice(i, 1); await saveData('config_shifts', globalShifts); renderShifts(); }};
     renderShifts();
 
-    // --- ADMINS ---
+    // ADMINS
     const admBtn = document.getElementById('addAdminBtn');
     const admCancel = document.getElementById('cancelAdminEditBtn');
     const admUser = document.getElementById('newAdminUser');
@@ -306,38 +271,24 @@ async function initSettings(currentSettings) {
 
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
-        if (!Array.isArray(admins)) admins = [];
-        document.getElementById('adminListContainer').innerHTML = admins.map(a => {
-            const json = JSON.stringify(a).replace(/"/g, '&quot;');
-            return `
+        if(!Array.isArray(admins)) admins = [];
+        document.getElementById('adminListContainer').innerHTML = admins.map(a => `
             <div style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
                 <span>${a.first_name||''} ${a.last_name||''} (${a.username})</span>
                 <div>
-                    <button class="list-btn" onclick="startEditAdmin(${json})">✏️</button>
+                    <button class="list-btn" onclick='startEditAdmin(${JSON.stringify(a).replace(/'/g,"&#39;")})'>✏️</button>
                     <button class="list-btn" onclick="deleteAdmin('${a.username}')">🗑️</button>
                 </div>
-            </div>`;
-        }).join('');
+            </div>`).join('');
     };
 
     window.startEditAdmin = (u) => {
-        editingAdminId = u.id;
-        admUser.value = u.username;
-        admFirst.value = u.first_name || "";
-        admLast.value = u.last_name || "";
-        admEmail.value = u.email || "";
-        admPass.placeholder = "Nytt lösen (valfritt)";
-        admPass.value = "";
-        
-        admBtn.innerText = "💾";
-        admBtn.style.background = "#2196F3";
-        admCancel.style.display = "block";
+        editingAdminId = u.id; admUser.value = u.username; admFirst.value = u.first_name||""; admLast.value = u.last_name||""; admEmail.value = u.email||"";
+        admPass.placeholder = "Nytt lösen (valfritt)"; admPass.value = "";
+        admBtn.innerText = "💾"; admBtn.style.background = "#2196F3"; admCancel.style.display = "block";
     };
 
-    const resetAdm = () => {
-        editingAdminId = null; admUser.value = ""; admPass.value = ""; admFirst.value = ""; admLast.value = ""; admEmail.value = "";
-        admPass.placeholder = "Lösenord"; admBtn.innerText = "+"; admBtn.style.background = ""; admCancel.style.display = "none";
-    };
+    const resetAdm = () => { editingAdminId = null; admUser.value = ""; admPass.value = ""; admFirst.value = ""; admLast.value = ""; admEmail.value = ""; admPass.placeholder = "Lösenord"; admBtn.innerText = "+"; admBtn.style.background = ""; admCancel.style.display = "none"; };
     admCancel.onclick = resetAdm;
 
     admBtn.onclick = async () => {
@@ -345,27 +296,20 @@ async function initSettings(currentSettings) {
         if(!u) return alert("Användarnamn krävs");
         const action = editingAdminId ? 'edit_admin' : 'add_admin';
         if(action === 'add_admin' && !p) return alert("Lösenord krävs");
-
-        await fetch('/api/data-api', { 
-            method:'POST', 
-            headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, 
+        await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, 
             body: JSON.stringify({action, username:u, password:p, firstName:admFirst.value, lastName:admLast.value, email:admEmail.value, id:editingAdminId}) 
         });
-        resetAdm();
-        renderAdmins();
+        resetAdm(); renderAdmins();
     };
 
-    window.deleteAdmin = async(u) => { 
-        if(confirm("Ta bort?")) await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) });
-        renderAdmins(); 
-    };
+    window.deleteAdmin = async(u) => { if(confirm("Ta bort admin?")) await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) }); renderAdmins(); };
     renderAdmins();
 
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
 }
 
 /* =========================================
-   6. ADMIN PLANERING & PRINT
+   6. ADMIN PLANERING
    ========================================= */
 async function initAdmin() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
@@ -373,7 +317,7 @@ async function initAdmin() {
     let draft = await fetchData('schedule_draft');
     const published = await fetchData('schedule_published');
     const old = await fetchData('schedule');
-    if(!draft || Object.keys(draft).length===0) draft = (published && Object.keys(published).length>0) ? published : old;
+    if(!draft || !Object.keys(draft).length) draft = (published && Object.keys(published).length) ? published : old;
     globalScheduleData = draft || {};
 
     document.getElementById('publishBtn').onclick = async () => {
@@ -395,12 +339,17 @@ async function initAdmin() {
     updateGrid(picker.value);
 
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
+    
+    // FIXAD: EXPORT BILD
     document.getElementById('exportBtn').onclick = generateImage;
     
+    // FIXAD: UTSKRIFT
     document.getElementById('printBtn').onclick = () => {
         const pc = document.getElementById('print-container') || document.createElement('div');
         pc.id = 'print-container';
         if(!document.body.contains(pc)) document.body.appendChild(pc);
+        
+        // HÄR ANVÄNDS DEN FIXADE FUNKTIONEN
         pc.innerHTML = getScheduleHtmlForPrint();
         window.print();
         setTimeout(() => pc.innerHTML='', 1000);
@@ -501,7 +450,7 @@ function initDisplay() {
 }
 
 /* =========================================
-   8. EXPORT & PRINT
+   8. EXPORT & PRINT (FIXAD FÖR SPARA/SKRIV UT)
    ========================================= */
 function getScheduleHtmlForPrint() {
     const dateText = document.getElementById('currentDateDisplay').innerText;
@@ -515,28 +464,61 @@ function getScheduleHtmlForPrint() {
     <div></div>${shifts.map(s=>`<div style="border:1px solid #000; padding:5px; background:#ddd;">${s.label}<br><span style="font-size:0.8em; font-weight:normal;">${s.time}</span></div>`).join('')}</div>`;
 
     stations.forEach(st => {
-        if(st.isSpacer) { html += `<div style="grid-column:1/-1; height:30px;"></div>`; return; }
-        const bg = st.color, fg = isLight(bg)?'#000':'#fff';
+        // VIKTIG FIX: Kontrollera spacer HÄR så den inte kraschar
+        if(st.isSpacer) { 
+            html += `<div style="grid-column:1/-1; height:30px;"></div>`; 
+            return; 
+        }
+        
+        // Hämta färger
+        const bg = st.color; 
+        const fg = isLight(bg)?'#000':'#fff';
+        
         html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length},1fr); gap:10px; margin-bottom:10px;">
             <div style="background:${bg}; color:${fg}; font-weight:bold; padding:10px; display:flex; align-items:center; justify-content:center; border:1px solid #000;">${st.name}</div>`;
+        
         shifts.forEach(sh => {
             const val = globalScheduleData[`${prefix}${st.name}-${sh.time}`] || "";
+            // Inline style för att garantera att det syns vid utskrift/bild
             html += `<div style="display:flex; align-items:center; justify-content:center; text-align:center; min-height:50px; padding:5px; font-weight:bold; border:1px solid #000; background:#fff;">${val}</div>`;
         });
         html += `</div>`;
     });
     return html + `</div>`;
 }
+
 function generateImage() {
-    const btn=document.getElementById('exportBtn'), txt=btn.innerText; btn.innerText="Genererar...";
-    const div=document.createElement('div'); div.style.cssText="position:absolute; top:-9999px; left:0; width:1200px; background:#fff;";
-    div.innerHTML=getScheduleHtmlForPrint(); document.body.appendChild(div);
-    if(typeof html2canvas==='undefined') return alert("Ladda om sidan");
+    const btn=document.getElementById('exportBtn'), txt=btn.innerText; 
+    btn.innerText="Genererar...";
+    
+    const div=document.createElement('div'); 
+    div.style.cssText="position:absolute; top:-9999px; left:0; width:1400px; background:#fff;";
+    
+    // Använd den fixade funktionen
+    div.innerHTML=getScheduleHtmlForPrint(); 
+    document.body.appendChild(div);
+
+    if(typeof html2canvas==='undefined') {
+        alert("Kunde inte ladda bildverktyget. Uppdatera sidan.");
+        btn.innerText = txt;
+        return;
+    }
+
     html2canvas(div,{scale:2}).then(c=>{
-        const a=document.createElement('a'); a.download=`Schema-${days[currentAdminDayIndex]}.jpg`; a.href=c.toDataURL('image/jpeg',0.9); a.click();
-        document.body.removeChild(div); btn.innerText=txt;
+        const a=document.createElement('a'); 
+        a.download=`Schema-${days[currentAdminDayIndex]}.jpg`; 
+        a.href=c.toDataURL('image/jpeg',0.9); 
+        a.click();
+        document.body.removeChild(div); 
+        btn.innerText=txt;
+    }).catch(e => {
+        console.error(e);
+        alert("Ett fel uppstod vid bildgenerering.");
+        btn.innerText=txt;
+        document.body.removeChild(div);
     });
 }
+
 function getISOWeek(d) { const date=new Date(d.getTime()); date.setHours(0,0,0,0); date.setDate(date.getDate()+3-(date.getDay()+6)%7); const w1=new Date(date.getFullYear(),0,4); return {week:1+Math.round(((date.getTime()-w1.getTime())/86400000-3+(w1.getDay()+6)%7)/7), year:date.getFullYear()}; }
 function setupSidebarAddUser() {
     const btn=document.getElementById('sidebarAddBtn'), inp=document.getElementById('sidebarNewName');

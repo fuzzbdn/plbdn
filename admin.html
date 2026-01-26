@@ -22,15 +22,15 @@
             <div style="display:flex; align-items:center; gap:20px;">
                 <h1>Adminpanel</h1>
                 <div class="header-datepicker" style="display:flex; align-items:center; gap:10px;">
-                    <label for="adminDatePicker" style="font-size:0.9rem; color:#666;">Planeringsdatum:</label>
+                    <label for="adminDatePicker" style="font-size:0.9rem; opacity:0.7;">Planeringsdatum:</label>
                     <input type="date" id="adminDatePicker">
                 </div>
             </div>
 
-            <div id="currentDateDisplay" style="font-size: 1.2rem; font-weight: 800; color: #333;"></div>
+            <div id="currentDateDisplay" style="font-size: 1.2rem; font-weight: 800; color: var(--text-color);"></div>
             
             <div style="display:flex; align-items:center; gap:15px;">
-                <span id="currentUserDisplay" style="font-weight:500; color:#555;"></span>
+                <span id="currentUserDisplay" style="font-weight:500; opacity:0.8;"></span>
                 <button id="logoutBtn" class="logout-btn">Logga ut</button>
             </div>
 
@@ -55,7 +55,7 @@
                 <div class="grid-container" id="scheduleContainer"></div>
             </div>
             
-            <footer class="export-container" style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
+            <footer class="export-container">
                 <div class="left-actions">
                     <a href="settings.html" class="export-button" style="text-decoration:none; background:#555;">⚙️ Inställningar</a>
                 </div>
@@ -71,6 +71,7 @@
 </div>
 
 <div id="print-container"></div>
+<div id="toast">Meddelande</div>
 
 </body>
 </html>
