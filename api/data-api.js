@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 
+// Koppling till Neon (hämtas från Environment Variables)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -9,7 +10,7 @@ const pool = new Pool({
 const MASTER_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
 module.exports = async function handler(req, res) {
-  // CORS-headers
+  // CORS-headers (Låter frontend prata med backend)
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
@@ -32,7 +33,7 @@ module.exports = async function handler(req, res) {
       if (result.rows.length > 0) {
         return res.status(200).json(result.rows[0].data);
       } else {
-        // Standardvärden
+        // Standardvärden om inget finns sparat
         if (type === 'settings') return res.status(200).json({ theme: 'light' });
         if (type === 'users') return res.status(200).json([]); // Personal
         if (type === 'admins') return res.status(200).json([]); // Admins
@@ -41,12 +42,12 @@ module.exports = async function handler(req, res) {
     }
 
     // ==========================================
-    // 2. POST (SPARA & LOGIN) - Skyddat
+    // 2. POST (SPARA & LOGIN)
     // ==========================================
     if (req.method === 'POST') {
       const { action, username, password, type, data } = req.body;
 
-      // --- SCENARIO A: INLOGGNING ---
+      // --- SCENARIO A: INLOGGNING (Kräver ingen token) ---
       if (action === 'login') {
         // 1. Kolla master-lösenordet först (alltid giltigt)
         if (password === MASTER_PASSWORD) {
@@ -55,27 +56,30 @@ module.exports = async function handler(req, res) {
 
         // 2. Kolla databasen efter matchande användare
         const dbRes = await pool.query("SELECT data FROM app_storage WHERE key = 'admins'");
-        const admins = dbRes.rows.length > 0 ? dbRes.rows[0].data : [];
+        // Om 'admins' raden inte finns, eller är tom, sätt en tom array
+        const admins = (dbRes.rows.length > 0) ? dbRes.rows[0].data : [];
         
-        // Hitta matchning (användarnamn OCH lösenord)
-        const validUser = admins.find(a => a.username === username && a.password === password);
-
-        if (validUser) {
-            return res.status(200).json({ success: true, user: validUser.username });
-        } else {
-            return res.status(401).json({ success: false, error: "Fel användarnamn eller lösenord" });
+        // Säkerställ att admins verkligen är en array innan vi söker
+        if (Array.isArray(admins)) {
+            const validUser = admins.find(a => a.username === username && a.password === password);
+            if (validUser) {
+                return res.status(200).json({ success: true, user: validUser.username });
+            }
         }
+
+        // Inget matchade
+        return res.status(401).json({ success: false, error: "Fel användarnamn eller lösenord" });
       }
 
-      // --- SCENARIO B: SPARA DATA (Kräver token/lösenord) ---
+      // --- SCENARIO B: SPARA DATA (Kräver inloggning/token) ---
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.split(' ')[1]; // "Bearer <lösenord>"
 
       if (!token) {
-          return res.status(401).json({ error: "Ingen behörighet" });
+          return res.status(401).json({ error: "Ingen behörighet (saknar token)" });
       }
 
-      // Vi måste verifiera att token (lösenordet) som skickas med är giltigt
+      // Verifiera att token (lösenordet) som skickas med är giltigt
       let isAuthorized = false;
 
       // 1. Är det master-lösenordet?
@@ -84,15 +88,17 @@ module.exports = async function handler(req, res) {
       // 2. Om inte, kolla om det matchar någon admin i databasen
       if (!isAuthorized) {
           const dbRes = await pool.query("SELECT data FROM app_storage WHERE key = 'admins'");
-          const admins = dbRes.rows.length > 0 ? dbRes.rows[0].data : [];
-          // Om lösenordet matchar någon av administratörerna
-          if (admins.some(a => a.password === token)) {
-              isAuthorized = true;
+          const admins = (dbRes.rows.length > 0) ? dbRes.rows[0].data : [];
+          
+          if (Array.isArray(admins)) {
+              if (admins.some(a => a.password === token)) {
+                  isAuthorized = true;
+              }
           }
       }
 
       if (!isAuthorized) {
-          return res.status(401).json({ error: "Ogiltigt lösenord (sessionen kan ha gått ut)" });
+          return res.status(401).json({ error: "Ogiltigt lösenord eller sessionen har gått ut" });
       }
 
       // Spara data om behörig
