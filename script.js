@@ -60,33 +60,37 @@ async function saveData(type, data) {
 }
 
 /* =========================================
-   3. TEMA-HANTERING (FIXAD)
+   3. TEMA-FUNKTIONER
    ========================================= */
 function applyTheme(themeName) {
     const knownThemes = ['theme-dark', 'theme-jul', 'theme-pask', 'theme-matrix'];
-    // Ta bort alla befintliga temaklasser från body
     document.body.classList.remove(...knownThemes);
-    
-    // Om temat inte är ljust, lägg till klassen
     if (themeName && themeName !== 'light') {
         document.body.classList.add(`theme-${themeName}`);
     }
-    console.log("Tema applicerat:", themeName);
+}
+
+function getISOWeekAndYear(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    const week1 = new Date(d.getFullYear(), 0, 4);
+    const week = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+    return { week: week, year: d.getFullYear() };
 }
 
 /* =========================================
-   4. INITIERING (DOM CONTENT LOADED)
+   4. INITIERING
    ========================================= */
 document.addEventListener('DOMContentLoaded', async () => {
     const bodyId = document.body.id;
 
-    // 1. Inloggningssidan
     if (bodyId === 'page-login') {
         initLogin();
         return;
     }
 
-    // 2. Ladda all data och applicera tema direkt
+    // Ladda data
     try {
         const [schedule, users, settings] = await Promise.all([
             fetchData('schedule'),
@@ -101,10 +105,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             applyTheme(settings.theme);
         }
     } catch (err) {
-        console.error("Initieringsfel:", err);
+        console.error("Init fel:", err);
     }
 
-    // 3. Välj vy baserat på Body ID
     if (bodyId === 'page-admin') {
         if (sessionStorage.getItem('isLoggedIn') !== 'true') { 
             window.location.href = "index.html"; 
@@ -117,7 +120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* =========================================
-   5. ADMIN-PANEL LOGIK
+   5. ADMIN-LOGIK
    ========================================= */
 function initAdmin() {
     const userDisplay = document.getElementById('currentUserDisplay');
@@ -128,16 +131,9 @@ function initAdmin() {
     initThemeSelector();
     setupAdminManagement();
 
-    // Koppla logout
     const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.onclick = () => {
-            sessionStorage.clear();
-            window.location.href = "index.html";
-        };
-    }
+    if (logoutBtn) logoutBtn.onclick = () => { sessionStorage.clear(); window.location.href = "index.html"; };
     
-    // Koppla exportknappar
     const printBtn = document.getElementById('printBtn');
     if (printBtn) printBtn.onclick = printSchedule;
     
@@ -145,31 +141,25 @@ function initAdmin() {
     if (exportBtn) exportBtn.onclick = generateScheduleImage;
 }
 
-// Datumväljaren i Headern
 function setupDatePicker() {
     const picker = document.getElementById('adminDatePicker');
     const display = document.getElementById('currentDateDisplay');
     if (!picker) return;
 
-    // Standardvärde: Idag
     picker.value = new Date().toISOString().split('T')[0];
 
     const update = (dateStr) => {
         const d = new Date(dateStr);
+        const iso = getISOWeekAndYear(d);
         
-        // Räkna ut ISO-vecka
-        const t = new Date(d.valueOf());
-        t.setHours(0,0,0,0);
-        t.setDate(t.getDate() + 3 - (t.getDay() + 6) % 7);
-        const week1 = new Date(t.getFullYear(), 0, 4);
-        selectedWeek = 1 + Math.round(((t.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-        selectedYear = t.getFullYear();
+        selectedWeek = iso.week;
+        selectedYear = iso.year;
         
-        currentAdminDayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
+        // Hitta dagens index (0 = Måndag, 6 = Söndag)
+        let dayIdx = d.getDay(); 
+        currentAdminDayIndex = (dayIdx === 0) ? 6 : dayIdx - 1;
         
-        if (display) {
-            display.innerText = `${days[currentAdminDayIndex]} vecka ${selectedWeek}, ${selectedYear}`;
-        }
+        if (display) display.innerText = `${days[currentAdminDayIndex]} vecka ${selectedWeek}, ${selectedYear}`;
         renderAdminGrid();
     };
 
@@ -177,7 +167,6 @@ function setupDatePicker() {
     update(picker.value);
 }
 
-// Rendera själva rutnätet
 function renderAdminGrid() {
     const container = document.getElementById('scheduleContainer');
     if (!container) return;
@@ -187,7 +176,7 @@ function renderAdminGrid() {
     const prefix = `y${selectedYear}w${selectedWeek}-`;
 
     let html = `
-        <div class="header-row" style="display:grid; grid-template-columns:150px 1fr 1fr 1fr; gap:12px; text-align:center; font-weight:bold; margin-bottom:15px; color:#666;">
+        <div class="header-row">
             <div></div>
             ${dbTimes.map(t => `<div>${t}</div>`).join('')}
         </div>
@@ -220,7 +209,7 @@ function renderAdminGrid() {
 }
 
 /* =========================================
-   6. PERSONAL & INTERAKTION
+   6. ROSTER & DATA
    ========================================= */
 function renderRoster() {
     const list = document.getElementById('draggableUserList');
@@ -276,7 +265,7 @@ async function removeUser(name) {
 }
 
 /* =========================================
-   7. TEMAVÄLJARE (FIXAD LOGIK)
+   7. TEMAVÄLJARE
    ========================================= */
 async function initThemeSelector() {
     const select = document.getElementById('themeSelect');
@@ -286,7 +275,7 @@ async function initThemeSelector() {
     saveBtn.onclick = async () => {
         const theme = select.value;
         await saveData('settings', { theme: theme });
-        applyTheme(theme); // Denna rad aktiverar temat direkt
+        applyTheme(theme);
         
         const originalText = saveBtn.innerText;
         saveBtn.innerText = "Sparat!";
@@ -295,7 +284,7 @@ async function initThemeSelector() {
 }
 
 /* =========================================
-   8. EXPORT & UTSKRIFT
+   8. EXPORT
    ========================================= */
 function printSchedule() { window.print(); }
 
@@ -319,7 +308,7 @@ function generateScheduleImage() {
 }
 
 /* =========================================
-   9. LOGIN & AUTH
+   9. AUTH & MISC
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -362,23 +351,32 @@ function setupAdminManagement() {
 }
 
 /* =========================================
-   10. DISPLAY (SKÄRMVISNING)
+   10. DISPLAY (FIXAD)
    ========================================= */
 function initDisplay() {
-    // Klocka
+    // Starta klockan
     setInterval(() => {
         const clock = document.getElementById('clock');
         if (clock) clock.innerText = new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     }, 1000);
 
     const loadData = async () => {
+        // Hämta data och tema
         const [data, settings] = await Promise.all([fetchData('schedule'), fetchData('settings')]);
         globalScheduleData = data;
+        
         if (settings && settings.theme) applyTheme(settings.theme);
         
         const now = new Date();
+        // HÄR VAR FELET: iso saknades innan det användes
+        const iso = getISOWeekAndYear(now); 
         const todayName = days[now.getDay() === 0 ? 6 : now.getDay() - 1];
         
+        const title = document.getElementById('mainTitle');
+        if (title) {
+            title.innerText = `Vi som jobbar ${todayName} ${now.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })} (v.${iso.week})`;
+        }
+
         const container = document.getElementById('mainContainer');
         if (!container) return;
 
@@ -388,7 +386,7 @@ function initDisplay() {
             html += `<div class="display-row ${st.class}"><div class="station-label">${st.name}</div>`;
             dbTimes.forEach((time, idx) => {
                 if ((st.name === "Info" || st.name === "PL") && idx === 2) return;
-                const iso = getISOWeekAndYear(now);
+                
                 const key = `y${iso.year}w${iso.week}-${todayName}-${st.name}-${time}`;
                 const val = data[key] || "";
                 html += `<div class="shift-card ${val ? '' : 'empty'}">${val}</div>`;
@@ -397,6 +395,8 @@ function initDisplay() {
         });
         container.innerHTML = html;
     };
+    
+    // Kör direkt och sedan var 15:e sekund
     loadData();
     setInterval(loadData, 15000);
 }
