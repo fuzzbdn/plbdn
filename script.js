@@ -60,7 +60,9 @@ async function saveData(type, data) {
 }
 
 function applyTheme(themeName) {
+    // FIX: Hårdkodad spärr - Teman får ALDRIG visas på admin eller settings
     if (document.body.id === 'page-admin' || document.body.id === 'page-settings') return;
+
     document.body.classList.remove('theme-dark','theme-jul','theme-pask','theme-matrix');
     if (themeName && themeName !== 'light') document.body.classList.add(`theme-${themeName}`);
 }
@@ -114,7 +116,6 @@ function initLogin() {
 
     if(loginBtn) loginBtn.onclick = doLogin;
     
-    // FIX: Enter fungerar i båda fälten
     const handleEnter = (e) => { if(e.key==='Enter') doLogin(); };
     if(userIn) userIn.onkeydown = handleEnter;
     if(passIn) passIn.onkeydown = handleEnter;
@@ -196,7 +197,6 @@ async function initSettings(currentSettings) {
         const newIndex = index + direction;
         if (newIndex < 0 || newIndex >= globalStations.length) return;
         
-        // Byt plats i arrayen
         const temp = globalStations[index];
         globalStations[index] = globalStations[newIndex];
         globalStations[newIndex] = temp;
@@ -210,12 +210,12 @@ async function initSettings(currentSettings) {
         stName.value = globalStations[i].name;
         stColor.value = globalStations[i].color;
         stBtn.innerText = "💾";
-        stBtn.style.background = "#2196F3"; // Blå för editering, grön annars
+        stBtn.style.background = "#2196F3";
         stCancel.style.display = "block";
     };
 
     const resetSt = () => {
-        editingStationIndex = null; stName.value = ""; stBtn.innerText = "+"; stBtn.style.background = ""; // Återgår till CSS-klassen (grön)
+        editingStationIndex = null; stName.value = ""; stBtn.innerText = "+"; stBtn.style.background = "";
         stCancel.style.display = "none";
     };
     stCancel.onclick = resetSt;
@@ -272,7 +272,7 @@ async function initSettings(currentSettings) {
     };
 
     const resetSh = () => {
-        editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = ""; // Återgår till grön
+        editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = "";
         shCancel.style.display = "none";
     };
     shCancel.onclick = resetSh;
@@ -385,7 +385,8 @@ async function initAdmin() {
     picker.onchange = (e) => updateGrid(e.target.value);
     
     function updateGrid(dateStr) {
-        const d = new Date(dateStr);
+        // FIX: Sätt tid till 12:00 för att undvika tidszon-problem vid midnatt
+        const d = new Date(dateStr + "T12:00:00"); 
         const iso = getISOWeek(d);
         selectedWeek = iso.week; selectedYear = iso.year;
         currentAdminDayIndex = d.getDay()===0?6:d.getDay()-1;
@@ -428,7 +429,7 @@ function renderAdminGrid() {
         globalShifts.forEach(sh => {
             const key = `${prefix}${st.name}-${sh.time}`;
             const rawVal = globalScheduleData[key] || "";
-            const val = escapeHtml(rawVal); // SÄKERHETSFIX: Sanera output
+            const val = escapeHtml(rawVal); // SÄKERHET: Sanera data
 
             html += `<div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event,'${key}')">
                 <span class="shift-text" contenteditable="true" onblur="saveShift('${key}', this.innerText)">${val}</span>
@@ -458,7 +459,19 @@ function renderRoster() {
 }
 
 async function saveShift(k, v) { globalScheduleData[k] = v.trim(); await saveData('schedule_draft', globalScheduleData); renderAdminGrid(); }
-async function handleDrop(e, k) { e.preventDefault(); const n = e.dataTransfer.getData("text"); let c = globalScheduleData[k]||""; if(!c.includes(n)) await saveShift(k, c?c+" / "+n:n); }
+
+// FIX: Drag-and-drop bugg - Splitta strängen för att undvika att "Jo" hittas i "Johan"
+async function handleDrop(e, k) { 
+    e.preventDefault(); 
+    const n = e.dataTransfer.getData("text"); 
+    let c = globalScheduleData[k]||""; 
+    
+    const currentUsers = c ? c.split(' / ').map(u => u.trim()) : [];
+    
+    if(!currentUsers.includes(n)) {
+        await saveShift(k, c ? c + " / " + n : n);
+    }
+}
 
 /* =========================================
    7. DISPLAY
@@ -466,6 +479,7 @@ async function handleDrop(e, k) { e.preventDefault(); const n = e.dataTransfer.g
 let lastSnap="";
 function initDisplay() {
     setInterval(()=>document.getElementById('clock').innerText=new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}),1000);
+    
     const refresh = async () => {
         let pub = await fetchData('schedule_published');
         if(!pub || !Object.keys(pub).length) pub = await fetchData('schedule');
@@ -479,7 +493,13 @@ function initDisplay() {
         const mq = document.getElementById('marqueeContainer');
         if(mq) { mq.style.display=(msg?.show&&msg?.text)?'block':'none'; if(msg?.text) document.getElementById('marqueeText').innerText=msg.text; }
 
-        const now = new Date(), iso = getISOWeek(now), today = days[now.getDay()===0?6:now.getDay()-1];
+        // HÄR sker automatisk dygnsbyte: 
+        // Eftersom 'now' skapas inuti denna funktion som körs via setInterval,
+        // kommer den automatiskt bli "imorgon" så fort klockan passerar 00:00.
+        const now = new Date(); 
+        const iso = getISOWeek(now); 
+        const today = days[now.getDay()===0?6:now.getDay()-1];
+        
         document.getElementById('mainTitle').innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
         
         const cont = document.getElementById('mainContainer');
@@ -493,7 +513,7 @@ function initDisplay() {
             globalShifts.forEach(sh => {
                 const key = `y${iso.year}w${iso.week}-${today}-${st.name}-${sh.time}`;
                 const rawVal = globalScheduleData[key] || "";
-                const val = escapeHtml(rawVal); // SÄKERHETSFIX: Sanera output
+                const val = escapeHtml(rawVal); // SÄKERHET
 
                 html += `<div class="shift-card ${val?'':'empty'}">${val}</div>`;
             });
@@ -525,9 +545,6 @@ function getScheduleHtmlForPrint() {
             <div style="background:${bg}; color:${fg}; font-weight:bold; padding:10px; display:flex; align-items:center; justify-content:center; border:1px solid #000;">${st.name}</div>`;
         shifts.forEach(sh => {
             const val = globalScheduleData[`${prefix}${st.name}-${sh.time}`] || "";
-            // Obs: Vid print escapear vi inte strikt här eftersom det inte körs som HTML i en webbläsare på samma sätt,
-            // men för konsistens kan man göra det. Dock, eftersom print-vyn ofta är statisk, är risken lägre.
-            // Men vi behåller val "raw" här för att inte krångla till det, eller så kan vi köra escapeHtml(val).
             html += `<div style="display:flex; align-items:center; justify-content:center; text-align:center; min-height:50px; padding:5px; font-weight:bold; border:1px solid #000; background:#fff;">${val}</div>`;
         });
         html += `</div>`;
@@ -552,7 +569,7 @@ function setupSidebarAddUser() {
 async function removeUser(u) { if(confirm('Ta bort '+u+'?')){globalUserList=globalUserList.filter(user=>user!==u);await saveData('users',globalUserList);renderRoster();} }
 
 /* =========================================
-   9. HJÄLPFUNKTIONER (SÄKERHET)
+   9. HJÄLPFUNKTIONER
    ========================================= */
 function escapeHtml(text) {
     if (!text) return "";
