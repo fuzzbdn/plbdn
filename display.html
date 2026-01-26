@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Display</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="base.css">
+	<link rel="stylesheet" href="display.css">
     <script src="script.js" defer></script>
 </head>
 <body class="display-view" id="page-display">
@@ -15,11 +16,15 @@
         <h1 id="mainTitle">...</h1> 
         <div id="clock">00:00</div>
     </div>
-    
+    <div id="marqueeContainer" style="display:none; background:#ffeb3b; color:#000; padding:10px; margin-bottom:2vh; border-radius:8px; font-weight:bold; text-align:center; font-size:2.5vh; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+    <marquee id="marqueeText" scrollamount="10"></marquee>
+</div>
     <div class="display-grid" id="mainContainer">
         </div>
 </div>
 	
 	
 </body>
+
 </html>
+

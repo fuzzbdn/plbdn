@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inställningar - STRUL</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="base.css">
+    <link rel="stylesheet" href="admin.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="script.js" defer></script>
+
+    <style>
+        /* EXTRA CSS FÖR ATT STÄDA UPP SETTINGS-SIDAN */
+        .settings-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        
+        .setting-card { background: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .setting-card h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; color: #333; }
+        
+        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-weight: 600; font-size: 0.9rem; color: #555; }
+        
+        input[type="text"], input[type="password"], input[type="email"], select { 
+            padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; 
+        }
+        
+        /* GEMENSAM GRÖN KNAPP-STIL FÖR ALLA SPARA-KNAPPAR */
+        .save-btn { 
+            background-color: #4CAF50; /* Samma gröna som "Lägg till" */
+            color: white; border: none; padding: 10px; border-radius: 4px; 
+            cursor: pointer; font-weight: bold; width: 100%; 
+            font-size: 0.95rem;
+            transition: background 0.2s;
+        }
+        .save-btn:hover { background-color: #45a049; }
+        
+        /* Små knappar i listor (Edit/Delete/Move) */
+        .list-btn { 
+            border: none; background: none; cursor: pointer; font-size: 1.1rem; padding: 5px; color: #555;
+        }
+        .list-btn:hover { color: #000; background-color: #f0f0f0; border-radius: 4px; }
+
+        .list-container { 
+            max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; background: #fafafa; 
+        }
+        
+        .cancel-edit-btn { 
+            background: #999; color: white; border: none; padding: 0 10px; border-radius: 4px; cursor: pointer; display: none; 
+        }
+
+        /* HEADER STYLING */
+        .admin-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 15px 0;
+            color: #333;
+        }
+        .header-content {
+            max-width: 1200px; margin: 0 auto; padding: 0 20px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-content h1 { margin: 0; font-size: 1.5rem; color: #333; }
+        
+        .back-link {
+            color: #333; text-decoration: none; background: #f0f0f0; 
+            padding: 8px 12px; border-radius: 4px; font-size: 0.9rem;
+            border: 1px solid #ccc; font-weight: 600;
+        }
+        .back-link:hover { background: #e0e0e0; }
+
+        #currentUserDisplay { font-weight: 600; color: #333; margin-right: 10px; }
+    </style>
+</head>
+<body id="page-settings">
+
+    <header class="admin-header">
+        <div class="header-content">
+            <div style="display:flex; align-items:center; gap:20px;">
+                <h1>⚙️ Inställningar</h1>
+                <a href="admin.html" class="back-link">⬅ Tillbaka till Planering</a>
+            </div>
+            <div style="display:flex; align-items:center;">
+                <span id="currentUserDisplay"></span>
+                <button id="logoutBtn" class="logout-btn" style="background:#ffebee; color:#c62828; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">Logga ut</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="settings-container">
+        <div class="settings-grid">
+            
+            <div class="setting-card">
+                <h3>🎨 Utseende & Tema</h3>
+                <div class="form-group">
+                    <label>Välj färgtema:</label>
+                    <select id="themeSelect">
+                        <option value="light">Ljus (Standard)</option>
+                        <option value="dark">Mörk (Dark Mode)</option>
+                        <option value="jul">Jul-tema 🎅</option>
+                        <option value="pask">Påsk-tema 🐣</option>
+                        <option value="matrix">Matrix 🟢</option>
+                    </select>
+                </div>
+                <button id="saveThemeBtn" class="save-btn">Spara Tema</button>
+            </div>
+
+            <div class="setting-card">
+                <h3>📢 Meddelande</h3>
+                <div class="form-group">
+                    <label>Rullande text:</label>
+                    <input type="text" id="displayMessageInput" placeholder="Text...">
+                </div>
+                <div class="form-group" style="flex-direction:row; align-items:center; gap:10px;">
+                    <input type="checkbox" id="showMessageCheckbox" style="width:auto; margin:0;">
+                    <label for="showMessageCheckbox" style="margin:0; cursor:pointer;">Visa meddelande</label>
+                </div>
+                <button id="saveMessageBtn" class="save-btn">Uppdatera</button>
+            </div>
+
+            <div class="setting-card">
+                <h3>📍 Hantera Platser</h3>
+                <div class="form-group">
+                    <div style="display:flex; gap:5px;">
+                        <input type="text" id="newStationName" placeholder="Namn" style="flex:1;">
+                        <input type="color" id="newStationColor" value="#cccccc" style="width:40px; height:38px; padding:0; border:none; cursor:pointer;">
+                        <button id="addStationBtn" class="save-btn" style="width:auto;">+</button>
+                        <button id="cancelStationEditBtn" class="cancel-edit-btn">❌</button>
+                    </div>
+                    <button id="addSpacerBtn" class="save-btn" style="background-color: #7f8c8d; margin-top:5px;">➕ Lägg till Mellanrum</button>
+                </div>
+                
+                <div style="margin-top:10px;">
+                    <h4 style="font-size:0.9rem; color:#666; margin-bottom:5px;">Ordning (Dra ej, använd pilarna):</h4>
+                    <div id="stationListContainer" class="list-container">Laddar...</div>
+                </div>
+            </div>
+
+            <div class="setting-card">
+                <h3>⏰ Hantera Pass</h3>
+                <div class="form-group">
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <input type="text" id="newShiftLabel" placeholder="Etikett (t.ex. Förmiddag)">
+                        <input type="text" id="newShiftTime" placeholder="Tid (t.ex. 06:30 - 14:00)">
+                        <div style="display:flex; gap:5px;">
+                            <button id="addShiftBtn" class="save-btn">Lägg till Pass</button>
+                            <button id="cancelShiftEditBtn" class="cancel-edit-btn">❌</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <h4 style="font-size:0.9rem; color:#666; margin-bottom:5px;">Nuvarande pass:</h4>
+                    <div id="shiftListContainer" class="list-container">Laddar...</div>
+                </div>
+            </div>
+
+            <div class="setting-card" style="grid-column: 1 / -1;">
+                <h3>👤 Hantera Administratörer</h3>
+                <div class="form-group" style="background:#f0f8ff; padding:15px; border-radius:6px; border:1px solid #cce5ff;">
+                    <label style="margin-bottom:10px; display:block; color:#0056b3;">Hantera admin:</label>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                        <input type="text" id="newAdminFirstName" placeholder="Förnamn">
+                        <input type="text" id="newAdminLastName" placeholder="Efternamn">
+                    </div>
+                    <input type="email" id="newAdminEmail" placeholder="E-post" style="width:100%; margin-bottom:10px; box-sizing:border-box;">
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="newAdminUser" placeholder="Användarnamn" style="flex:1;">
+                        <input type="text" id="newAdminPass" placeholder="Lösenord" style="flex:1;">
+                        <button id="addAdminBtn" class="save-btn" style="width:60px;">+</button>
+                        <button id="cancelAdminEditBtn" class="cancel-edit-btn" style="display:none;">❌</button>
+                    </div>
+                </div>
+                <div style="margin-top:20px;">
+                    <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:#666;">Befintliga administratörer:</h4>
+                    <div id="adminListContainer" class="list-container">Laddar...</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

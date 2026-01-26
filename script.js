@@ -1,753 +1,545 @@
 /* =========================================
-   1. KONFIGURATION & DATA
+   1. KONFIGURATION & GLOBALA VARIABLER
    ========================================= */
-// Sätt till true för att använda databasen (Vercel + Neon)
-const USE_CLOUD_DB = true; 
-
-const stations = [
-    { name: "Björkliden", class: "color-bjorkliden" },
-    { name: "Kiruna",     class: "color-kiruna" },
-    { name: "Bastuträsk", class: "color-bastutrask" },
-    { name: "Boden",      class: "color-boden" },
-    { name: "Gällivare",  class: "color-gallivare" },
-    { name: "Älvsbyn",    class: "color-alvsbyn" },
-    { name: "Info",       class: "color-info" },
-    { name: "PL",         class: "color-pl" }
+const DEFAULT_STATIONS = [
+    { name: "Björkliden", color: "#ffb74d" },
+    { name: "Kiruna",     color: "#fff176" },
+    { name: "Bastuträsk", color: "#e57373" },
+    { name: "Boden",      color: "#81c784" },
+    { name: "Gällivare",  color: "#64b5f6" },
+    { name: "Älvsbyn",    color: "#e0e0e0" },
+    { isSpacer: true },
+    { name: "Info",       color: "#f06292" },
+    { name: "PL",         color: "#0277bd" }
 ];
-
-const dbTimes = ["06:30 - 14:00", "14:00 - 21:15", "21:15 - 06:30"];
-const displayTimes = ["Förmiddag", "Eftermiddag", "Natt"];
+const DEFAULT_SHIFTS = [
+    { label: "Förmiddag",  time: "06:30 - 14:00" },
+    { label: "Eftermiddag", time: "14:00 - 21:15" },
+    { label: "Natt",        time: "21:15 - 06:30" }
+];
 const days = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"];
 
-let selectedWeek = 0;
-let selectedYear = 0;
+let globalStations = [], globalShifts = [];
+let selectedWeek = 0, selectedYear = 0, currentAdminDayIndex = 0;
+let globalScheduleData = {}, globalUserList = [];
 
-let globalScheduleData = {};
-let globalUserList = [];
+let editingStationIndex = null;
+let editingShiftIndex = null;
+let editingAdminId = null;
 
 /* =========================================
-   2. API & DATABAS (VERCEL + NEON)
+   2. API & SPARANDE
    ========================================= */
-
 async function fetchData(type) {
-    if (!USE_CLOUD_DB) {
-        const key = type === 'schedule' ? 'shiftData' : 'userList';
-        const local = localStorage.getItem(key);
-        return local ? JSON.parse(local) : (type === 'users' ? [] : {});
-    }
-    
     try {
-        const response = await fetch(`/api/data-api?type=${type}`);
-        if (!response.ok) throw new Error('Kunde inte hämta data');
-        return await response.json();
-    } catch (error) {
-        console.error("Fetch error:", error);
-        return type === 'users' ? [] : {};
-    }
+        const headers = {};
+        const token = sessionStorage.getItem('jwtToken');
+        if (token && type === 'admins') headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(`/api/data-api?type=${type}`, { headers });
+        if (!res.ok) throw new Error();
+        return await res.json();
+    } catch (e) { return null; }
 }
 
 async function saveData(type, data) {
-    if (type === 'schedule') globalScheduleData = data;
-    if (type === 'users') globalUserList = data;
+    if(type.startsWith('schedule')) globalScheduleData = data;
+    if(type === 'config_stations') globalStations = data;
+    if(type === 'config_shifts') globalShifts = data;
 
-    if (!USE_CLOUD_DB) {
-        const key = type === 'schedule' ? 'shiftData' : 'userList';
-        localStorage.setItem(key, JSON.stringify(data));
-        return;
-    }
-
-    const password = sessionStorage.getItem('adminPassword');
-    
-    if (!password) {
-        alert("Du måste logga in igen!");
-        window.location.href = "index.html";
-        return;
-    }
+    const token = sessionStorage.getItem('jwtToken');
+    if (!token) { alert("Logga in igen."); window.location.href="index.html"; return; }
 
     try {
-        const response = await fetch('/api/data-api', {
+        await fetch('/api/data-api', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${password}`
-            },
-            body: JSON.stringify({ type: type, data: data })
+            headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+            body: JSON.stringify({ type, data })
         });
+        return true;
+    } catch (e) { alert("Kunde inte spara."); return false; }
+}
 
-        if (!response.ok) {
-            if (response.status === 401) alert("Fel lösenord! Logga in på nytt.");
-            else throw new Error("Serverfel vid sparning");
-        }
-
-    } catch (e) {
-        console.error("Save failed", e);
-    }
+function applyTheme(themeName) {
+    if (document.body.id === 'page-admin' || document.body.id === 'page-settings') return;
+    document.body.classList.remove('theme-dark','theme-jul','theme-pask','theme-matrix');
+    if (themeName && themeName !== 'light') document.body.classList.add(`theme-${themeName}`);
 }
 
 /* =========================================
-   3. HJÄLPFUNKTIONER
-   ========================================= */
-function getScheduleData() { return globalScheduleData; }
-function getUsers() { return globalUserList; }
-
-function getCurrentDayIndex() {
-    let day = new Date().getDay(); 
-    return day === 0 ? 6 : day - 1;
-}
-
-function getISOWeekAndYear(date) {
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
-    const week1 = new Date(d.getFullYear(), 0, 4);
-    const week = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-    return { week: week, year: d.getFullYear() };
-}
-
-function getUsedUsersForDay(dayName, prefix) {
-    const data = getScheduleData();
-    const used = new Set();
-    const searchPrefix = prefix ? prefix + dayName + "-" : dayName + "-";
-
-    Object.keys(data).forEach(key => {
-        if (key.startsWith(searchPrefix)) {
-            const val = data[key];
-            if (val) {
-                val.split(" / ").forEach(n => {
-                    if (n.trim()) used.add(n.trim());
-                });
-            }
-        }
-    });
-    return used;
-}
-
-/* =========================================
-   4. INITIERING
+   3. INIT
    ========================================= */
 document.addEventListener('DOMContentLoaded', async () => {
-    const bodyId = document.body.id;
+    const pageId = document.body.id;
+    if (pageId === 'page-login') { initLogin(); return; }
+    if (pageId === 'page-reset') { initReset(); return; }
 
-    if (bodyId === 'page-login') {
-        initLogin();
-        return;
-    }
+    const [users, settings, dbStations, dbShifts] = await Promise.all([
+        fetchData('users'), fetchData('settings'), fetchData('config_stations'), fetchData('config_shifts')
+    ]);
 
-    if (USE_CLOUD_DB) {
-        try {
-            [globalScheduleData, globalUserList] = await Promise.all([
-                fetchData('schedule'),
-                fetchData('users')
-            ]);
-        } catch (e) {
-            console.log("Kunde inte hämta initial data.");
-        }
-    } else {
-        globalScheduleData = JSON.parse(localStorage.getItem('shiftData')) || {};
-        globalUserList = JSON.parse(localStorage.getItem('userList')) || [];
-    }
+    globalUserList = Array.isArray(users) ? users : [];
+    globalStations = (Array.isArray(dbStations) && dbStations.length > 0) ? dbStations : DEFAULT_STATIONS;
+    globalShifts = (Array.isArray(dbShifts) && dbShifts.length > 0) ? dbShifts : DEFAULT_SHIFTS;
 
-    if (bodyId === 'page-admin') {
-        initLogout(); 
-        if (USE_CLOUD_DB && !sessionStorage.getItem('adminPassword')) {
-             window.location.href = "index.html";
-             return;
-        }
-        initAdmin();
-    } else if (bodyId === 'page-display') {
-        initDisplay();
-    }
-    
-    // Koppla knappar
-    const printBtn = document.getElementById('printBtn');
-    if (printBtn) printBtn.addEventListener('click', printSchedule);
+    if (settings?.theme) applyTheme(settings.theme);
 
-    const exportBtn = document.getElementById('exportBtn');
-    if (exportBtn) exportBtn.addEventListener('click', generateScheduleImage);
+    if (pageId === 'page-admin') { if(checkAuth()) initAdmin(); }
+    else if (pageId === 'page-settings') { if(checkAuth()) initSettings(settings); }
+    else if (pageId === 'page-display') { initDisplay(); }
 });
 
+function checkAuth() {
+    if (!sessionStorage.getItem('jwtToken')) { window.location.href="index.html"; return false; }
+    return true;
+}
+
 /* =========================================
-   5. LOGIN & LOGOUT (UPPDATERAD)
+   4. LOGIN
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
-    const passwordInput = document.getElementById('passwordInput');
+    const userIn = document.getElementById('usernameInput');
+    const passIn = document.getElementById('passwordInput');
 
-    if (!loginBtn || !passwordInput) return;
-
-    const performLogin = async () => {
-        const password = passwordInput.value.trim();
-        
-        // 1. Kolla om fältet är tomt
-        if (!password) {
-            passwordInput.style.borderColor = "#ff6b6b";
-            setTimeout(() => passwordInput.style.borderColor = "#eee", 500);
-            return;
-        }
-
-        // Byt text på knappen för feedback
-        const originalText = loginBtn.innerText;
-        loginBtn.innerText = "Kontrollerar...";
-        loginBtn.disabled = true;
-
+    const doLogin = async () => {
         try {
-            // 2. Skicka "verify"-förfrågan till API:et
-            const response = await fetch('/api/data-api', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${password}` // Här skickas lösenordet
-                },
-                body: JSON.stringify({ type: 'verify', data: {} })
-            });
-
-            // 3. Om servern svarar OK (200)
-            if (response.ok) {
-                sessionStorage.setItem('adminPassword', password);
+            const res = await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'login', username:userIn.value.trim(), password:passIn.value.trim()}) });
+            const d = await res.json();
+            if(d.success) {
+                sessionStorage.setItem('jwtToken', d.token); sessionStorage.setItem('adminUser', d.user); sessionStorage.setItem('adminName', d.name);
                 window.location.href = "admin.html";
-            } else {
-                // 4. Om servern svarar 401 (Fel lösenord)
-                alert("Fel lösenord!");
-                passwordInput.value = "";
-                passwordInput.focus();
-                passwordInput.style.borderColor = "#ff6b6b";
-            }
-        } catch (error) {
-            console.error("Login error:", error);
-            alert("Kunde inte nå servern. Kontrollera din anslutning.");
-        } finally {
-            // Återställ knappen
-            loginBtn.innerText = originalText;
-            loginBtn.disabled = false;
-        }
+            } else alert("Fel uppgifter!");
+        } catch(e) { alert("Serverfel"); }
     };
 
-    loginBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        performLogin();
-    });
+    if(loginBtn) loginBtn.onclick = doLogin;
+    
+    // FIX: Enter fungerar i båda fälten
+    const handleEnter = (e) => { if(e.key==='Enter') doLogin(); };
+    if(userIn) userIn.onkeydown = handleEnter;
+    if(passIn) passIn.onkeydown = handleEnter;
 
-    passwordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') performLogin();
-    });
+    const forgotLink = document.getElementById('forgotPassLink');
+    if(forgotLink) forgotLink.onclick = (e) => { e.preventDefault(); document.getElementById('loginForm').style.display='none'; document.getElementById('forgotForm').style.display='block'; };
+    
+    const resetBtn = document.getElementById('sendResetBtn');
+    if(resetBtn) resetBtn.onclick = async () => {
+        const email = document.getElementById('resetEmailInput').value;
+        if(!email) return alert("Ange e-post");
+        await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'request_reset', email}) });
+        alert("Länk skickad."); window.location.reload();
+    };
 }
-
-function initLogout() {
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (!logoutBtn) return;
-
-    logoutBtn.addEventListener('click', () => {
-        sessionStorage.removeItem('adminPassword');
-        window.location.href = "index.html";
-    });
+function initReset() {
+    const t = new URLSearchParams(window.location.search).get('token');
+    if(!t) return;
+    document.getElementById('resetSubmitBtn').onclick = async () => {
+        const p1 = document.getElementById('newPassInput').value;
+        const p2 = document.getElementById('confirmPassInput').value;
+        if(p1!==p2) return alert("Ej match");
+        const res = await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'perform_reset', token:t, newPassword:p1}) });
+        if(res.ok) window.location.href="index.html";
+    };
 }
 
 /* =========================================
-   6. ADMIN LOGIK
+   5. INSTÄLLNINGAR (MED SORTERING & EDIT)
    ========================================= */
-let currentAdminDayIndex = getCurrentDayIndex();
-if (currentAdminDayIndex < 0) currentAdminDayIndex = 0; 
+async function initSettings(currentSettings) {
+    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
 
-window.onclick = function(event) {
-    if (!event.target.closest('.dropdown-container')) closeAllDropdowns();
+    const themeSelect = document.getElementById('themeSelect');
+    if(currentSettings?.theme) themeSelect.value = currentSettings.theme;
+    document.getElementById('saveThemeBtn').onclick = () => saveData('settings', { theme: themeSelect.value });
+
+    const msgIn = document.getElementById('displayMessageInput');
+    const msgCheck = document.getElementById('showMessageCheckbox');
+    const msg = await fetchData('message');
+    if(msg) { msgIn.value = msg.text||""; msgCheck.checked = msg.show||false; }
+    document.getElementById('saveMessageBtn').onclick = () => saveData('message', { text: msgIn.value, show: msgCheck.checked });
+
+    // --- PLATSER (STATIONER) ---
+    const stName = document.getElementById('newStationName');
+    const stColor = document.getElementById('newStationColor');
+    const stBtn = document.getElementById('addStationBtn');
+    const stCancel = document.getElementById('cancelStationEditBtn');
+
+    const renderStations = () => {
+        const cont = document.getElementById('stationListContainer');
+        if(!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
+        
+        cont.innerHTML = globalStations.map((st, i) => {
+            const upBtn = i > 0 ? `<button class="list-btn" onclick="moveStation(${i}, -1)" title="Flytta upp">⬆️</button>` : `<span style="display:inline-block;width:28px;"></span>`;
+            const downBtn = i < globalStations.length - 1 ? `<button class="list-btn" onclick="moveStation(${i}, 1)" title="Flytta ner">⬇️</button>` : `<span style="display:inline-block;width:28px;"></span>`;
+            
+            const content = st.isSpacer 
+                ? `<i>--- Mellanrum ---</i>` 
+                : `<div style="display:flex; align-items:center; gap:10px;"><div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc;"></div><strong>${st.name}</strong></div>`;
+            
+            const editBtn = st.isSpacer ? '' : `<button class="list-btn" onclick="startEditStation(${i})">✏️</button>`;
+
+            return `
+                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; align-items:center; ${st.isSpacer?'background:#f9f9f9;color:#888;':''}">
+                    <div style="display:flex; align-items:center;">
+                        ${upBtn} ${downBtn}
+                        <span style="margin-left:10px;">${content}</span>
+                    </div>
+                    <div>
+                        ${editBtn}
+                        <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
+                    </div>
+                </div>`;
+        }).join('');
+    };
+
+    window.moveStation = async (index, direction) => {
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= globalStations.length) return;
+        
+        // Byt plats i arrayen
+        const temp = globalStations[index];
+        globalStations[index] = globalStations[newIndex];
+        globalStations[newIndex] = temp;
+        
+        await saveData('config_stations', globalStations);
+        renderStations();
+    };
+
+    window.startEditStation = (i) => {
+        editingStationIndex = i;
+        stName.value = globalStations[i].name;
+        stColor.value = globalStations[i].color;
+        stBtn.innerText = "💾";
+        stBtn.style.background = "#2196F3"; // Blå för editering, grön annars
+        stCancel.style.display = "block";
+    };
+
+    const resetSt = () => {
+        editingStationIndex = null; stName.value = ""; stBtn.innerText = "+"; stBtn.style.background = ""; // Återgår till CSS-klassen (grön)
+        stCancel.style.display = "none";
+    };
+    stCancel.onclick = resetSt;
+
+    stBtn.onclick = async () => {
+        if(!stName.value) return alert("Ange namn");
+        const item = { name: stName.value, color: stColor.value };
+        if(editingStationIndex !== null) globalStations[editingStationIndex] = item;
+        else globalStations.push(item);
+        await saveData('config_stations', globalStations);
+        resetSt();
+        renderStations();
+    };
+
+    document.getElementById('addSpacerBtn').onclick = async () => {
+        globalStations.push({ isSpacer: true });
+        await saveData('config_stations', globalStations);
+        renderStations();
+    };
+
+    window.deleteStation = async (i) => {
+        if(!confirm("Ta bort?")) return;
+        globalStations.splice(i, 1);
+        await saveData('config_stations', globalStations);
+        renderStations();
+    };
+    renderStations();
+
+    // --- PASS (SHIFTS) ---
+    const shLabel = document.getElementById('newShiftLabel');
+    const shTime = document.getElementById('newShiftTime');
+    const shBtn = document.getElementById('addShiftBtn');
+    const shCancel = document.getElementById('cancelShiftEditBtn');
+
+    const renderShifts = () => {
+        if(!Array.isArray(globalShifts)) globalShifts = DEFAULT_SHIFTS;
+        document.getElementById('shiftListContainer').innerHTML = globalShifts.map((sh, i) => `
+            <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee;">
+                <div><strong>${sh.label}</strong> <span style="color:#666;">(${sh.time})</span></div>
+                <div>
+                    <button class="list-btn" onclick="startEditShift(${i})">✏️</button>
+                    <button class="list-btn" onclick="deleteShift(${i})">🗑️</button>
+                </div>
+            </div>`).join('');
+    };
+
+    window.startEditShift = (i) => {
+        editingShiftIndex = i;
+        shLabel.value = globalShifts[i].label;
+        shTime.value = globalShifts[i].time;
+        shBtn.innerText = "Spara";
+        shBtn.style.background = "#2196F3";
+        shCancel.style.display = "block";
+    };
+
+    const resetSh = () => {
+        editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = ""; // Återgår till grön
+        shCancel.style.display = "none";
+    };
+    shCancel.onclick = resetSh;
+
+    shBtn.onclick = async () => {
+        if(!shLabel.value || !shTime.value) return alert("Fyll i allt");
+        const item = { label: shLabel.value, time: shTime.value };
+        if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item;
+        else globalShifts.push(item);
+        await saveData('config_shifts', globalShifts);
+        resetSh();
+        renderShifts();
+    };
+
+    window.deleteShift = async (i) => {
+        if(!confirm("Ta bort?")) return;
+        globalShifts.splice(i, 1);
+        await saveData('config_shifts', globalShifts);
+        renderShifts();
+    };
+    renderShifts();
+
+    // --- ADMINS ---
+    const admBtn = document.getElementById('addAdminBtn');
+    const admCancel = document.getElementById('cancelAdminEditBtn');
+    const admUser = document.getElementById('newAdminUser');
+    const admPass = document.getElementById('newAdminPass');
+    const admFirst = document.getElementById('newAdminFirstName');
+    const admLast = document.getElementById('newAdminLastName');
+    const admEmail = document.getElementById('newAdminEmail');
+
+    const renderAdmins = async () => {
+        let admins = await fetchData('admins');
+        if (!Array.isArray(admins)) admins = [];
+        document.getElementById('adminListContainer').innerHTML = admins.map(a => {
+            const json = JSON.stringify(a).replace(/"/g, '&quot;');
+            return `
+            <div style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <span>${a.first_name||''} ${a.last_name||''} (${a.username})</span>
+                <div>
+                    <button class="list-btn" onclick="startEditAdmin(${json})">✏️</button>
+                    <button class="list-btn" onclick="deleteAdmin('${a.username}')">🗑️</button>
+                </div>
+            </div>`;
+        }).join('');
+    };
+
+    window.startEditAdmin = (u) => {
+        editingAdminId = u.id;
+        admUser.value = u.username;
+        admFirst.value = u.first_name || "";
+        admLast.value = u.last_name || "";
+        admEmail.value = u.email || "";
+        admPass.placeholder = "Nytt lösen (valfritt)";
+        admPass.value = "";
+        
+        admBtn.innerText = "💾";
+        admBtn.style.background = "#2196F3";
+        admCancel.style.display = "block";
+    };
+
+    const resetAdm = () => {
+        editingAdminId = null; admUser.value = ""; admPass.value = ""; admFirst.value = ""; admLast.value = ""; admEmail.value = "";
+        admPass.placeholder = "Lösenord"; admBtn.innerText = "+"; admBtn.style.background = ""; admCancel.style.display = "none";
+    };
+    admCancel.onclick = resetAdm;
+
+    admBtn.onclick = async () => {
+        const u = admUser.value, p = admPass.value;
+        if(!u) return alert("Användarnamn krävs");
+        const action = editingAdminId ? 'edit_admin' : 'add_admin';
+        if(action === 'add_admin' && !p) return alert("Lösenord krävs");
+
+        await fetch('/api/data-api', { 
+            method:'POST', 
+            headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, 
+            body: JSON.stringify({action, username:u, password:p, firstName:admFirst.value, lastName:admLast.value, email:admEmail.value, id:editingAdminId}) 
+        });
+        resetAdm();
+        renderAdmins();
+    };
+
+    window.deleteAdmin = async(u) => { 
+        if(confirm("Ta bort?")) await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) });
+        renderAdmins(); 
+    };
+    renderAdmins();
+
+    document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
 }
 
-function closeAllDropdowns() {
-    const dropdowns = document.getElementsByClassName("dropdown-menu");
-    for (let i = 0; i < dropdowns.length; i++) {
-        dropdowns[i].classList.remove('show');
+/* =========================================
+   6. ADMIN PLANERING & PRINT
+   ========================================= */
+async function initAdmin() {
+    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
+
+    let draft = await fetchData('schedule_draft');
+    const published = await fetchData('schedule_published');
+    const old = await fetchData('schedule');
+    if(!draft || Object.keys(draft).length===0) draft = (published && Object.keys(published).length>0) ? published : old;
+    globalScheduleData = draft || {};
+
+    document.getElementById('publishBtn').onclick = async () => {
+        if(confirm("Publicera?")) { await saveData('schedule_published', globalScheduleData); alert("Publicerat!"); }
+    };
+
+    const picker = document.getElementById('adminDatePicker');
+    picker.value = new Date().toISOString().split('T')[0];
+    picker.onchange = (e) => updateGrid(e.target.value);
+    
+    function updateGrid(dateStr) {
+        const d = new Date(dateStr);
+        const iso = getISOWeek(d);
+        selectedWeek = iso.week; selectedYear = iso.year;
+        currentAdminDayIndex = d.getDay()===0?6:d.getDay()-1;
+        document.getElementById('currentDateDisplay').innerText = `${days[currentAdminDayIndex]} v.${selectedWeek}, ${selectedYear}`;
+        renderAdminGrid();
     }
-}
+    updateGrid(picker.value);
 
-function initAdmin() {
-    const now = new Date();
-    const iso = getISOWeekAndYear(now);
-    selectedWeek = iso.week;
-    selectedYear = iso.year;
-
-    setupWeekNav();
+    document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
+    document.getElementById('exportBtn').onclick = generateImage;
+    
+    document.getElementById('printBtn').onclick = () => {
+        const pc = document.getElementById('print-container') || document.createElement('div');
+        pc.id = 'print-container';
+        if(!document.body.contains(pc)) document.body.appendChild(pc);
+        pc.innerHTML = getScheduleHtmlForPrint();
+        window.print();
+        setTimeout(() => pc.innerHTML='', 1000);
+    };
     setupSidebarAddUser();
-    renderNav();
-    renderAdminGrid();
-}
-
-function setupSidebarAddUser() {
-    const addBtn = document.getElementById('sidebarAddBtn');
-    const input = document.getElementById('sidebarNewName');
-
-    function addUser() {
-        const name = input.value.trim();
-        if (name) {
-            let users = [...getUsers()]; 
-            if (!users.some(u => u.toLowerCase() === name.toLowerCase())) {
-                users.push(name);
-                users.sort((a, b) => a.localeCompare(b, 'sv'));
-                saveData('users', users);
-                input.value = '';
-                renderRoster(); 
-            } else {
-                alert('Namnet finns redan!');
-            }
-        }
-    }
-    if (addBtn && input) {
-        addBtn.onclick = addUser;
-        input.onkeydown = (e) => { if (e.key === 'Enter') addUser(); };
-    }
-}
-
-function setupWeekNav() {
-    const prevBtn = document.getElementById('prevWeekBtn');
-    const nextBtn = document.getElementById('nextWeekBtn');
-    const display = document.getElementById('currentWeekDisplay');
-
-    if (!prevBtn || !nextBtn || !display) return;
-
-    function updateDisplay() {
-        display.innerText = `Vecka ${selectedWeek}, ${selectedYear}`;
-        const dateDisplay = document.getElementById('currentDateDisplay');
-        if (dateDisplay) dateDisplay.innerText = `Redigerar: ${days[currentAdminDayIndex]} (v.${selectedWeek})`;
-    }
-
-    prevBtn.onclick = () => {
-        if (selectedWeek === 1) { selectedYear--; selectedWeek = 52; } else { selectedWeek--; }
-        updateDisplay(); renderAdminGrid();
-    };
-
-    nextBtn.onclick = () => {
-        if (selectedWeek >= 52) { selectedYear++; selectedWeek = 1; } else { selectedWeek++; }
-        updateDisplay(); renderAdminGrid();
-    };
-    updateDisplay();
-}
-
-function renderNav() {
-    const nav = document.getElementById('weekNav');
-    if (!nav) return;
-    nav.innerHTML = '';
-    days.forEach((day, idx) => {
-        const btn = document.createElement('button');
-        btn.className = `day-btn ${idx === currentAdminDayIndex ? 'active' : ''}`;
-        btn.innerText = day;
-        btn.onclick = () => { currentAdminDayIndex = idx; renderNav(); renderAdminGrid(); };
-        nav.appendChild(btn);
-    });
-}
-
-function renderRoster() {
-    const listContainer = document.getElementById('draggableUserList');
-    if (!listContainer) return; 
-    
-    listContainer.innerHTML = '';
-    const allUsers = getUsers();
-    
-    const dayName = days[currentAdminDayIndex];
-    const weekPrefix = `y${selectedYear}w${selectedWeek}-`;
-    const usedUsers = getUsedUsersForDay(dayName, weekPrefix);
-
-    if (allUsers.length === 0) {
-        listContainer.innerHTML = '<div style="padding:10px; color:#888; font-size:0.9rem;">Listan är tom.</div>';
-        return;
-    }
-
-    allUsers.forEach(user => {
-        const isBusy = usedUsers.has(user);
-        
-        const div = document.createElement('div');
-        div.className = `draggable-item ${isBusy ? 'is-busy' : ''}`;
-        
-        const nameSpan = document.createElement('span');
-        nameSpan.innerText = user;
-        if (isBusy) {
-            div.title = "Redan inbokad denna dag";
-            nameSpan.innerText += " ✓";
-        }
-        div.appendChild(nameSpan);
-
-        const delBtn = document.createElement('button');
-        delBtn.innerHTML = "&times;";
-        delBtn.className = "remove-user-btn";
-        delBtn.title = "Ta bort permanent";
-        
-        delBtn.onclick = (e) => {
-            e.stopPropagation();
-            const newUsers = getUsers().filter(u => u !== user);
-            saveData('users', newUsers);
-            renderRoster(); 
-        };
-
-        div.appendChild(delBtn);
-        div.draggable = true; 
-
-        div.ondragstart = (e) => {
-            e.dataTransfer.setData("text/plain", user);
-            e.dataTransfer.effectAllowed = "copy";
-        };
-
-        listContainer.appendChild(div);
-    });
 }
 
 function renderAdminGrid() {
-    const container = document.getElementById('scheduleContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    
-    renderRoster(); 
+    const cont = document.getElementById('scheduleContainer');
+    renderRoster();
+    if(!cont) return;
 
-    const scheduleData = getScheduleData();
-    const allUsers = getUsers();
     const dayName = days[currentAdminDayIndex];
-    const weekPrefix = `y${selectedYear}w${selectedWeek}-`;
-    const usedUsersSet = getUsedUsersForDay(dayName, weekPrefix);
+    const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
 
-    const headerRow = document.createElement('div');
-    headerRow.className = 'header-row';
-    headerRow.appendChild(document.createElement('div')); 
-    dbTimes.forEach(time => {
-        const th = document.createElement('div');
-        th.className = 'time-header-item';
-        th.innerText = time;
-        headerRow.appendChild(th);
-    });
-    container.appendChild(headerRow);
+    if(!Array.isArray(globalShifts) || !globalShifts.length) globalShifts = DEFAULT_SHIFTS;
+    if(!Array.isArray(globalStations) || !globalStations.length) globalStations = DEFAULT_STATIONS;
 
-    stations.forEach(station => {
-        const row = document.createElement('div');
-        row.className = `station-row ${station.class}`;
-        const label = document.createElement('div');
-        label.className = 'station-label';
-        label.innerText = station.name;
-        row.appendChild(label);
+    let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${s.time}</div>`).join('')}</div>`;
 
-        dbTimes.forEach((time, index) => {
-            const isTwoColStation = (station.name === "Info" || station.name === "PL");
-            if (isTwoColStation && index === 2) return; 
-
-            const block = document.createElement('div');
-            block.className = 'shift-block'; 
-            
-            const key = `${weekPrefix}${dayName}-${station.name}-${time}`;
-            const currentText = scheduleData[key] || "";
-            if (!currentText.trim()) block.classList.add('empty');
-
-            block.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; block.classList.add('drag-over'); };
-            block.ondragleave = () => { block.classList.remove('drag-over'); };
-            block.ondrop = (e) => {
-                e.preventDefault();
-                block.classList.remove('drag-over');
-                const droppedName = e.dataTransfer.getData("text/plain");
-                if (droppedName) {
-                    let newVal = currentText.trim();
-                    if (newVal === "" || newVal === droppedName) newVal = droppedName;
-                    else if (!newVal.includes(droppedName)) newVal += " / " + droppedName;
-                    else return;
-                    
-                    scheduleData[key] = newVal;
-                    saveData('schedule', scheduleData);
-                    renderAdminGrid(); 
-                }
-            };
-
-            const textSpan = document.createElement('span');
-            textSpan.className = 'shift-text';
-            textSpan.innerText = currentText;
-            textSpan.contentEditable = "true";
-            
-            textSpan.onblur = (e) => {
-                const newText = e.target.innerText.trim();
-                if (newText === currentText) return;
-
-                const namesInBox = newText.split('/').map(n => n.trim()).filter(n => n.length > 0);
-                let currentUsersList = [...getUsers()];
-                let usersUpdated = false;
-
-                namesInBox.forEach(name => {
-                    const exists = currentUsersList.some(u => u.toLowerCase() === name.toLowerCase());
-                    if (!exists) {
-                        currentUsersList.push(name);
-                        usersUpdated = true;
-                    }
-                });
-
-                if (usersUpdated) {
-                    currentUsersList.sort((a, b) => a.localeCompare(b, 'sv'));
-                    saveData('users', currentUsersList);
-                }
-
-                scheduleData[key] = newText;
-                saveData('schedule', scheduleData);
-                renderAdminGrid(); 
-            };
-
-            textSpan.onkeydown = (e) => { 
-                if (e.key === 'Enter') { 
-                    e.preventDefault(); 
-                    e.target.blur(); 
-                } 
-            };
-            
-            block.appendChild(textSpan);
-
-            const toolsDiv = document.createElement('div');
-            toolsDiv.className = 'admin-tools';
-            const availableUsers = allUsers.filter(u => !usedUsersSet.has(u));
-            
-            if (availableUsers.length > 0) {
-                const ddContainer = document.createElement('div');
-                ddContainer.className = 'dropdown-container';
-                const btn = document.createElement('button');
-                btn.className = 'dropdown-btn';
-                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
-                const menu = document.createElement('div');
-                menu.className = 'dropdown-menu';
-                availableUsers.forEach(u => {
-                    const item = document.createElement('div');
-                    item.className = 'dropdown-item';
-                    item.innerText = u;
-                    item.onclick = () => {
-                        let ns = textSpan.innerText.trim(); 
-                        ns = ns === "" ? u : ns + " / " + u;
-                        scheduleData[key] = ns;
-                        saveData('schedule', scheduleData);
-                        renderAdminGrid();
-                    };
-                    menu.appendChild(item);
-                });
-                btn.onclick = (e) => { e.stopPropagation(); closeAllDropdowns(); menu.classList.toggle('show'); };
-                ddContainer.appendChild(btn);
-                ddContainer.appendChild(menu);
-                toolsDiv.appendChild(ddContainer);
-            }
-
-            if (currentText !== "") {
-                const clearBtn = document.createElement('button');
-                clearBtn.className = 'clear-btn';
-                clearBtn.innerHTML = "&times;";
-                clearBtn.onclick = () => {
-                    scheduleData[key] = "";
-                    saveData('schedule', scheduleData);
-                    renderAdminGrid();
-                };
-                toolsDiv.appendChild(clearBtn);
-            }
-            block.appendChild(toolsDiv);
-            row.appendChild(block);
+    globalStations.forEach(st => {
+        if(st.isSpacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#f5f5f5;"></div>`; return; }
+        
+        html += `<div class="station-row"><div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
+        globalShifts.forEach(sh => {
+            const key = `${prefix}${st.name}-${sh.time}`;
+            const val = globalScheduleData[key] || "";
+            html += `<div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event,'${key}')">
+                <span class="shift-text" contenteditable="true" onblur="saveShift('${key}', this.innerText)">${val}</span>
+                ${val ? `<button class="clear-btn" onclick="saveShift('${key}', '')">&times;</button>`:''}</div>`;
         });
-        container.appendChild(row);
+        html += `</div>`;
     });
+    cont.innerHTML = html;
 }
 
+function isLight(color) {
+    if(!color) return true;
+    const h = color.replace('#','');
+    const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
+    return ((r*299 + g*587 + b*114)/1000) >= 128;
+}
+
+function renderRoster() {
+    const list = document.getElementById('draggableUserList');
+    if(!list) return;
+    const day = days[currentAdminDayIndex];
+    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+    const work = new Set();
+    Object.keys(globalScheduleData).forEach(k => { if(k.startsWith(prefix) && globalScheduleData[k]) globalScheduleData[k].split('/').forEach(n=>work.add(n.trim())); });
+    list.innerHTML = globalUserList.filter(u=>!work.has(u)).map(u => 
+        `<div class="draggable-item" draggable="true" ondragstart="event.dataTransfer.setData('text','${u}')">${u} <button class="remove-user-btn" onclick="removeUser('${u}')">&times;</button></div>`).join('');
+}
+
+async function saveShift(k, v) { globalScheduleData[k] = v.trim(); await saveData('schedule_draft', globalScheduleData); renderAdminGrid(); }
+async function handleDrop(e, k) { e.preventDefault(); const n = e.dataTransfer.getData("text"); let c = globalScheduleData[k]||""; if(!c.includes(n)) await saveShift(k, c?c+" / "+n:n); }
+
 /* =========================================
-   7. DISPLAY LOGIK
+   7. DISPLAY
    ========================================= */
+let lastSnap="";
 function initDisplay() {
-    updateClock();
-    loadDisplayData();
-    setInterval(updateClock, 60000);
-    
-    if (USE_CLOUD_DB) {
-        setInterval(async () => {
-            try {
-                globalScheduleData = await fetchData('schedule');
-                loadDisplayData();
-            } catch (e) { console.error("Update fail", e); }
-        }, 10000); 
-    }
-}
+    setInterval(()=>document.getElementById('clock').innerText=new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}),1000);
+    const refresh = async () => {
+        let pub = await fetchData('schedule_published');
+        if(!pub || !Object.keys(pub).length) pub = await fetchData('schedule');
+        const [sets, msg] = await Promise.all([fetchData('settings'), fetchData('message')]);
+        
+        const snap = JSON.stringify({s:pub, t:sets?.theme, m:msg});
+        if(snap === lastSnap) return; lastSnap=snap;
+        globalScheduleData = pub || {};
 
-function updateClock() {
-    const clockEl = document.getElementById('clock');
-    if (clockEl) {
-        clockEl.innerText = new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-    }
-}
+        if(sets?.theme) applyTheme(sets.theme);
+        const mq = document.getElementById('marqueeContainer');
+        if(mq) { mq.style.display=(msg?.show&&msg?.text)?'block':'none'; if(msg?.text) document.getElementById('marqueeText').innerText=msg.text; }
 
-function loadDisplayData() {
-    let todayIndex = getCurrentDayIndex();
-    if (todayIndex < 0) todayIndex = 0; 
-    const todayName = days[todayIndex];
-    const data = getScheduleData();
-    const now = new Date();
-    const iso = getISOWeekAndYear(now);
-    const container = document.getElementById('mainContainer');
-    if (!container) return;
-    
-    const titleEl = document.getElementById('mainTitle');
-    if (titleEl) {
-        titleEl.innerText = `Vi som jobbar ${todayName} ${now.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })} (v.${iso.week})`;
-    }
-    
-    container.innerHTML = '';
-    const headerRow = document.createElement('div');
-    headerRow.className = 'time-header-row';
-    headerRow.appendChild(document.createElement('div')); 
-    displayTimes.forEach(t => {
-        const div = document.createElement('div');
-        div.className = 'time-header';
-        div.innerText = t;
-        headerRow.appendChild(div);
-    });
-    container.appendChild(headerRow);
+        const now = new Date(), iso = getISOWeek(now), today = days[now.getDay()===0?6:now.getDay()-1];
+        document.getElementById('mainTitle').innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
+        
+        const cont = document.getElementById('mainContainer');
+        if(!Array.isArray(globalShifts) || !globalShifts.length) globalShifts = DEFAULT_SHIFTS;
+        if(!Array.isArray(globalStations) || !globalStations.length) globalStations = DEFAULT_STATIONS;
 
-    stations.forEach(station => {
-        const row = document.createElement('div');
-        row.className = `display-row ${station.class}`;
-        const stDiv = document.createElement('div');
-        stDiv.className = 'station-label'; 
-        stDiv.innerText = station.name;
-        row.appendChild(stDiv);
-
-        dbTimes.forEach((dbTime, index) => {
-            if ((station.name === "Info" || station.name === "PL") && index === 2) return;
-            const key = `y${iso.year}w${iso.week}-${todayName}-${station.name}-${dbTime}`;
-            const name = data[key];
-            const card = document.createElement('div');
-            card.className = 'shift-card'; 
-            if (!name || !name.trim()) card.classList.add('empty');
-            else card.innerText = name;
-            row.appendChild(card);
+        let html = `<div class="time-header-row"><div></div>${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}</div>`;
+        globalStations.forEach(st => {
+            if(st.isSpacer) { html += `<div class="display-row" style="grid-column:1/-1; height:4vh;"></div>`; return; }
+            html += `<div class="display-row"><div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
+            globalShifts.forEach(sh => {
+                const key = `y${iso.year}w${iso.week}-${today}-${st.name}-${sh.time}`;
+                const val = globalScheduleData[key] || "";
+                html += `<div class="shift-card ${val?'':'empty'}">${val}</div>`;
+            });
+            html += `</div>`;
         });
-        container.appendChild(row);
-    });
+        cont.innerHTML = html;
+    };
+    refresh(); setInterval(refresh, 15000);
 }
 
 /* =========================================
-   8. EXPORT & UTSKRIFT (Print på samma sida)
+   8. EXPORT & PRINT
    ========================================= */
-
-// Funktion för att skriva ut via webbläsaren men med rätt layout
-function printSchedule() {
-    // 1. Skapa eller hämta print-containern
-    let printContainer = document.getElementById('print-container');
-    if (!printContainer) {
-        printContainer = document.createElement('div');
-        printContainer.id = 'print-container';
-        // Dölj den normalt (i skärmläge) via CSS-klass eller inline
-        // Men vi litar på att style.css sköter @media print
-        document.body.appendChild(printContainer);
-    }
-
-    // 2. Fyll den med det snygga innehållet
-    printContainer.innerHTML = getScheduleHtmlForPrint();
-
-    // 3. Trigga utskriften
-    window.print();
-    
-    // Containern kan ligga kvar, den syns inte förrän @media print kickar in
-}
-
-function generateScheduleImage() {
-    const exportBtn = document.getElementById('exportBtn');
-    const originalText = exportBtn.innerText;
-    exportBtn.innerText = "Genererar bild..."; 
-
-    const tempContainer = document.createElement('div');
-    tempContainer.id = "temp-export-container";
-    Object.assign(tempContainer.style, {
-        position: 'absolute', top: '-9999px', left: '0', width: '1600px', 
-        backgroundColor: '#fff', padding: '40px', fontFamily: "'Inter', sans-serif"
-    });
-
-    tempContainer.innerHTML = getScheduleHtmlForPrint();
-    document.body.appendChild(tempContainer);
-
-    if (typeof html2canvas === 'undefined') {
-        alert("html2canvas saknas.");
-        exportBtn.innerText = originalText;
-        return;
-    }
-
-    html2canvas(tempContainer, { scale: 2, useCORS: true }).then(canvas => {
-        const activeDayName = days[currentAdminDayIndex];
-        const link = document.createElement('a');
-        link.download = `Schema-${activeDayName}-v${selectedWeek}.jpg`; 
-        link.href = canvas.toDataURL('image/jpeg', 0.9);
-        link.click();
-        
-        document.body.removeChild(tempContainer);
-        exportBtn.innerText = originalText;
-    }).catch(err => {
-        console.error("Kunde inte skapa bild:", err);
-        if(document.body.contains(tempContainer)) document.body.removeChild(tempContainer);
-        exportBtn.innerText = originalText;
-    });
-}
-
 function getScheduleHtmlForPrint() {
-    const activeDayIndex = currentAdminDayIndex; 
-    const activeDayName = days[activeDayIndex];
-    const now = new Date();
-    
-    const COLOR_MAP = {
-        "color-bjorkliden": { solid: "#43a047", transparent: "rgba(67, 160, 71, 0.4)", border: "rgba(67, 160, 71, 0.6)" },
-        "color-kiruna":     { solid: "#546e7a", transparent: "rgba(84, 110, 122, 0.4)", border: "rgba(84, 110, 122, 0.6)" },
-        "color-bastutrask": { solid: "#d81b60", transparent: "rgba(216, 27, 96, 0.4)", border: "rgba(216, 27, 96, 0.6)" },
-        "color-boden":      { solid: "#fb8c00", transparent: "rgba(251, 140, 0, 0.4)", border: "rgba(251, 140, 0, 0.6)" },
-        "color-gallivare":  { solid: "#8e24aa", transparent: "rgba(142, 36, 170, 0.4)", border: "rgba(142, 36, 170, 0.6)" },
-        "color-alvsbyn":    { solid: "#039be5", transparent: "rgba(3, 155, 229, 0.4)", border: "rgba(3, 155, 229, 0.6)" },
-        "color-info":       { solid: "#00acc1", transparent: "rgba(0, 172, 193, 0.4)", border: "rgba(0, 172, 193, 0.6)" },
-        "color-pl":         { solid: "#3949ab", transparent: "rgba(57, 73, 171, 0.4)", border: "rgba(57, 73, 171, 0.6)" }
-    };
+    const dateText = document.getElementById('currentDateDisplay').innerText;
+    const day = days[currentAdminDayIndex];
+    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+    const shifts = (Array.isArray(globalShifts)&&globalShifts.length)?globalShifts:DEFAULT_SHIFTS;
+    const stations = (Array.isArray(globalStations)&&globalStations.length)?globalStations:DEFAULT_STATIONS;
 
-    const dateFormatted = now.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' });
-    const mainTitleText = `Vi som jobbar ${activeDayName} ${dateFormatted} (v.${selectedWeek})`;
+    let html = `<div style="font-family:sans-serif; padding:20px;"><div style="text-align:center; margin-bottom:20px;"><h1 style="font-size:24px; margin:0;">Bemanningsschema - ${dateText}</h1></div>
+    <div style="display:grid; grid-template-columns:150px repeat(${shifts.length},1fr); gap:10px; text-align:center; font-weight:bold; margin-bottom:10px;">
+    <div></div>${shifts.map(s=>`<div style="border:1px solid #000; padding:5px; background:#ddd;">${s.label}<br><span style="font-size:0.8em; font-weight:normal;">${s.time}</span></div>`).join('')}</div>`;
 
-    let htmlContent = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h1 style="font-size:2.2rem; color:#222; margin:0;">${mainTitleText}</h1>
-        </div>
-        <div style="display:grid; grid-template-columns: 150px 1fr 1fr 1fr; gap:10px; margin-bottom:10px; padding-bottom:5px; border-bottom:2px solid #eee; font-weight:bold; text-align:center;">
-            <div></div>
-            ${displayTimes.map(t => `<div>${t}</div>`).join('')}
-        </div>
-    `;
-
-    const scheduleData = getScheduleData();
-    const weekPrefix = `y${selectedYear}w${selectedWeek}-`; 
-
-    stations.forEach(station => {
-        const color = COLOR_MAP[station.class] || { solid: "#666", transparent: "#eee", border: "#ccc" };
-        const isInfo = station.name === 'Info';
-        const rowStyle = isInfo ? 'margin-top:50px;' : '';
-
-        const labelStyle = `
-            background-color: ${color.solid}; color: #fff; 
-            font-weight: bold; padding: 10px; border-radius: 4px;
-            display:flex; align-items:center; justify-content:center;
-            min-height:50px;
-        `;
-        
-        htmlContent += `
-            <div style="display:grid; grid-template-columns: 150px 1fr 1fr 1fr; gap:10px; margin-bottom:10px; ${rowStyle}">
-                <div style="${labelStyle}">${station.name}</div>
-        `;
-
-        dbTimes.forEach((dbTime, index) => {
-            const isTwoColStation = (station.name === "Info" || station.name === "PL");
-            if (isTwoColStation && index === 2) return; 
-
-            const key = `${weekPrefix}${activeDayName}-${station.name}-${dbTime}`;
-            const name = scheduleData[key] || "";
-            const isEmpty = (!name || name.trim() === "");
-
-            let cardStyle = `
-                display:flex; align-items:center; justify-content:center; text-align:center; 
-                min-height:50px; border-radius:4px; padding:10px; font-weight:bold; font-size:1.1rem;
-            `;
-
-            if (isEmpty) {
-                cardStyle += `background-color: #fff; border: 1px solid #eee;`;
-            } else {
-                cardStyle += `background-color: ${color.transparent}; border: 1px solid ${color.border}; color: #000;`;
-            }
-
-            htmlContent += `<div style="${cardStyle}">${name}</div>`;
+    stations.forEach(st => {
+        if(st.isSpacer) { html += `<div style="grid-column:1/-1; height:30px;"></div>`; return; }
+        const bg = st.color, fg = isLight(bg)?'#000':'#fff';
+        html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length},1fr); gap:10px; margin-bottom:10px;">
+            <div style="background:${bg}; color:${fg}; font-weight:bold; padding:10px; display:flex; align-items:center; justify-content:center; border:1px solid #000;">${st.name}</div>`;
+        shifts.forEach(sh => {
+            const val = globalScheduleData[`${prefix}${st.name}-${sh.time}`] || "";
+            html += `<div style="display:flex; align-items:center; justify-content:center; text-align:center; min-height:50px; padding:5px; font-weight:bold; border:1px solid #000; background:#fff;">${val}</div>`;
         });
-        htmlContent += `</div>`; 
+        html += `</div>`;
     });
-    
-    return htmlContent;
+    return html + `</div>`;
 }
-
-
+function generateImage() {
+    const btn=document.getElementById('exportBtn'), txt=btn.innerText; btn.innerText="Genererar...";
+    const div=document.createElement('div'); div.style.cssText="position:absolute; top:-9999px; left:0; width:1200px; background:#fff;";
+    div.innerHTML=getScheduleHtmlForPrint(); document.body.appendChild(div);
+    if(typeof html2canvas==='undefined') return alert("Ladda om sidan");
+    html2canvas(div,{scale:2}).then(c=>{
+        const a=document.createElement('a'); a.download=`Schema-${days[currentAdminDayIndex]}.jpg`; a.href=c.toDataURL('image/jpeg',0.9); a.click();
+        document.body.removeChild(div); btn.innerText=txt;
+    });
+}
+function getISOWeek(d) { const date=new Date(d.getTime()); date.setHours(0,0,0,0); date.setDate(date.getDate()+3-(date.getDay()+6)%7); const w1=new Date(date.getFullYear(),0,4); return {week:1+Math.round(((date.getTime()-w1.getTime())/86400000-3+(w1.getDay()+6)%7)/7), year:date.getFullYear()}; }
+function setupSidebarAddUser() {
+    const btn=document.getElementById('sidebarAddBtn'), inp=document.getElementById('sidebarNewName');
+    if(btn&&inp) { btn.onclick=async()=>{if(inp.value){globalUserList.push(inp.value);globalUserList.sort();await saveData('users',globalUserList);inp.value='';renderRoster();}}; inp.onkeydown=e=>{if(e.key==='Enter')btn.click();} }
+}
+async function removeUser(u) { if(confirm('Ta bort '+u+'?')){globalUserList=globalUserList.filter(user=>user!==u);await saveData('users',globalUserList);renderRoster();} }

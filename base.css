@@ -1,0 +1,95 @@
+/* =========================================
+   BASE.CSS - GEMENSAMT & TEMAN
+   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 0;
+    /* Mjuk övergång vid temabyte */
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.hidden { display: none !important; }
+
+/* =========================================
+   TEMA-VARIABLER
+   ========================================= */
+
+/* --- Ljust tema (Standard) --- */
+:root {
+    --bg-color: #f4f4f9;
+    --text-color: #333333;
+    --header-bg: #ffffff;
+    --header-text: #444444;
+    --card-bg: #ffffff;
+    --card-text: #333333;
+    --border-color: #dddddd;
+    --input-bg: #ffffff;
+    --input-border: #cccccc;
+    --shadow: 0 2px 10px rgba(0,0,0,0.1);
+    --btn-primary: #4CAF50;
+    --btn-text: #ffffff;
+}
+
+/* --- Mörkt tema --- */
+body.theme-dark {
+    --bg-color: #121212;
+    --text-color: #e0e0e0;
+    --header-bg: #1e1e1e;
+    --header-text: #ffffff;
+    --card-bg: #2d2d2d;
+    --card-text: #ffffff;
+    --border-color: #444444;
+    --input-bg: #333333;
+    --input-border: #555555;
+    --shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+/* --- Norrsken (Aurora) --- */
+body.theme-jul {
+    --bg-color: #0b1026;
+    --text-color: #e0f7fa;
+    --header-bg: #151a30;
+    --header-text: #50fa7b;
+    --card-bg: rgba(13, 17, 34, 0.85);
+    --card-text: #e0f7fa;
+    --border-color: #50fa7b;
+    --input-bg: rgba(255,255,255,0.1);
+    --input-border: #50fa7b;
+    --shadow: 0 0 15px rgba(80, 250, 123, 0.2);
+}
+
+/* --- Påsktema --- */
+body.theme-pask {
+    --bg-color: #fffbea;
+    --text-color: #5a4a42;
+    --header-bg: #e3f2fd;
+    --header-text: #1565c0;
+    --card-bg: #ffffff;
+    --card-text: #5a4a42;
+    --border-color: #ffe0b2;
+    --input-bg: #fff;
+    --input-border: #ffcc80;
+    --shadow: 0 4px 15px rgba(100, 181, 246, 0.2);
+}
+
+/* --- Matrix --- */
+body.theme-matrix {
+    --bg-color: #000000;
+    --text-color: #00ff41;
+    --header-bg: #0a0a0a;
+    --header-text: #00ff41;
+    --card-bg: #0d0d0d;
+    --card-text: #00ff41;
+    --border-color: #003300;
+    --input-bg: #000;
+    --input-border: #00ff41;
+    --shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+    --btn-primary: #003300;
+    --btn-text: #00ff41;
+    font-family: 'JetBrains Mono', monospace;
+}

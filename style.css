@@ -1,5 +1,5 @@
 /* =========================================
-   1. GRUNDLÄGGANDE INSTÄLLNINGAR
+   1. GRUNDLÄGGANDE INSTÄLLNINGAR (GLOBAL)
    ========================================= */
 * { box-sizing: border-box; }
 
@@ -19,7 +19,132 @@ h1 {
 }
 
 /* =========================================
-   2. MENY & NAVIGATION (ADMIN)
+   2. SPECIALDESIGN FÖR INLOGGNING (STRUL DARK MODE)
+   OBS: Detta gäller ENDAST inloggningssidan (.login-view)
+   ========================================= */
+
+body.login-view {
+    padding: 0;
+    margin: 0;
+    background-color: #050505 !important;
+    background-image: 
+        linear-gradient(rgba(0, 168, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 168, 255, 0.03) 1px, transparent 1px);
+    background-size: 30px 30px;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: #fff !important;
+}
+
+.login-view .login-container {
+    width: 100%;
+    max-width: 600px;
+    padding: 20px;
+    position: relative;
+    z-index: 10;
+}
+
+.login-view .login-card {
+    background: rgba(10, 15, 20, 0.85);
+    border: 1px solid #333;
+    padding: 0 0 40px 0;
+    border-radius: 4px;
+    box-shadow: 0 0 50px rgba(0, 168, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+}
+
+.login-view .login-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 3px;
+    background: linear-gradient(90deg, #00a8ff, #ff6600);
+    box-shadow: 0 0 10px rgba(0, 168, 255, 0.8);
+}
+
+.login-view .graphic-header {
+    width: 100%;
+    background: radial-gradient(circle at 50% 50%, rgba(0, 168, 255, 0.05), transparent 70%);
+    margin-bottom: 20px;
+}
+
+.login-view .graphic-header svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.login-view .form-section {
+    padding: 0 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.login-view .input-wrapper { position: relative; }
+
+/* Endast input på login-sidan ska vara mörk */
+.login-view input {
+    width: 100%;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid #333 !important;
+    color: #00a8ff !important;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    outline: none;
+    text-align: center;
+    border-radius: 0 !important;
+}
+.login-view input:focus {
+    border-color: #00a8ff !important;
+    box-shadow: 0 0 15px rgba(0, 168, 255, 0.2);
+}
+
+.login-view .login-btn {
+    background: transparent;
+    border: 1px solid #ff6600;
+    color: #ff6600;
+    padding: 15px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+.login-view .login-btn:hover {
+    background: #ff6600;
+    color: #000;
+    box-shadow: 0 0 20px rgba(255, 102, 0, 0.4);
+}
+
+.login-view .footer-links { margin-top: 30px; text-align: center; }
+.login-view .display-link {
+    color: #555; text-decoration: none; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+}
+.login-view .display-link:hover { color: #00a8ff; }
+
+.login-view .scan-lines {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+    background-size: 100% 4px; pointer-events: none; z-index: 5; opacity: 0.3;
+}
+
+
+/* =========================================
+   3. MENY & NAVIGATION (ADMIN - ORIGINAL)
    ========================================= */
 
 /* --- Veckonavigering (UPPDATERAD) --- */
@@ -100,7 +225,7 @@ h1 {
 }
 
 /* =========================================
-   3. ADMIN-LAYOUT & SIDOPANEL (ENDAST ADMIN)
+   4. ADMIN-LAYOUT & SIDOPANEL (ENDAST ADMIN)
    ========================================= */
 
 .admin-layout {
@@ -131,7 +256,7 @@ h1 {
 .roster-card h3 { margin-top: 0; margin-bottom: 15px; text-align: center; color: #444; }
 .roster-hint { text-align: center; color: #888; font-size: 0.85rem; margin-bottom: 10px; margin-top: 20px; }
 
-/* Inputfält i sidebar */
+/* Inputfält i sidebar - Återställt */
 .sidebar-add-row {
     display: flex;
     align-items: center; /* Centrerar vertikalt */
@@ -144,9 +269,12 @@ h1 {
     flex: 1;             /* Tar all ledig plats */
     min-width: 0;        /* VIKTIGT: Gör att den inte knuffar ut knappen */
     padding: 8px 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    background: #fff !important;
+    color: #333 !important;
     font-size: 0.95rem;
+    text-align: left !important;
 }
 
 .sidebar-add-btn {
@@ -154,7 +282,6 @@ h1 {
     width: 36px;         /* Fast bredd så den alltid är fyrkantig och fin */
     height: 36px;        /* Samma höjd som bredd */
     padding: 0;          /* Nollställ padding för att centrera texten */
-    
     background-color: #4CAF50; 
     color: white;
     border: none;
@@ -228,7 +355,7 @@ h1 {
 .schedule-card-wrapper { flex-grow: 1; min-width: 0; }
 
 /* =========================================
-   4. LAYOUT & GRID (GEMENSAMT)
+   5. LAYOUT & GRID (GEMENSAMT)
    ========================================= */
 
 /* Admin container */
@@ -283,7 +410,7 @@ h1 {
 }
 
 /* =========================================
-   5. ADMIN-SPECIFIKT (RUTORNA)
+   6. ADMIN-SPECIFIKT (RUTORNA)
    ========================================= */
 .shift-block {
     background-color: #f9f9f9;
@@ -329,7 +456,7 @@ h1 {
 .clear-btn:hover { background-color: #ffebee; border-radius: 4px; }
 
 /* =========================================
-   6. DISPLAY-SPECIFIKT (ÅTERSTÄLLD DESIGN)
+   7. DISPLAY-SPECIFIKT (ÅTERSTÄLLD DESIGN)
    ========================================= */
    
 /* Top bar återställd till original-layout */
@@ -383,7 +510,7 @@ body.display-view .shift-card.empty {
 }
 
 /* =========================================
-   7. FÄRGER (KORRIGERAD EFTER BILD: SVART TEXT)
+   8. FÄRGER (KORRIGERAD EFTER BILD: SVART TEXT)
    ========================================= */
 
 /* Björkliden - Orange/Guld (Svart text) */
@@ -485,7 +612,7 @@ body.display-view .shift-card.empty {
 }
 
 /* =========================================
-   8. ÖVRIGT (EXPORT, DROPDOWN ETC)
+   9. ÖVRIGT (EXPORT, DROPDOWN ETC)
    ========================================= */
 .export-container {
     max-width: 100%;
@@ -567,96 +694,6 @@ body.display-view .shift-card.empty {
         margin: 1cm;
     }
 }
-/* =========================================
-   10. LOGIN SIDA
-   ========================================= */
-.login-view {
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.login-wrapper { width: 100%; max-width: 420px; }
-
-.login-card {
-    background: white;
-    padding: 40px;
-    border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-    text-align: center;
-}
-
-.login-header { margin-bottom: 30px; }
-
-.icon-bg {
-    font-size: 3rem;
-    margin-bottom: 15px;
-    display: inline-block;
-    background: #f0f2f5;
-    width: 80px; height: 80px;
-    line-height: 80px;
-    border-radius: 50%;
-}
-
-.login-header h1 { font-size: 1.5rem; margin: 0 0 10px 0; color: #333; }
-.login-header p { color: #666; margin: 0; font-size: 0.95rem; }
-
-.input-group { margin-bottom: 20px; }
-.input-group input {
-    width: 100%;
-    padding: 14px;
-    border: 2px solid #eee;
-    border-radius: 8px;
-    font-size: 1rem;
-    outline: none;
-    transition: border-color 0.2s;
-}
-.input-group input:focus { border-color: #333; }
-
-.action-btn {
-    width: 100%;
-    display: block;
-    padding: 14px;
-    border-radius: 8px;
-    border: none;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: none;
-    transition: transform 0.1s, opacity 0.2s;
-    box-sizing: border-box; /* Viktigt för padding */
-}
-
-.action-btn.primary { background-color: #222; color: white; margin-bottom: 15px; }
-.action-btn.primary:hover { background-color: #000; }
-
-.action-btn.secondary { 
-    background-color: white; 
-    color: #444; 
-    border: 2px solid #eee; 
-}
-.action-btn.secondary:hover { background-color: #f9f9f9; border-color: #ddd; }
-
-.divider {
-    position: relative;
-    margin: 25px 0;
-    text-align: center;
-}
-.divider::before {
-    content: "";
-    position: absolute; top: 50%; left: 0; right: 0;
-    border-top: 1px solid #eee;
-}
-.divider span {
-    background: white;
-    padding: 0 10px;
-    color: #999;
-    font-size: 0.8rem;
-    position: relative;
-}
 
 /* LOGGA UT KNAPP (ADMIN) */
 .admin-header .header-content {
@@ -683,53 +720,176 @@ body.display-view .shift-card.empty {
 .logout-btn:hover { background: #ffcdd2; }
 
 /* =========================================
-   STRUL BRANDING (LOGIN)
+   11. DISPLAY "MODERN LIGHT" (TOTAL REMAKE)
    ========================================= */
 
-/* Titel-stilen */
-.strul-title {
-    font-size: 3.5rem !important;
-    font-weight: 900 !important;
-    color: #222;
-    margin: 10px 0 5px 0 !important;
-    letter-spacing: 2px;
-    line-height: 1;
+/* 1. Grundlayout - Mjuk och modern */
+body.display-view {
+    background-color: #f0f2f5 !important; /* Mjuk ljusgrå bakgrund (Facebook/Google stil) */
+    color: #1a1a1a !important; /* Mörkgrå text (mjukare än svart) */
+    margin: 0 !important;
+    padding: 2vh 3vw !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    font-family: 'Inter', sans-serif !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
-/* Undertitel-stilen */
-.strul-desc {
-    font-size: 0.95rem !important;
-    color: #555;
-    font-weight: 600;
-    max-width: 320px;
-    margin: 0 auto 25px auto !important;
-    line-height: 1.4;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* LOGO-behållare */
-.icon-bg.logo-container {
-    font-size: 0;
-    background-color: rgba(2, 119, 189, 0.08) !important; /* Mycket ljus blå */
-    padding: 15px;
-    width: 90px;
-    height: 90px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 10px;
-    border-radius: 50%; /* Gör den helt rund */
-}
-
-/* LOGO-bilden (SVG) */
-.strul-logo-svg {
+.display-view .display-wrapper {
     width: 100%;
     height: 100%;
-    color: #0277bd; /* Samma blå som 'PL' */
-    stroke-width: 1.5px;
-    filter: drop-shadow(0px 2px 4px rgba(2, 119, 189, 0.25));
+    display: flex;
+    flex-direction: column;
+}
+
+/* 2. Header - Svävande och ren */
+.display-view .top-bar {
+    background: #ffffff;
+    padding: 1.5vh 2vw;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05); /* Mjuk skugga */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: none !important;
+    width: 100%;
+    margin-bottom: 2vh !important;
+}
+
+.display-view #mainTitle {
+    font-size: 3.5vh !important;
+    font-weight: 800 !important;
+    color: #2c3e50 !important;
+    margin: 0 !important;
+    letter-spacing: -0.5px;
+}
+
+.display-view #clock {
+    font-size: 4.5vh !important;
+    font-weight: 900 !important;
+    color: #2c3e50 !important;
+    background: #f8f9fa;
+    padding: 0.2vh 1.5vw;
+    border-radius: 8px;
+}
+
+/* 3. Grid-containern */
+.display-view #mainContainer {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly; /* Fördela höjden snyggt */
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: none !important;
+}
+
+/* Rubrikraden (Tiderna) */
+.display-view .time-header-row {
+    display: grid;
+    grid-template-columns: 220px 1fr 1fr 1fr; /* Bredare för stationsnamn */
+    gap: 1.5vw;
+    margin-bottom: 1vh;
+    padding: 0 10px;
+}
+
+.display-view .time-header {
+    font-size: 2.2vh !important;
+    font-weight: 700 !important;
+    color: #6c757d !important; /* Diskret grå */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+    border: none !important;
+}
+
+/* 4. Raderna (Stationerna) */
+.display-view .display-row {
+    display: grid;
+    grid-template-columns: 220px 1fr 1fr 1fr;
+    gap: 1.5vw;
+    align-items: stretch !important;
+    margin-bottom: 1.2vh;
+    min-height: 8vh; /* Garantera viss höjd */
+}
+
+/* Stationsnamnet (Etiketten) - Nu som en "Tag" */
+.display-view .station-label {
+    font-size: 2.8vh !important;
+    border-radius: 12px !important;
+    justify-content: flex-start !important; /* Vänsterställd text */
+    padding-left: 1.5vw !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    background-color: #fff !important; /* Vit bakgrund */
+    color: #333 !important;
+    border-left: 8px solid; /* Färgen ligger som en tjock linje till vänster */
+}
+
+/* 5. Korten (Namnen) - Svävande vita kort */
+.display-view .shift-card {
+    background-color: #ffffff !important;
+    color: #2c3e50 !important;
+    border: none !important; /* Ingen ram runt hela */
+    border-radius: 12px !important;
+    font-size: 3vh !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03); /* Mycket subtil skugga */
+    transition: transform 0.2s;
+    
+    /* Centrera text */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Tomma kort - "Ghost"-effekt */
+.display-view .shift-card.empty {
+    background-color: rgba(255,255,255,0.4) !important;
+    box-shadow: none !important;
+    border: 2px dashed #e0e0e0 !important;
+}
+
+/* Specialregler för Info och PL */
+.display-view .display-row.color-info {
+    margin-top: 3vh !important;
 }
 
 
+/* =========================================
+   FÄRG-HANTERING (ACCENT STRIPS)
+   Här sätter vi färgen på den vänstra kanten (border-left)
+   ========================================= */
 
+/* Björkliden (Orange) */
+.display-view .color-bjorkliden .station-label { border-left-color: #ffb300 !important; }
+.display-view .color-bjorkliden .shift-card { border-bottom: 4px solid #ffb300 !important; } /* Liten färgklick i botten på kortet */
+
+/* Kiruna (Gul) */
+.display-view .color-kiruna .station-label { border-left-color: #fdd835 !important; }
+.display-view .color-kiruna .shift-card { border-bottom: 4px solid #fdd835 !important; }
+
+/* Bastuträsk (Röd) */
+.display-view .color-bastutrask .station-label { border-left-color: #e53935 !important; }
+.display-view .color-bastutrask .shift-card { border-bottom: 4px solid #e53935 !important; }
+
+/* Boden (Grön) */
+.display-view .color-boden .station-label { border-left-color: #7cb342 !important; }
+.display-view .color-boden .shift-card { border-bottom: 4px solid #7cb342 !important; }
+
+/* Gällivare (Blå) */
+.display-view .color-gallivare .station-label { border-left-color: #1e88e5 !important; }
+.display-view .color-gallivare .shift-card { border-bottom: 4px solid #1e88e5 !important; }
+
+/* Älvsbyn (Grå) */
+.display-view .color-alvsbyn .station-label { border-left-color: #757575 !important; }
+.display-view .color-alvsbyn .shift-card { border-bottom: 4px solid #757575 !important; }
+
+/* Info (Rosa) */
+.display-view .color-info .station-label { border-left-color: #ec407a !important; }
+.display-view .color-info .shift-card { border-bottom: 4px solid #ec407a !important; }
+
+/* PL (Mörkblå) */
+.display-view .color-pl .station-label { border-left-color: #0d47a1 !important; }
+.display-view .color-pl .shift-card { border-bottom: 4px solid #0d47a1 !important; }

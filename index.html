@@ -4,57 +4,246 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>STRUL - Logga in</title>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    
+    <link rel="stylesheet" href="base.css">
+    
     <script src="script.js" defer></script>
+
+    <style>
+        /* INLOGGNINGS-SPECIFIK CSS */
+        .login-view {
+            background-color: #f0f4f8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        /* LOGO */
+        .logo-container {
+            width: 80px;
+            height: 80px;
+            background: rgba(2, 119, 189, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .strul-logo-svg {
+            width: 48px;
+            height: 48px;
+            stroke: #0277bd;
+            stroke-width: 1.5;
+        }
+
+        /* TITEL & VERSION */
+        .strul-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin: 0 0 10px 0;
+            color: #1a202c;
+            letter-spacing: -1px;
+            text-align: center; /* Centrerar texten */
+        }
+
+        /* En wrapper runt bara texten "STRUL" för att ankra versionstaggen */
+        .title-text-wrapper {
+            position: relative;
+            display: inline-block; /* Gör att boxen blir exakt lika bred som ordet STRUL */
+        }
+
+        .version-tag {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #a0aec0;
+            letter-spacing: 0;
+            
+            /* Magi för positionering */
+            position: absolute;
+            left: 100%; /* Skjuter den till högerkanten av STRUL */
+            bottom: 8px; /* Justerar höjden så den ligger snyggt mot baslinjen */
+            margin-left: 8px; /* Lite luft mellan texten och versionen */
+            white-space: nowrap; /* Förhindrar radbrytning */
+        }
+
+        .strul-desc {
+            font-size: 0.95rem;
+            color: #718096;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        /* FORMULÄR */
+        .input-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+
+        .input-group input:focus {
+            border-color: #0277bd;
+        }
+
+        /* KNAPPAR */
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.1s, box-shadow 0.2s;
+            box-sizing: border-box;
+        }
+
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+
+        .action-btn.primary {
+            background-color: #0277bd;
+            color: white;
+            box-shadow: 0 4px 12px rgba(2, 119, 189, 0.3);
+            margin-bottom: 15px;
+        }
+
+        .action-btn.secondary {
+            background-color: #f7fafc;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+
+        .action-btn.secondary:hover {
+            background-color: #edf2f7;
+        }
+
+        /* DIVIDER */
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 25px 0;
+            color: #a0aec0;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .divider span {
+            padding: 0 10px;
+        }
+
+        /* LÄNKAR */
+        .link-text {
+            color: #0277bd;
+            font-size: 0.9rem;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        
+        .link-text:hover { text-decoration: underline; }
+        
+        #forgotForm { display: none; }
+    </style>
 </head>
 <body class="login-view" id="page-login">
     <div class="login-wrapper">
         <div class="login-card">
+            
             <div class="login-header">
-                <div class="icon-bg logo-container">
-                    <svg class="strul-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <div class="logo-container">
+                    <svg class="strul-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3" fill="rgba(2, 119, 189, 0.1)"></circle>
                         <path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"></path>
-                        
-                        <path d="M12 9V4"></path>
-                        <circle cx="12" cy="3" r="2"></circle>
-                        
-                        <path d="M12 15v5"></path>
-                        <circle cx="12" cy="21" r="2"></circle>
-                        
-                        <path d="M9 12H4"></path>
-                        <circle cx="3" cy="12" r="2"></circle>
-                        
-                        <path d="M15 12h5"></path>
-                        <circle cx="21" cy="12" r="2"></circle>
-                        
-                        <path d="M14.5 10.5l3 -3"></path>
-                        <circle cx="18.5" cy="6.5" r="1.5"></circle>
-                        
-                        <path d="M9.5 13.5l-3 3"></path>
-                        <circle cx="5.5" cy="17.5" r="1.5"></circle>
+                        <path d="M12 9V4"></path><circle cx="12" cy="3" r="2"></circle>
+                        <path d="M12 15v5"></path><circle cx="12" cy="21" r="2"></circle>
+                        <path d="M9 12H4"></path><circle cx="3" cy="12" r="2"></circle>
+                        <path d="M15 12h5"></path><circle cx="21" cy="12" r="2"></circle>
+                        <path d="M14.5 10.5l3 -3"></path><circle cx="18.5" cy="6.5" r="1.5"></circle>
+                        <path d="M9.5 13.5l-3 3"></path><circle cx="5.5" cy="17.5" r="1.5"></circle>
                     </svg>
                 </div>
                 
-                <h1 class="strul-title">STRUL</h1>
-                <p class="strul-desc">Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen</p>
+                <h1 class="strul-title">
+                    <span class="title-text-wrapper">
+                        STRUL
+                        <span class="version-tag">v1.0</span>
+                    </span>
+                </h1>
                 
+                <p class="strul-desc">Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen</p>
             </div>
             
-            <div class="login-form">
+            <div id="loginForm">
                 <div class="input-group">
-                    <input type="password" id="passwordInput" placeholder="Ange admin-lösenord">
+                    <input type="text" id="usernameInput" placeholder="Användarnamn">
+                </div>
+                <div class="input-group">
+                    <input type="password" id="passwordInput" placeholder="Lösenord">
                 </div>
                 
                 <button id="loginBtn" class="action-btn primary">Logga in</button>
                 
-                <div class="divider">
-                    <span>ELLER</span>
-                </div>
+                <a href="#" id="forgotPassLink" class="link-text">Glömt lösenord?</a>
+
+                <div class="divider"><span>ELLER</span></div>
 
                 <a href="display.html" class="action-btn secondary">📺 Visa Schema (Display)</a>
             </div>
+
+            <div id="forgotForm">
+                <h3 style="margin-top:0; color:#333;">Återställ Lösenord</h3>
+                <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">Ange din e-postadress så skickar vi en återställningslänk.</p>
+                
+                <div class="input-group">
+                    <input type="email" id="resetEmailInput" placeholder="Din e-postadress">
+                </div>
+                
+                <button id="sendResetBtn" class="action-btn primary">Skicka länk</button>
+                
+                <a href="#" id="backToLoginLink" class="link-text">⬅ Tillbaka till logga in</a>
+            </div>
+
         </div>
     </div>
 </body>

@@ -4,70 +4,73 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Bemanningsplanering</title>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="base.css">
+    <link rel="stylesheet" href="admin.css">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="script.js" defer></script>
 </head>
 <body class="admin-view" id="page-admin">
+
 <div class="admin-wrapper">
-<header class="admin-header">
-    <div class="header-content">
-        <h1>Adminpanel</h1>
-        <button id="logoutBtn" class="logout-btn">
-            Logga ut
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-        </button>
-    </div>
-</header>
-
-    <div class="controls-bar">
-        <div class="week-nav-container">
-            <button id="prevWeekBtn" class="nav-btn">← Föregående</button>
-            <span id="currentWeekDisplay">Vecka ...</span>
-            <button id="nextWeekBtn" class="nav-btn">Nästa →</button>
-        </div>
-
-        <div class="nav-days-container">
-            <div class="nav-days" id="weekNav"></div>
-        </div>
-    </div>
-
-    <div class="admin-layout">
-        
-<div class="sidebar-roster">
-    <div class="roster-card">
-        <h3>Personal</h3>
-        
-        <div class="sidebar-add-row">
-            <input type="text" id="sidebarNewName" placeholder="Namn..." class="sidebar-input">
-            <button id="sidebarAddBtn" class="sidebar-add-btn">+</button>
-        </div>
-
-        <p class="roster-hint">Dra namn till schemat</p>
-        
-        <div id="draggableUserList" class="roster-list">
+    
+    <header class="admin-header">
+        <div class="header-content">
+            
+            <div style="display:flex; align-items:center; gap:20px;">
+                <h1>Adminpanel</h1>
+                <div class="header-datepicker" style="display:flex; align-items:center; gap:10px;">
+                    <label for="adminDatePicker" style="font-size:0.9rem; color:#666;">Planeringsdatum:</label>
+                    <input type="date" id="adminDatePicker">
+                </div>
             </div>
-    </div>
-</div>
 
-        <div class="schedule-card-wrapper">
+            <div id="currentDateDisplay" style="font-size: 1.2rem; font-weight: 800; color: #333;"></div>
+            
+            <div style="display:flex; align-items:center; gap:15px;">
+                <span id="currentUserDisplay" style="font-weight:500; color:#555;"></span>
+                <button id="logoutBtn" class="logout-btn">Logga ut</button>
+            </div>
+
+        </div>
+    </header>
+
+    <div class="admin-layout" style="margin-top: 20px;">
+        
+        <aside class="sidebar-roster">
+            <div class="roster-card">
+                <h3>Personal</h3>
+                <div class="sidebar-add-row">
+                    <input type="text" id="sidebarNewName" placeholder="Nytt namn..." class="sidebar-input">
+                    <button id="sidebarAddBtn" class="sidebar-add-btn">+</button>
+                </div>
+                <div id="draggableUserList" class="roster-list"></div>
+            </div>
+        </aside>
+
+        <main class="schedule-card-wrapper">
             <div class="schedule-card">
                 <div class="grid-container" id="scheduleContainer"></div>
             </div>
             
-            <div class="export-container">
-                <button id="printBtn" class="export-button">
-                    🖨️ Skriv ut
-                </button>
-                <button id="exportBtn" class="export-button">
-                    📷 Spara som bild
-                </button>
-            </div>
-        </div>
+            <footer class="export-container" style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
+                <div class="left-actions">
+                    <a href="settings.html" class="export-button" style="text-decoration:none; background:#555;">⚙️ Inställningar</a>
+                </div>
+                <div class="action-buttons">
+                    <button id="publishBtn" class="export-button" style="background-color: #2e7d32;">📡 Publicera</button>
+                    <button id="printBtn" class="export-button">🖨️ Skriv ut</button>
+                    <button id="exportBtn" class="export-button">📷 Spara som bild</button>
+                </div>
+            </footer>
+        </main>
+
     </div>
-
 </div>
-</body>
 
+<div id="print-container"></div>
+
+</body>
 </html>
