@@ -41,7 +41,6 @@ async function fetchData(type) {
 }
 
 async function saveData(type, data) {
-    // Uppdatera lokalt minne direkt för snabbhet
     if(type === 'schedule' || type === 'schedule_draft' || type === 'schedule_published') {
         globalScheduleData = data;
     }
@@ -89,7 +88,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pageId === 'page-login') { initLogin(); return; }
     if (pageId === 'page-reset') { initReset(); return; }
 
-    // Hämta grunddata
     const [users, settings] = await Promise.all([
         fetchData('users'), fetchData('settings')
     ]);
@@ -120,19 +118,18 @@ function checkAuth() {
    4. LOGIN & GLÖMT LÖSENORD
    ========================================= */
 function initLogin() {
-    const loginView = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
     const userIn = document.getElementById('usernameInput');
     const passIn = document.getElementById('passwordInput');
-    const loginBtn = document.getElementById('loginBtn');
     
     const forgotView = document.getElementById('forgotForm');
+    const loginView = document.getElementById('loginForm');
     const resetEmailIn = document.getElementById('resetEmailInput');
     const resetBtn = document.getElementById('sendResetBtn');
     
     const toForgotLink = document.getElementById('forgotPassLink');
     const toLoginLink = document.getElementById('backToLoginLink');
 
-    // -- LOGGA IN --
     const doLogin = async () => {
         const password = passIn.value.trim();
         const username = userIn.value.trim();
@@ -159,7 +156,6 @@ function initLogin() {
     if(loginBtn) loginBtn.onclick = doLogin;
     if(passIn) passIn.onkeydown = (e) => { if(e.key === 'Enter') doLogin(); };
 
-    // -- VÄXLA VYER --
     if(toForgotLink) {
         toForgotLink.onclick = (e) => {
             e.preventDefault();
@@ -175,7 +171,6 @@ function initLogin() {
         };
     }
 
-    // -- BEGÄR LÄNK --
     if(resetBtn) {
         resetBtn.onclick = async () => {
             const email = resetEmailIn.value.trim();
@@ -203,9 +198,6 @@ function initLogin() {
     }
 }
 
-/* =========================================
-   5. ÅTERSTÄLLNINGSSIDA (RESET.HTML)
-   ========================================= */
 function initReset() {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
@@ -263,7 +255,6 @@ async function initSettings(currentSettings) {
     const displayName = sessionStorage.getItem('adminName') || sessionStorage.getItem('adminUser') || 'Admin';
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + displayName;
 
-    // --- TEMA ---
     const themeSelect = document.getElementById('themeSelect');
     const saveThemeBtn = document.getElementById('saveThemeBtn');
     if(themeSelect && currentSettings?.theme) themeSelect.value = currentSettings.theme;
@@ -277,7 +268,6 @@ async function initSettings(currentSettings) {
         };
     }
 
-    // --- MEDDELANDE ---
     const msgInput = document.getElementById('displayMessageInput');
     const showCheck = document.getElementById('showMessageCheckbox');
     const msgBtn = document.getElementById('saveMessageBtn');
@@ -296,7 +286,6 @@ async function initSettings(currentSettings) {
         };
     }
 
-    // --- ADMIN HANTERING ---
     const listContainer = document.getElementById('adminListContainer');
     const actionBtn = document.getElementById('addAdminBtn');
     
@@ -437,7 +426,6 @@ async function initAdmin() {
     const displayName = sessionStorage.getItem('adminName') || sessionStorage.getItem('adminUser') || 'Admin';
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + displayName;
 
-    // --- HÄMTA UTKAST I FÖRSTA HAND ---
     let draft = await fetchData('schedule_draft');
     const published = await fetchData('schedule_published');
     const oldLegacy = await fetchData('schedule');
@@ -449,7 +437,6 @@ async function initAdmin() {
     
     globalScheduleData = draft || {}; 
 
-    // --- PUBLICERA KNAPP ---
     const pubBtn = document.getElementById('publishBtn');
     if(pubBtn) {
         pubBtn.onclick = async () => {
@@ -468,7 +455,6 @@ async function initAdmin() {
         };
     }
 
-    // --- DATUMVÄLJARE ---
     const picker = document.getElementById('adminDatePicker');
     const dateDisplay = document.getElementById('currentDateDisplay');
     
@@ -488,51 +474,33 @@ async function initAdmin() {
         renderAdminGrid();
     }
 
-    // --- ÖVRIGA KNAPPAR ---
     document.getElementById('logoutBtn').onclick = () => {
         sessionStorage.clear();
         window.location.href = "index.html";
     };
     setupSidebarAddUser();
+    
+    // EXPORT KNAPPAR
     document.getElementById('exportBtn').onclick = generateImage;
 
-    // --- UTSKRIFT (MED SKALNING & INNEHÅLLSKOPIERING) ---
     const printBtn = document.getElementById('printBtn');
     if (printBtn) {
         printBtn.onclick = () => {
-            const gridContent = document.getElementById('scheduleContainer').innerHTML;
-            const dateText = document.getElementById('currentDateDisplay').innerText;
+            // Här använder vi "getScheduleHtmlForPrint" som också används av exportBtn
+            // men vi lägger in det i print-container för utskrift
             const printContainer = document.getElementById('print-container');
-
             if (!printContainer) return alert("Saknar print-container!");
 
-            // Fyll utskriftscontainern med rätt innehåll
-            printContainer.innerHTML = `
-                <div style="text-align: center; margin-bottom: 10px;">
-                    <h1 style="margin:0; font-size: 24px;">Bemanningsschema</h1>
-                    <h3 style="margin:5px 0 15px 0;">${dateText}</h3>
-                </div>
-                <div class="print-scale-wrapper" style="width:100%;">
-                    <div class="grid-container">
-                        ${gridContent}
-                    </div>
-                </div>
-            `;
-
+            printContainer.innerHTML = getScheduleHtmlForPrint();
             window.print();
-            
-            // Töm efteråt
             setTimeout(() => { printContainer.innerHTML = ''; }, 1000);
         };
     }
 }
 
-// Rendera admin-rutnätet
 function renderAdminGrid() {
     const container = document.getElementById('scheduleContainer');
-    
-    renderRoster(); // Uppdatera listan varje gång vi ritar om
-    
+    renderRoster(); 
     if(!container) return;
 
     const dayName = days[currentAdminDayIndex];
@@ -558,7 +526,6 @@ function renderAdminGrid() {
     container.innerHTML = html;
 }
 
-// SMART LISTA: Visar alla som INTE jobbar idag
 function renderRoster() {
     const list = document.getElementById('draggableUserList');
     if(!list) return;
@@ -566,7 +533,6 @@ function renderRoster() {
     const dayName = days[currentAdminDayIndex];
     const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
 
-    // Hitta alla som jobbar idag
     const usersWorkingToday = new Set();
     Object.keys(globalScheduleData).forEach(key => {
         if (key.startsWith(prefix)) {
@@ -577,7 +543,6 @@ function renderRoster() {
         }
     });
 
-    // Visa resten
     const availableUsers = globalUserList.filter(user => !usersWorkingToday.has(user));
 
     list.innerHTML = availableUsers.map(u => 
@@ -587,10 +552,8 @@ function renderRoster() {
     ).join('');
 }
 
-// SPARA & DROP (Mot UTKAST)
 async function saveShift(key, val) {
     globalScheduleData[key] = val.trim();
-    // VIKTIGT: Spara alltid som UTKAST (draft) i Admin-läge
     await saveData('schedule_draft', globalScheduleData);
     renderAdminGrid();
 }
@@ -598,18 +561,15 @@ async function saveShift(key, val) {
 async function handleDrop(e, key) {
     e.preventDefault();
     const name = e.dataTransfer.getData("text");
-    
     let current = globalScheduleData[key] || "";
-    if (current.includes(name)) return; // Inga dubbletter i samma ruta
-
+    if (current.includes(name)) return;
     if(current) current += " / " + name;
     else current = name;
-    
     await saveShift(key, current);
 }
 
 /* =========================================
-   8. DISPLAY-SIDAN (SMART UPPDATERING)
+   8. DISPLAY-SIDAN
    ========================================= */
 let lastDataSnapshot = ""; 
 
@@ -620,7 +580,6 @@ function initDisplay() {
     }, 1000);
 
     const refreshData = async () => {
-        // Hämta enbart publicerat data
         let published = await fetchData('schedule_published');
         const oldLegacy = await fetchData('schedule'); 
         
@@ -633,17 +592,14 @@ function initDisplay() {
         ]);
         
         const currentData = published || {};
-
-        // Jämför om något ändrats (Snapshot)
         const newSnapshot = JSON.stringify({
             schedule: currentData,
             theme: settings?.theme || 'light',
             msg: message || {}
         });
 
-        if (newSnapshot === lastDataSnapshot) return; // Gör inget om inget ändrats
+        if (newSnapshot === lastDataSnapshot) return; 
 
-        // Uppdatera GUI
         lastDataSnapshot = newSnapshot;
         globalScheduleData = currentData;
         
@@ -684,7 +640,121 @@ function initDisplay() {
     };
 
     refreshData();
-    setInterval(refreshData, 15000); // Kollar tyst var 15:e sekund
+    setInterval(refreshData, 15000);
+}
+
+/* =========================================
+   9. BILDEXPORT & UTSKRIFTS-HJÄLP
+   ========================================= */
+
+// Denna funktion skapar en snygg HTML-sträng som används både för "Spara bild" och "Skriv ut"
+function getScheduleHtmlForPrint() {
+    const activeDayName = days[currentAdminDayIndex];
+    const now = new Date(); // Eller använd det valda datumet om du vill
+    
+    // Färger (Måste matcha CSS-klasserna)
+    const COLOR_MAP = {
+        "color-bjorkliden": { solid: "#ffb74d", transparent: "rgba(255, 183, 77, 0.4)", border: "rgba(255, 183, 77, 0.6)" },
+        "color-kiruna":     { solid: "#fff176", transparent: "rgba(255, 241, 118, 0.4)", border: "rgba(255, 241, 118, 0.6)" },
+        "color-bastutrask": { solid: "#e57373", transparent: "rgba(229, 115, 115, 0.4)", border: "rgba(229, 115, 115, 0.6)" },
+        "color-boden":      { solid: "#81c784", transparent: "rgba(129, 199, 132, 0.4)", border: "rgba(129, 199, 132, 0.6)" },
+        "color-gallivare":  { solid: "#64b5f6", transparent: "rgba(100, 181, 246, 0.4)", border: "rgba(100, 181, 246, 0.6)" },
+        "color-alvsbyn":    { solid: "#e0e0e0", transparent: "rgba(224, 224, 224, 0.4)", border: "rgba(224, 224, 224, 0.6)" },
+        "color-info":       { solid: "#f06292", transparent: "rgba(240, 98, 146, 0.4)", border: "rgba(240, 98, 146, 0.6)" },
+        "color-pl":         { solid: "#0277bd", transparent: "rgba(2, 119, 189, 0.4)", border: "rgba(2, 119, 189, 0.6)" }
+    };
+
+    const dateFormatted = document.getElementById('currentDateDisplay').innerText;
+    const mainTitleText = `Bemanningsschema - ${dateFormatted}`;
+
+    let htmlContent = `
+        <div style="font-family: sans-serif; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h1 style="font-size: 24px; margin: 0;">${mainTitleText}</h1>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 150px 1fr 1fr 1fr; gap: 10px; text-align: center; font-weight: bold; margin-bottom: 10px;">
+                <div></div>
+                ${displayTimes.map(t => `<div style="border:1px solid #000; padding:5px; background:#ddd;">${t}</div>`).join('')}
+            </div>
+    `;
+
+    const weekPrefix = `y${selectedYear}w${selectedWeek}-`; 
+
+    stations.forEach(station => {
+        const color = COLOR_MAP[station.class] || { solid: "#ccc", transparent: "#eee", border: "#999" };
+        const labelStyle = `background-color: ${color.solid}; color: #000; font-weight: bold; padding: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid #000;`;
+        
+        htmlContent += `
+            <div style="display: grid; grid-template-columns: 150px 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div style="${labelStyle}">${station.name}</div>
+        `;
+
+        dbTimes.forEach((dbTime, index) => {
+            const isTwoColStation = (station.name === "Info" || station.name === "PL");
+            if (isTwoColStation && index === 2) return; 
+
+            const key = `${weekPrefix}${activeDayName}-${station.name}-${dbTime}`;
+            const name = globalScheduleData[key] || "";
+            const isEmpty = (!name || name.trim() === "");
+
+            let cardStyle = `
+                display: flex; align-items: center; justify-content: center; text-align: center; 
+                min-height: 50px; padding: 5px; font-weight: bold; border: 1px solid #000;
+            `;
+
+            if (isEmpty) {
+                cardStyle += `background-color: #fff;`;
+            } else {
+                cardStyle += `background-color: #fff;`; // Eller color.transparent om du vill ha färg i rutan
+            }
+
+            htmlContent += `<div style="${cardStyle}">${name}</div>`;
+        });
+        htmlContent += `</div>`; 
+    });
+    
+    htmlContent += `</div>`;
+    return htmlContent;
+}
+
+function generateImage() {
+    const exportBtn = document.getElementById('exportBtn');
+    const originalText = exportBtn.innerText;
+    exportBtn.innerText = "Genererar..."; 
+
+    // Skapa en tillfällig container för bilden
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.top = '-9999px';
+    tempContainer.style.left = '0';
+    tempContainer.style.width = '1200px'; // Bredden på bilden
+    tempContainer.style.backgroundColor = '#fff';
+    
+    // Fyll med snygg HTML
+    tempContainer.innerHTML = getScheduleHtmlForPrint();
+    document.body.appendChild(tempContainer);
+
+    if (typeof html2canvas === 'undefined') {
+        alert("html2canvas saknas. Ladda om sidan.");
+        exportBtn.innerText = originalText;
+        return;
+    }
+
+    html2canvas(tempContainer, { scale: 2 }).then(canvas => {
+        const activeDayName = days[currentAdminDayIndex];
+        const link = document.createElement('a');
+        link.download = `Schema-${activeDayName}-v${selectedWeek}.jpg`; 
+        link.href = canvas.toDataURL('image/jpeg', 0.9);
+        link.click();
+        
+        document.body.removeChild(tempContainer);
+        exportBtn.innerText = originalText;
+    }).catch(err => {
+        console.error("Fel vid bildgenerering:", err);
+        if(document.body.contains(tempContainer)) document.body.removeChild(tempContainer);
+        exportBtn.innerText = originalText;
+    });
 }
 
 /* =========================================
@@ -723,16 +793,4 @@ async function removeUser(u) {
         await saveData('users', globalUserList);
         renderRoster();
     }
-}
-
-function generateImage() {
-    const btn = document.getElementById('exportBtn');
-    btn.innerText = "Genererar...";
-    html2canvas(document.getElementById('scheduleContainer')).then(canvas => {
-        const a = document.createElement('a');
-        a.download = 'schema.jpg';
-        a.href = canvas.toDataURL();
-        a.click();
-        btn.innerText = "📷 Spara som bild";
-    });
 }
