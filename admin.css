@@ -578,7 +578,7 @@ select, input[type="text"], input[type="password"], input[type="email"] {
 }
 
 /* =========================================
-   TOAST NOTIFICATIONS (Popup-meddelanden)
+   TOAST NOTIFICATIONS (Uppdaterad)
    ========================================= */
 #toast-container {
     position: fixed;
@@ -595,7 +595,7 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     color: #fff;
     padding: 12px 24px;
     border-radius: 4px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     opacity: 0;
     transform: translateY(20px);
     transition: opacity 0.3s, transform 0.3s;
@@ -605,6 +605,7 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     align-items: center;
     gap: 10px;
     font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
 }
 
 .toast.show {
@@ -612,18 +613,7 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     transform: translateY(0);
 }
 
-/* Färger beroende på typ */
-.toast.success {
-    background-color: #4CAF50; /* Grön */
-    border-left: 5px solid #2E7D32;
-}
-
-.toast.error {
-    background-color: #f44336; /* Röd */
-    border-left: 5px solid #c62828;
-}
-
-.toast.info {
-    background-color: #2196F3; /* Blå */
-    border-left: 5px solid #1565C0;
-}
+/* Färgkoder */
+.toast.success { background-color: #4CAF50; border-left: 5px solid #2E7D32; }
+.toast.error   { background-color: #f44336; border-left: 5px solid #c62828; }
+.toast.info    { background-color: #2196F3; border-left: 5px solid #1565C0; }
