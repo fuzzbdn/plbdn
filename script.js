@@ -60,7 +60,7 @@ async function saveData(type, data) {
 }
 
 /* =========================================
-   3. HJÄLPFUNKTIONER
+   3. HJÄLPFUNKTIONER (DATUM & TEMA)
    ========================================= */
 function getISOWeekAndYear(date) {
     const d = new Date(date);
@@ -71,16 +71,12 @@ function getISOWeekAndYear(date) {
     return { week: week, year: d.getFullYear() };
 }
 
-function getUsedUsersForDay(dayName, prefix) {
-    const used = new Set();
-    const searchPrefix = prefix + dayName + "-";
-    Object.keys(globalScheduleData).forEach(key => {
-        if (key.startsWith(searchPrefix)) {
-            const val = globalScheduleData[key];
-            if (val) val.split(" / ").forEach(n => { if (n.trim()) used.add(n.trim()); });
-        }
-    });
-    return used;
+function applyTheme(themeName) {
+    const knownThemes = ['theme-dark', 'theme-jul', 'theme-pask', 'theme-matrix'];
+    knownThemes.forEach(t => document.body.classList.remove(t));
+    if (themeName && themeName !== 'light') {
+        document.body.classList.add(`theme-${themeName}`);
+    }
 }
 
 /* =========================================
@@ -94,11 +90,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Hämta startdata
-    [globalScheduleData, globalUserList] = await Promise.all([
+    // Ladda grunddata och tema omedelbart
+    const [schedule, users, settings] = await Promise.all([
         fetchData('schedule'),
-        fetchData('users')
+        fetchData('users'),
+        fetchData('settings')
     ]);
+    
+    globalScheduleData = schedule;
+    globalUserList = users;
+    if (settings && settings.theme) applyTheme(settings.theme);
 
     if (bodyId === 'page-admin') {
         if (sessionStorage.getItem('isLoggedIn') !== 'true') { 
@@ -163,7 +164,7 @@ function renderAdminGrid() {
     let html = `
         <div class="header-row" style="display:grid; grid-template-columns:150px 1fr 1fr 1fr; gap:12px; text-align:center; font-weight:bold; margin-bottom:15px; color:#666;">
             <div></div>
-            ${dbTimes.map(t => `<div class="time-header-item">${t}</div>`).join('')}
+            ${dbTimes.map(t => `<div>${t}</div>`).join('')}
         </div>
     `;
 
@@ -197,7 +198,15 @@ function renderRoster() {
     const list = document.getElementById('draggableUserList');
     if (!list) return;
 
-    const used = getUsedUsersForDay(days[currentAdminDayIndex], `y${selectedYear}w${selectedWeek}-`);
+    const used = new Set();
+    const prefix = `y${selectedYear}w${selectedWeek}-${days[currentAdminDayIndex]}-`;
+    Object.keys(globalScheduleData).forEach(key => {
+        if (key.startsWith(prefix)) {
+            const val = globalScheduleData[key];
+            if (val) val.split(" / ").forEach(n => { if (n.trim()) used.add(n.trim()); });
+        }
+    });
+
     list.innerHTML = globalUserList.map(user => `
         <div class="draggable-item ${used.has(user) ? 'is-busy' : ''}" 
              draggable="true" 
@@ -252,7 +261,7 @@ async function removeUser(name) {
 }
 
 /* =========================================
-   7. EXPORT & UTSKRIFT
+   7. EXPORT & UTSKRIFT (FÄRG-FIX)
    ========================================= */
 function getScheduleHtmlForPrint() {
     const datePicker = document.getElementById('adminDatePicker');
@@ -269,7 +278,7 @@ function getScheduleHtmlForPrint() {
     };
 
     let html = `
-        <div style="font-family: 'Inter', sans-serif; padding:20px;">
+        <div style="font-family: 'Inter', sans-serif; padding:20px; background:white; color:black;">
             <h1 style="text-align:center;">Vi som jobbar ${days[currentAdminDayIndex]} ${displayDate} (v.${selectedWeek})</h1>
             <div style="display:grid; grid-template-columns: 150px 1fr 1fr 1fr; gap:10px; font-weight:bold; text-align:center; margin-bottom:15px; border-bottom:2px solid #eee;">
                 <div></div>${displayTimes.map(t => `<div>${t}</div>`).join('')}
@@ -284,7 +293,7 @@ function getScheduleHtmlForPrint() {
             if ((st.name === "Info" || st.name === "PL") && idx === 2) return;
             const key = `y${selectedYear}w${selectedWeek}-${days[currentAdminDayIndex]}-${st.name}-${time}`;
             const val = globalScheduleData[key] || "";
-            html += `<div style="background:${val ? c.trans : '#fff'}; border:1px solid #eee; border-radius:4px; padding:10px; text-align:center; min-height:40px;">${val}</div>`;
+            html += `<div style="background:${val ? c.trans : '#fff'}; border:1px solid #eee; border-radius:4px; padding:10px; text-align:center; min-height:40px; color:black;">${val}</div>`;
         });
         html += `</div>`;
     });
@@ -299,9 +308,7 @@ function printSchedule() {
 
 function generateScheduleImage() {
     const btn = document.getElementById('exportBtn');
-    const originalText = btn.innerText;
     btn.innerText = "Genererar...";
-    
     const temp = document.createElement('div');
     Object.assign(temp.style, { position: 'absolute', top: '-9999px', width: '1200px', background: '#fff' });
     temp.innerHTML = getScheduleHtmlForPrint();
@@ -313,12 +320,12 @@ function generateScheduleImage() {
         link.href = canvas.toDataURL('image/jpeg', 0.9);
         link.click();
         document.body.removeChild(temp);
-        btn.innerText = originalText;
+        btn.innerText = "📷 Spara som bild";
     });
 }
 
 /* =========================================
-   8. LOGIN, TEMA & ADMIN MANAGEMENT
+   8. LOGIN, TEMA & ADMINS
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -345,9 +352,7 @@ function initLogin() {
             } else { alert("Fel inloggning"); }
         } catch (e) { console.error(e); }
     };
-
     loginBtn.onclick = performLogin;
-    passwordInput.onkeydown = (e) => { if (e.key === 'Enter') performLogin(); };
 }
 
 async function initThemeSelector() {
@@ -355,11 +360,10 @@ async function initThemeSelector() {
     const saveBtn = document.getElementById('saveThemeBtn');
     if (!select || !saveBtn) return;
 
-    const settings = await fetchData('settings'); 
-    if (settings && settings.theme) select.value = settings.theme;
-
     saveBtn.onclick = async () => {
-        await saveData('settings', { theme: select.value });
+        const theme = select.value;
+        await saveData('settings', { theme });
+        applyTheme(theme);
         saveBtn.innerText = "Sparat!";
         setTimeout(() => saveBtn.innerText = "Spara tema", 2000);
     };
@@ -368,20 +372,13 @@ async function initThemeSelector() {
 function setupAdminManagement() {
     const adminBtn = document.getElementById('manageAdminsBtn');
     if (!adminBtn) return;
-
     adminBtn.onclick = async () => {
         const res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list' }) });
         const admins = await res.json();
-        const list = admins.map(a => `- ${a.username}`).join('\n');
-        const action = prompt(`Admins:\n${list}\n\nSkriv 'ny' eller 'radera'`);
-        
+        const action = prompt(`Admins:\n${admins.map(a => a.username).join('\n')}\n\nSkriv 'ny' eller 'radera'`);
         if (action === 'ny') {
-            const username = prompt("Användarnamn:");
-            const password = prompt("Lösenord:");
+            const username = prompt("Användarnamn:"), password = prompt("Lösenord:");
             await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'add', username, password }) });
-        } else if (action === 'radera') {
-            const username = prompt("Vem ska bort?");
-            await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'remove', username }) });
         }
     };
 }
@@ -396,13 +393,11 @@ function initDisplay() {
     }, 1000);
 
     const loadData = async () => {
-        globalScheduleData = await fetchData('schedule');
-        const settings = await fetchData('settings');
-        const activeTheme = settings?.theme || 'light';
-        document.body.className = `display-view theme-${activeTheme}`;
+        const [data, settings] = await Promise.all([fetchData('schedule'), fetchData('settings')]);
+        globalScheduleData = data;
+        if (settings && settings.theme) applyTheme(settings.theme);
         
-        const now = new Date();
-        const iso = getISOWeekAndYear(now);
+        const now = new Date(), iso = getISOWeekAndYear(now);
         const todayName = days[now.getDay() === 0 ? 6 : now.getDay() - 1];
         
         const title = document.getElementById('mainTitle');
@@ -411,26 +406,19 @@ function initDisplay() {
         const container = document.getElementById('mainContainer');
         if (!container) return;
 
-        let html = `
-            <div class="time-header-row">
-                <div></div>${displayTimes.map(t => `<div class="time-header">${t}</div>`).join('')}
-            </div>
-        `;
+        let html = `<div class="time-header-row"><div></div>${displayTimes.map(t => `<div class="time-header">${t}</div>`).join('')}</div>`;
 
         stations.forEach(st => {
-            html += `<div class="display-row ${st.class}">
-                <div class="station-label">${st.name}</div>`;
+            html += `<div class="display-row ${st.class}"><div class="station-label">${st.name}</div>`;
             dbTimes.forEach((time, idx) => {
                 if ((st.name === "Info" || st.name === "PL") && idx === 2) return;
-                const key = `y${iso.year}w${iso.week}-${todayName}-${st.name}-${time}`;
-                const val = globalScheduleData[key] || "";
+                const key = `y${iso.year}w${iso.week}-${todayName}-${st.name}-${time}`, val = data[key] || "";
                 html += `<div class="shift-card ${val ? '' : 'empty'}">${val}</div>`;
             });
             html += `</div>`;
         });
         container.innerHTML = html;
     };
-
     loadData();
     setInterval(loadData, 10000);
 }
