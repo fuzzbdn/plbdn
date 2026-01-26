@@ -73,7 +73,7 @@ function getISOWeekAndYear(date) {
 
 function applyTheme(themeName) {
     const knownThemes = ['theme-dark', 'theme-jul', 'theme-pask', 'theme-matrix'];
-    knownThemes.forEach(t => document.body.classList.remove(t));
+    document.body.classList.remove(...knownThemes);
     if (themeName && themeName !== 'light') {
         document.body.classList.add(`theme-${themeName}`);
     }
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Ladda grunddata och tema omedelbart
+    // Ladda data
     const [schedule, users, settings] = await Promise.all([
         fetchData('schedule'),
         fetchData('users'),
@@ -121,12 +121,19 @@ function initAdmin() {
     initThemeSelector();
     setupAdminManagement();
 
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        sessionStorage.clear();
-        window.location.href = "index.html";
-    });
-    document.getElementById('printBtn').addEventListener('click', printSchedule);
-    document.getElementById('exportBtn').addEventListener('click', generateScheduleImage);
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.onclick = () => {
+            sessionStorage.clear();
+            window.location.href = "index.html";
+        };
+    }
+    
+    const printBtn = document.getElementById('printBtn');
+    if (printBtn) printBtn.onclick = printSchedule;
+    
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) exportBtn.onclick = generateScheduleImage;
 }
 
 /* =========================================
@@ -137,6 +144,7 @@ function setupDatePicker() {
     const display = document.getElementById('currentDateDisplay');
     if (!picker) return;
 
+    // Sätt dagens datum som standard
     picker.value = new Date().toISOString().split('T')[0];
 
     const update = (dateStr) => {
@@ -145,7 +153,10 @@ function setupDatePicker() {
         selectedWeek = iso.week;
         selectedYear = iso.year;
         currentAdminDayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
-        if (display) display.innerText = `${days[currentAdminDayIndex]} vecka ${selectedWeek}, ${selectedYear}`;
+        
+        if (display) {
+            display.innerText = `${days[currentAdminDayIndex]} vecka ${selectedWeek}, ${selectedYear}`;
+        }
         renderAdminGrid();
     };
 
@@ -218,7 +229,7 @@ function renderRoster() {
 }
 
 /* =========================================
-   6. LOGIK (UPPDATERA, LÄGG TILL, TA BORT)
+   6. INTERAKTION
    ========================================= */
 async function updateShift(key, value) {
     globalScheduleData[key] = value.trim();
@@ -261,11 +272,12 @@ async function removeUser(name) {
 }
 
 /* =========================================
-   7. EXPORT & UTSKRIFT (FÄRG-FIX)
+   7. EXPORT
    ========================================= */
 function getScheduleHtmlForPrint() {
     const datePicker = document.getElementById('adminDatePicker');
     const displayDate = datePicker ? new Date(datePicker.value).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' }) : "";
+    
     const COLOR_MAP = {
         "color-bjorkliden": { solid: "#ffb300", trans: "rgba(255, 179, 0, 0.15)", text: "#000" },
         "color-kiruna":     { solid: "#fff176", trans: "rgba(255, 241, 118, 0.25)", text: "#000" },
@@ -302,13 +314,17 @@ function getScheduleHtmlForPrint() {
 
 function printSchedule() {
     const container = document.getElementById('print-container');
-    container.innerHTML = getScheduleHtmlForPrint();
-    window.print();
+    if (container) {
+        container.innerHTML = getScheduleHtmlForPrint();
+        window.print();
+    }
 }
 
 function generateScheduleImage() {
     const btn = document.getElementById('exportBtn');
+    const originalText = btn.innerText;
     btn.innerText = "Genererar...";
+    
     const temp = document.createElement('div');
     Object.assign(temp.style, { position: 'absolute', top: '-9999px', width: '1200px', background: '#fff' });
     temp.innerHTML = getScheduleHtmlForPrint();
@@ -320,12 +336,15 @@ function generateScheduleImage() {
         link.href = canvas.toDataURL('image/jpeg', 0.9);
         link.click();
         document.body.removeChild(temp);
-        btn.innerText = "📷 Spara som bild";
+        btn.innerText = originalText;
+    }).catch(e => {
+        console.error(e);
+        btn.innerText = "Fel vid export";
     });
 }
 
 /* =========================================
-   8. LOGIN, TEMA & ADMINS
+   8. ADMIN TOOLS & AUTH
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -384,7 +403,7 @@ function setupAdminManagement() {
 }
 
 /* =========================================
-   9. DISPLAY LOGIK
+   9. DISPLAY
    ========================================= */
 function initDisplay() {
     setInterval(() => {
