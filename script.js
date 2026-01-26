@@ -29,7 +29,43 @@ let editingShiftIndex = null;
 let editingAdminId = null;
 
 /* =========================================
-   2. API & SPARANDE
+   2. TOAST NOTIFICATIONS (POPUP)
+   ========================================= */
+function showToast(message, type = 'success') {
+    // Skapa container om den inte finns
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    // Skapa toast-elementet
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    // Ikoner baserat på typ
+    let icon = '✅';
+    if(type === 'error') icon = '❌';
+    if(type === 'info') icon = 'ℹ️';
+
+    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    container.appendChild(toast);
+
+    // Animera in
+    setTimeout(() => { toast.classList.add('show'); }, 10);
+
+    // Ta bort efter 3 sekunder
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if(container.contains(toast)) container.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+
+/* =========================================
+   3. API & SPARANDE
    ========================================= */
 async function fetchData(type) {
     try {
@@ -48,7 +84,11 @@ async function saveData(type, data) {
     if(type === 'config_shifts') globalShifts = data;
 
     const token = sessionStorage.getItem('jwtToken');
-    if (!token) { alert("Logga in igen."); window.location.href="index.html"; return; }
+    if (!token) { 
+        showToast("Sessionen utlöpt. Logga in igen.", "error"); 
+        setTimeout(() => window.location.href="index.html", 2000);
+        return; 
+    }
 
     try {
         await fetch('/api/data-api', {
@@ -57,7 +97,10 @@ async function saveData(type, data) {
             body: JSON.stringify({ type, data })
         });
         return true;
-    } catch (e) { alert("Kunde inte spara."); return false; }
+    } catch (e) { 
+        showToast("Kunde inte spara.", "error"); 
+        return false; 
+    }
 }
 
 function applyTheme(themeName) {
@@ -67,7 +110,7 @@ function applyTheme(themeName) {
 }
 
 /* =========================================
-   3. INIT
+   4. INIT
    ========================================= */
 document.addEventListener('DOMContentLoaded', async () => {
     const pageId = document.body.id;
@@ -95,7 +138,7 @@ function checkAuth() {
 }
 
 /* =========================================
-   4. LOGIN
+   5. LOGIN
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -109,8 +152,8 @@ function initLogin() {
             if(d.success) {
                 sessionStorage.setItem('jwtToken', d.token); sessionStorage.setItem('adminUser', d.user); sessionStorage.setItem('adminName', d.name);
                 window.location.href = "admin.html";
-            } else alert("Fel uppgifter!");
-        } catch(e) { alert("Serverfel"); }
+            } else showToast("Fel användarnamn eller lösenord", "error");
+        } catch(e) { showToast("Serverfel vid inloggning", "error"); }
     };
 
     if(loginBtn) loginBtn.onclick = doLogin;
@@ -125,9 +168,10 @@ function initLogin() {
     const resetBtn = document.getElementById('sendResetBtn');
     if(resetBtn) resetBtn.onclick = async () => {
         const email = document.getElementById('resetEmailInput').value;
-        if(!email) return alert("Ange e-post");
+        if(!email) return showToast("Ange e-post", "info");
         await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'request_reset', email}) });
-        alert("Länk skickad."); window.location.reload();
+        showToast("Om e-posten finns har en länk skickats.", "success");
+        setTimeout(() => window.location.reload(), 2000);
     };
 }
 function initReset() {
@@ -136,27 +180,36 @@ function initReset() {
     document.getElementById('resetSubmitBtn').onclick = async () => {
         const p1 = document.getElementById('newPassInput').value;
         const p2 = document.getElementById('confirmPassInput').value;
-        if(p1!==p2) return alert("Ej match");
+        if(p1!==p2) return showToast("Lösenorden matchar ej", "error");
         const res = await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'perform_reset', token:t, newPassword:p1}) });
-        if(res.ok) window.location.href="index.html";
+        if(res.ok) { showToast("Lösenord ändrat!", "success"); window.location.href="index.html"; }
+        else showToast("Kunde inte återställa", "error");
     };
 }
 
 /* =========================================
-   5. INSTÄLLNINGAR
+   6. INSTÄLLNINGAR
    ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
 
     const themeSelect = document.getElementById('themeSelect');
     if(currentSettings?.theme) themeSelect.value = currentSettings.theme;
-    document.getElementById('saveThemeBtn').onclick = () => saveData('settings', { theme: themeSelect.value });
+    
+    document.getElementById('saveThemeBtn').onclick = async () => {
+        await saveData('settings', { theme: themeSelect.value });
+        showToast("Tema sparat!", "success");
+    };
 
     const msgIn = document.getElementById('displayMessageInput');
     const msgCheck = document.getElementById('showMessageCheckbox');
     const msg = await fetchData('message');
     if(msg) { msgIn.value = msg.text||""; msgCheck.checked = msg.show||false; }
-    document.getElementById('saveMessageBtn').onclick = () => saveData('message', { text: msgIn.value, show: msgCheck.checked });
+    
+    document.getElementById('saveMessageBtn').onclick = async () => {
+        await saveData('message', { text: msgIn.value, show: msgCheck.checked });
+        showToast("Meddelande uppdaterat!", "success");
+    };
 
     // STATIONER
     const stName = document.getElementById('newStationName');
@@ -210,11 +263,13 @@ async function initSettings(currentSettings) {
     stCancel.onclick = resetSt;
 
     stBtn.onclick = async () => {
-        if(!stName.value) return alert("Ange namn");
+        if(!stName.value) return showToast("Ange namn", "info");
         const item = { name: stName.value, color: stColor.value };
         if(editingStationIndex !== null) globalStations[editingStationIndex] = item;
         else globalStations.push(item);
+        
         await saveData('config_stations', globalStations);
+        showToast(editingStationIndex !== null ? "Plats uppdaterad" : "Plats tillagd", "success");
         resetSt(); renderStations();
     };
 
@@ -224,7 +279,14 @@ async function initSettings(currentSettings) {
         renderStations();
     };
 
-    window.deleteStation = async (i) => { if(confirm("Ta bort?")) { globalStations.splice(i, 1); await saveData('config_stations', globalStations); renderStations(); }};
+    window.deleteStation = async (i) => { 
+        if(confirm("Ta bort?")) { 
+            globalStations.splice(i, 1); 
+            await saveData('config_stations', globalStations); 
+            showToast("Plats borttagen", "info");
+            renderStations(); 
+        }
+    };
     renderStations();
 
     // PASS
@@ -251,13 +313,23 @@ async function initSettings(currentSettings) {
     shCancel.onclick = resetSh;
 
     shBtn.onclick = async () => {
-        if(!shLabel.value || !shTime.value) return alert("Fyll i allt");
+        if(!shLabel.value || !shTime.value) return showToast("Fyll i allt", "info");
         const item = { label: shLabel.value, time: shTime.value };
         if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item; else globalShifts.push(item);
-        await saveData('config_shifts', globalShifts); resetSh(); renderShifts();
+        
+        await saveData('config_shifts', globalShifts);
+        showToast(editingShiftIndex !== null ? "Pass uppdaterat" : "Pass tillagt", "success");
+        resetSh(); renderShifts();
     };
 
-    window.deleteShift = async (i) => { if(confirm("Ta bort?")) { globalShifts.splice(i, 1); await saveData('config_shifts', globalShifts); renderShifts(); }};
+    window.deleteShift = async (i) => { 
+        if(confirm("Ta bort?")) { 
+            globalShifts.splice(i, 1); 
+            await saveData('config_shifts', globalShifts); 
+            showToast("Pass borttaget", "info");
+            renderShifts(); 
+        }
+    };
     renderShifts();
 
     // ADMINS
@@ -293,23 +365,31 @@ async function initSettings(currentSettings) {
 
     admBtn.onclick = async () => {
         const u = admUser.value, p = admPass.value;
-        if(!u) return alert("Användarnamn krävs");
+        if(!u) return showToast("Användarnamn krävs", "error");
         const action = editingAdminId ? 'edit_admin' : 'add_admin';
-        if(action === 'add_admin' && !p) return alert("Lösenord krävs");
+        if(action === 'add_admin' && !p) return showToast("Lösenord krävs", "error");
+        
         await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, 
             body: JSON.stringify({action, username:u, password:p, firstName:admFirst.value, lastName:admLast.value, email:admEmail.value, id:editingAdminId}) 
         });
+        showToast(editingAdminId ? "Admin uppdaterad" : "Admin tillagd", "success");
         resetAdm(); renderAdmins();
     };
 
-    window.deleteAdmin = async(u) => { if(confirm("Ta bort admin?")) await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) }); renderAdmins(); };
+    window.deleteAdmin = async(u) => { 
+        if(confirm("Ta bort admin?")) {
+            await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) }); 
+            showToast("Admin borttagen", "info");
+            renderAdmins(); 
+        }
+    };
     renderAdmins();
 
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
 }
 
 /* =========================================
-   6. ADMIN PLANERING
+   7. ADMIN PLANERING
    ========================================= */
 async function initAdmin() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
@@ -321,7 +401,10 @@ async function initAdmin() {
     globalScheduleData = draft || {};
 
     document.getElementById('publishBtn').onclick = async () => {
-        if(confirm("Publicera?")) { await saveData('schedule_published', globalScheduleData); alert("Publicerat!"); }
+        if(confirm("Publicera?")) { 
+            await saveData('schedule_published', globalScheduleData); 
+            showToast("Schemat är publicerat!", "success"); 
+        }
     };
 
     const picker = document.getElementById('adminDatePicker');
@@ -340,16 +423,13 @@ async function initAdmin() {
 
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
-    // FIXAD: EXPORT BILD
     document.getElementById('exportBtn').onclick = generateImage;
     
-    // FIXAD: UTSKRIFT
     document.getElementById('printBtn').onclick = () => {
         const pc = document.getElementById('print-container') || document.createElement('div');
         pc.id = 'print-container';
         if(!document.body.contains(pc)) document.body.appendChild(pc);
         
-        // HÄR ANVÄNDS DEN FIXADE FUNKTIONEN
         pc.innerHTML = getScheduleHtmlForPrint();
         window.print();
         setTimeout(() => pc.innerHTML='', 1000);
@@ -408,7 +488,7 @@ async function saveShift(k, v) { globalScheduleData[k] = v.trim(); await saveDat
 async function handleDrop(e, k) { e.preventDefault(); const n = e.dataTransfer.getData("text"); let c = globalScheduleData[k]||""; if(!c.includes(n)) await saveShift(k, c?c+" / "+n:n); }
 
 /* =========================================
-   7. DISPLAY
+   8. DISPLAY
    ========================================= */
 let lastSnap="";
 function initDisplay() {
@@ -450,7 +530,7 @@ function initDisplay() {
 }
 
 /* =========================================
-   8. EXPORT & PRINT (FIXAD FÖR SPARA/SKRIV UT)
+   9. EXPORT & PRINT
    ========================================= */
 function getScheduleHtmlForPrint() {
     const dateText = document.getElementById('currentDateDisplay').innerText;
@@ -464,22 +544,12 @@ function getScheduleHtmlForPrint() {
     <div></div>${shifts.map(s=>`<div style="border:1px solid #000; padding:5px; background:#ddd;">${s.label}<br><span style="font-size:0.8em; font-weight:normal;">${s.time}</span></div>`).join('')}</div>`;
 
     stations.forEach(st => {
-        // VIKTIG FIX: Kontrollera spacer HÄR så den inte kraschar
-        if(st.isSpacer) { 
-            html += `<div style="grid-column:1/-1; height:30px;"></div>`; 
-            return; 
-        }
-        
-        // Hämta färger
-        const bg = st.color; 
-        const fg = isLight(bg)?'#000':'#fff';
-        
+        if(st.isSpacer) { html += `<div style="grid-column:1/-1; height:30px;"></div>`; return; }
+        const bg = st.color, fg = isLight(bg)?'#000':'#fff';
         html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length},1fr); gap:10px; margin-bottom:10px;">
             <div style="background:${bg}; color:${fg}; font-weight:bold; padding:10px; display:flex; align-items:center; justify-content:center; border:1px solid #000;">${st.name}</div>`;
-        
         shifts.forEach(sh => {
             const val = globalScheduleData[`${prefix}${st.name}-${sh.time}`] || "";
-            // Inline style för att garantera att det syns vid utskrift/bild
             html += `<div style="display:flex; align-items:center; justify-content:center; text-align:center; min-height:50px; padding:5px; font-weight:bold; border:1px solid #000; background:#fff;">${val}</div>`;
         });
         html += `</div>`;
@@ -490,16 +560,13 @@ function getScheduleHtmlForPrint() {
 function generateImage() {
     const btn=document.getElementById('exportBtn'), txt=btn.innerText; 
     btn.innerText="Genererar...";
-    
     const div=document.createElement('div'); 
     div.style.cssText="position:absolute; top:-9999px; left:0; width:1400px; background:#fff;";
-    
-    // Använd den fixade funktionen
     div.innerHTML=getScheduleHtmlForPrint(); 
     document.body.appendChild(div);
 
     if(typeof html2canvas==='undefined') {
-        alert("Kunde inte ladda bildverktyget. Uppdatera sidan.");
+        showToast("Ladda om sidan först!", "error");
         btn.innerText = txt;
         return;
     }
@@ -513,7 +580,7 @@ function generateImage() {
         btn.innerText=txt;
     }).catch(e => {
         console.error(e);
-        alert("Ett fel uppstod vid bildgenerering.");
+        showToast("Fel vid bildgenerering", "error");
         btn.innerText=txt;
         document.body.removeChild(div);
     });
@@ -522,6 +589,25 @@ function generateImage() {
 function getISOWeek(d) { const date=new Date(d.getTime()); date.setHours(0,0,0,0); date.setDate(date.getDate()+3-(date.getDay()+6)%7); const w1=new Date(date.getFullYear(),0,4); return {week:1+Math.round(((date.getTime()-w1.getTime())/86400000-3+(w1.getDay()+6)%7)/7), year:date.getFullYear()}; }
 function setupSidebarAddUser() {
     const btn=document.getElementById('sidebarAddBtn'), inp=document.getElementById('sidebarNewName');
-    if(btn&&inp) { btn.onclick=async()=>{if(inp.value){globalUserList.push(inp.value);globalUserList.sort();await saveData('users',globalUserList);inp.value='';renderRoster();}}; inp.onkeydown=e=>{if(e.key==='Enter')btn.click();} }
+    if(btn&&inp) { 
+        btn.onclick=async()=>{
+            if(inp.value){
+                globalUserList.push(inp.value);
+                globalUserList.sort();
+                await saveData('users',globalUserList);
+                showToast("Personal tillagd", "success");
+                inp.value='';
+                renderRoster();
+            }
+        }; 
+        inp.onkeydown=e=>{if(e.key==='Enter')btn.click();} 
+    }
 }
-async function removeUser(u) { if(confirm('Ta bort '+u+'?')){globalUserList=globalUserList.filter(user=>user!==u);await saveData('users',globalUserList);renderRoster();} }
+async function removeUser(u) { 
+    if(confirm('Ta bort '+u+'?')){
+        globalUserList=globalUserList.filter(user=>user!==u);
+        await saveData('users',globalUserList);
+        showToast("Personal borttagen", "info");
+        renderRoster();
+    } 
+}
