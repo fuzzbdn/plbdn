@@ -549,3 +549,58 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     [contenteditable] { border: none; outline: none; }
     .empty { background-color: #f9f9f9 !important; }
 }
+
+
+
+/* =========================================
+   SETTINGS.HTML - FIXAR & TILLÄGG
+   ========================================= */
+
+/* FIX: Se till att färgväljaren och knapparna INTE krymper */
+.form-group .flex-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+}
+
+/* Namnfältet får ta all ledig plats, men måste kunna krympa */
+.form-group input[type="text"].flexible-input {
+    flex: 1 1 auto;
+    min-width: 0; /* VIKTIGT: Förhindrar att fältet vägrar krympa */
+}
+
+/* Färgväljare och knappar får ALDRIG krympa */
+.form-group input[type="color"],
+.form-group .save-btn,
+.form-group .cancel-edit-btn {
+    flex: 0 0 auto; /* Lås storleken */
+}
+
+/* --- TOAST NOTIFICATION (FEEDBACK-RUTAN) --- */
+.toast {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 8px;
+    padding: 16px;
+    position: fixed;
+    z-index: 9999;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    font-size: 1rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    opacity: 0;
+    transition: opacity 0.3s, bottom 0.3s;
+}
+
+.toast.show {
+    visibility: visible;
+    opacity: 1;
+    bottom: 50px; /* En liten animation uppåt */
+}
+
