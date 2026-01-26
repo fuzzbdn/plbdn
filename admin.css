@@ -188,11 +188,123 @@ body.theme-matrix .shift-block {
     border-left: 4px solid #00ff41 !important;
 }
 
-/* Print Styles */
+/* =========================================
+   UTSKRIFTS-STYLING (A4 Liggande & Färg)
+   ========================================= */
 @media print {
-    body * { visibility: hidden; }
-    body { background: white !important; margin: 0 !important; padding: 0 !important; }
-    #print-container, #print-container * { visibility: visible; }
-    #print-container { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 20px; }
-    @page { size: A4 landscape; margin: 1cm; }
+    /* 1. Sidinställningar: A4 Liggande, Inga marginaler för headers/footers */
+    @page {
+        size: A4 landscape;
+        margin: 10mm; /* Lite marginal så inget klipps */
+    }
+
+    /* 2. Dölj ALLT som inte är utskriftsrutan */
+    body * {
+        visibility: hidden;
+        height: 0;
+        overflow: hidden;
+    }
+
+    /* 3. Visa och positionera utskriftsrutan */
+    #print-container, #print-container * {
+        visibility: visible;
+        height: auto;
+        overflow: visible;
+    }
+
+    #print-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: white;
+    }
+
+    /* 4. TVINGA FRAM BAKGRUNDSFÄRGER & GRAFIK */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    /* 5. Styla rutnätet för papper */
+    #print-container .grid-container {
+        display: grid;
+        /* Samma kolumnbredd som i admin, eller justera % för passform */
+        grid-template-columns: 120px repeat(3, 1fr); 
+        width: 100%;
+        border: 2px solid #000;
+        font-size: 10pt; /* Lite mindre text för att rymmas */
+        font-family: sans-serif;
+    }
+
+    /* Header-raden (Tiderna) */
+    #print-container .header-row {
+        display: contents;
+        font-weight: bold;
+        background-color: #ddd !important; /* Grå bakgrund på tider */
+        color: #000 !important;
+    }
+    #print-container .header-row div {
+        border: 1px solid #000;
+        padding: 5px;
+        text-align: center;
+    }
+
+    /* Stationsrader */
+    #print-container .station-row {
+        display: contents;
+    }
+
+    /* Stationens namn (Första rutan) */
+    #print-container .station-label {
+        font-weight: bold;
+        border: 1px solid #000;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #000 !important;
+    }
+    
+    /* FÄRGERNA - Måste matcha dina klasser men med !important */
+    #print-container .color-bjorkliden .station-label { background-color: #ffb74d !important; }
+    #print-container .color-kiruna .station-label     { background-color: #fff176 !important; }
+    #print-container .color-bastutrask .station-label { background-color: #e57373 !important; }
+    #print-container .color-boden .station-label      { background-color: #81c784 !important; }
+    #print-container .color-gallivare .station-label  { background-color: #64b5f6 !important; }
+    #print-container .color-alvsbyn .station-label    { background-color: #e0e0e0 !important; }
+    #print-container .color-info .station-label       { background-color: #f06292 !important; }
+    #print-container .color-pl .station-label         { background-color: #0277bd !important; color: #fff !important; }
+
+    /* Passen (Rutorna med namn) */
+    #print-container .shift-block {
+        border: 1px solid #000;
+        padding: 4px;
+        background-color: #fff !important; /* Passen är vita */
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    /* 6. TA BORT SKRÄP */
+    /* Dölj krysset (radera-knappen) */
+    .clear-btn {
+        display: none !important;
+    }
+    
+    /* Ta bort contenteditable-styling */
+    [contenteditable] {
+        border: none;
+        outline: none;
+    }
+    
+    /* Dölj tomma platshållare om de stör */
+    .empty {
+        background-color: #f9f9f9 !important;
+    }
 }
