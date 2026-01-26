@@ -1,5 +1,5 @@
 /* =========================================
-   1. KONFIGURATION & VAR
+   1. KONFIGURATION & GLOBALA VARIABLER
    ========================================= */
 const stations = [
     { name: "Björkliden", class: "color-bjorkliden" },
@@ -30,7 +30,11 @@ async function fetchData(type) {
         return await res.json();
     } catch (e) {
         console.error(e);
-        return (type === 'users') ? [] : (type === 'settings' ? { theme: 'light' } : {});
+        // Returnera tomma värden om något går fel
+        if (type === 'users') return [];
+        if (type === 'admins') return [];
+        if (type === 'settings') return { theme: 'light' };
+        return {};
     }
 }
 
@@ -121,6 +125,7 @@ function initLogin() {
         const password = passIn.value.trim();
         const username = userIn.value.trim();
         
+        // Skicka login-förfrågan till API
         const res = await fetch('/api/data-api', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -128,12 +133,16 @@ function initLogin() {
         });
         
         const data = await res.json();
+        
         if (data.success) {
-            sessionStorage.setItem('authToken', password); // Spara token i minnet
-            sessionStorage.setItem('adminUser', username);
+            // Spara lösenordet (token) i sessionen så vi kan spara data senare
+            // Om API returnerade "Master Admin", använd det inskrivna lösenordet som token
+            // Om API returnerade en användare, använd det inskrivna lösenordet som token
+            sessionStorage.setItem('authToken', password); 
+            sessionStorage.setItem('adminUser', data.user || username);
             window.location.href = "admin.html";
         } else {
-            alert("Fel lösenord!");
+            alert("Fel användarnamn eller lösenord!");
         }
     };
 
@@ -147,6 +156,9 @@ function initLogin() {
 function initAdmin(settings) {
     const userDisplay = document.getElementById('currentUserDisplay');
     if(userDisplay) userDisplay.innerText = "Inloggad: " + (sessionStorage.getItem('adminUser') || 'Admin');
+
+    // Aktivera Admin-hantering (Skapa/Ta bort användare)
+    setupAdminManagement();
 
     // Temaväljare
     const themeSelect = document.getElementById('themeSelect');
@@ -197,6 +209,60 @@ function initAdmin(settings) {
     // Export
     document.getElementById('printBtn').onclick = () => window.print();
     document.getElementById('exportBtn').onclick = generateImage;
+}
+
+/* --- FUNKTION FÖR ATT HANTERA ADMINS --- */
+function setupAdminManagement() {
+    const adminBtn = document.getElementById('manageAdminsBtn');
+    if (!adminBtn) return;
+
+    adminBtn.onclick = async () => {
+        // 1. Hämta nuvarande lista på admins från databasen
+        let currentAdmins = [];
+        try {
+            currentAdmins = await fetchData('admins');
+            if (!Array.isArray(currentAdmins)) currentAdmins = [];
+        } catch (e) { console.error(e); }
+
+        // Skapa textlista för prompten
+        const adminListText = currentAdmins.length > 0 
+            ? currentAdmins.map(a => `- ${a.username}`).join('\n') 
+            : "(Inga andra admins skapade än)";
+        
+        const action = prompt(
+            `HANTERA ADMINS\n\nNuvarande:\n${adminListText}\n\nSkriv 'ny' för att skapa, eller namnet på den du vill radera.`
+        );
+
+        if (!action) return;
+
+        if (action.toLowerCase() === 'ny') {
+            const username = prompt("Ange nytt användarnamn:");
+            if (!username) return;
+            const password = prompt("Ange lösenord:");
+            if (!password) return;
+
+            // Lägg till i listan
+            currentAdmins.push({ username, password });
+            
+            // Spara listan till databasen
+            await saveData('admins', currentAdmins);
+            alert(`Admin ${username} skapad!`);
+        } 
+        else {
+            // Försök hitta namnet för att radera
+            const exists = currentAdmins.some(a => a.username.toLowerCase() === action.toLowerCase());
+            
+            if (exists) {
+                if (confirm(`Radera admin "${action}" permanent?`)) {
+                    currentAdmins = currentAdmins.filter(a => a.username.toLowerCase() !== action.toLowerCase());
+                    await saveData('admins', currentAdmins);
+                    alert("Användaren raderad.");
+                }
+            } else {
+                alert("Hittade inte den användaren.");
+            }
+        }
+    };
 }
 
 function renderAdminGrid() {
