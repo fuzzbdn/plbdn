@@ -56,7 +56,7 @@ async function saveData(type, data) {
             body: JSON.stringify({ type, data })
         });
         return true;
-    } catch (e) { showToast("Fel vid sparning!"); return false; }
+    } catch (e) { showToast("Kunde inte spara."); return false; }
 }
 
 function applyTheme(themeName) {
@@ -94,7 +94,7 @@ function checkAuth() {
 }
 
 /* =========================================
-   4. LOGIN
+   4. LOGIN (Uppdaterad med Toast)
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -108,35 +108,56 @@ function initLogin() {
             if(d.success) {
                 sessionStorage.setItem('jwtToken', d.token); sessionStorage.setItem('adminUser', d.user); sessionStorage.setItem('adminName', d.name);
                 window.location.href = "admin.html";
-            } else alert("Fel uppgifter!");
-        } catch(e) { alert("Serverfel"); }
+            } else showToast("Fel användarnamn eller lösenord!");
+        } catch(e) { showToast("Serverfel - försök igen senare"); }
     };
 
     if(loginBtn) loginBtn.onclick = doLogin;
+    
     const handleEnter = (e) => { if(e.key==='Enter') doLogin(); };
     if(userIn) userIn.onkeydown = handleEnter;
     if(passIn) passIn.onkeydown = handleEnter;
 
     const forgotLink = document.getElementById('forgotPassLink');
-    if(forgotLink) forgotLink.onclick = (e) => { e.preventDefault(); document.getElementById('loginForm').style.display='none'; document.getElementById('forgotForm').style.display='block'; };
+    if(forgotLink) forgotLink.onclick = (e) => { 
+        e.preventDefault(); 
+        document.getElementById('loginForm').style.display='none'; 
+        document.getElementById('forgotForm').style.display='block'; 
+    };
+    
+    const backLink = document.getElementById('backToLoginLink');
+    if(backLink) backLink.onclick = (e) => { 
+        e.preventDefault(); 
+        document.getElementById('forgotForm').style.display='none'; 
+        document.getElementById('loginForm').style.display='block'; 
+    };
     
     const resetBtn = document.getElementById('sendResetBtn');
     if(resetBtn) resetBtn.onclick = async () => {
         const email = document.getElementById('resetEmailInput').value;
-        if(!email) return alert("Ange e-post");
+        if(!email) return showToast("Ange e-postadress");
+        
         await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'request_reset', email}) });
-        alert("Länk skickad."); window.location.reload();
+        showToast("Återställningslänk skickad!");
+        
+        setTimeout(() => { window.location.reload(); }, 2000);
     };
 }
+
 function initReset() {
     const t = new URLSearchParams(window.location.search).get('token');
     if(!t) return;
     document.getElementById('resetSubmitBtn').onclick = async () => {
         const p1 = document.getElementById('newPassInput').value;
         const p2 = document.getElementById('confirmPassInput').value;
-        if(p1!==p2) return alert("Ej match");
+        if(p1!==p2) return showToast("Lösenorden matchar inte");
         const res = await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'perform_reset', token:t, newPassword:p1}) });
-        if(res.ok) window.location.href="index.html";
+        if(res.ok) {
+            showToast("Lösenord ändrat! Logga in.");
+            setTimeout(() => { window.location.href="index.html"; }, 1500);
+        } else {
+            showToast("Kunde inte återställa.");
+        }
     };
 }
 
@@ -494,10 +515,6 @@ async function handleDrop(e, k) {
 /* =========================================
    7. DISPLAY & ÖVRIGT
    ========================================= */
-// ... (Samma display- och hjälpfunktioner som förut) ... 
-// För att spara plats i svaret utelämnar jag Display/Print/Helpers om du inte vill ha ändringar där.
-// Men kom ihåg att lägga till showToast funktionen nedan!
-
 function generateImage() {
     const btn=document.getElementById('exportBtn'), txt=btn.innerText; btn.innerText="Genererar...";
     const div=document.createElement('div'); div.style.cssText="position:absolute; top:-9999px; left:0; width:1200px; background:#fff;";
@@ -515,11 +532,10 @@ function setupSidebarAddUser() {
 }
 async function removeUser(u) { if(confirm('Ta bort '+u+'?')){globalUserList=globalUserList.filter(user=>user!==u);await saveData('users',globalUserList);renderRoster();} }
 function escapeHtml(text) { return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : ""; }
-function getScheduleHtmlForPrint() { /* ... Behåll din befintliga kod ... */ return document.getElementById('scheduleContainer').innerHTML; } 
-// OBS: Jag förenklade print-funktionen här i snippet, använd den fulla från förra svaret om du behöver exakt samma.
+function getScheduleHtmlForPrint() { return document.getElementById('scheduleContainer').innerHTML; } 
 
 /* =========================================
-   8. TOAST NOTIFICATION FUNKTION (NY!)
+   8. TOAST NOTIFICATION FUNKTION
    ========================================= */
 function showToast(message) {
     let x = document.getElementById("toast");
