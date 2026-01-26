@@ -1,45 +1,65 @@
 /* =========================================
-   HEADER (Den mörka listen längst upp)
+   HEADER (Vit bakgrund som på bild 2)
    ========================================= */
 .admin-header {
-    background-color: #2c3e50; /* Mörkblå/grå färg */
-    color: white;
-    padding: 15px 0; /* Lite luft uppe och nere */
+    background-color: #ffffff; /* Vit bakgrund */
+    /* Ingen border-bottom eller skugga enligt bild 2, men vi kan ha en svag om du vill */
+    padding: 15px 20px;
     width: 100%;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Liten skugga */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
 }
 
-/* Innehålls-container i headern för att centrera det snyggt */
 .header-content {
-    max-width: 1200px;
+    width: 100%;
+    max-width: 1400px; /* Lite bredare för att matcha din skärm */
     margin: 0 auto;
-    padding: 0 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-/* Rubriken i headern */
+/* Rubriken "Adminpanel" */
 .admin-header h1 {
     margin: 0;
-    font-size: 1.5rem;
-    color: white;
+    font-size: 1.8rem;
+    font-weight: 800; /* Tjockare text */
+    color: #333333;   /* Mörkgrå */
 }
 
-/* Logga ut-knappen i headern */
+/* Datumväljaren */
+.admin-header input[type="date"] {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+    color: #333;
+}
+
+/* Texten "Inloggad: ..." */
+#currentUserDisplay {
+    font-weight: 500;
+    color: #555555; /* Lite ljusare grå */
+    margin-right: 15px;
+}
+
+/* Logga ut-knappen (Ljusrosa/röd bakgrund med röd text enligt bild 2) */
 .logout-btn {
-    background-color: #e74c3c;
-    color: white;
+    background-color: #ffebee; /* Ljusrosa bakgrund */
+    color: #c62828;          /* Mörkröd text */
     border: none;
-    padding: 8px 15px;
+    padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
     font-weight: bold;
     font-size: 0.9rem;
+    transition: background 0.2s;
 }
 
 .logout-btn:hover {
-    background-color: #c0392b;
+    background-color: #ffcdd2;
 }
 /* =========================================
    ADMIN.CSS - HANTERING & PLANERING
@@ -351,4 +371,5 @@ body.theme-matrix .shift-block {
         background-color: #f9f9f9 !important;
     }
 }
+
 
