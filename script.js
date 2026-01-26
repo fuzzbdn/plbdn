@@ -586,18 +586,21 @@ async function handleDrop(e, key) {
 }
 
 /* =========================================
-   8. DISPLAY-SIDAN
+   8. DISPLAY-SIDAN (SMART UPPDATERING)
    ========================================= */
+let lastDataSnapshot = ""; // Sparar en "bild" av senaste datan
+
 function initDisplay() {
+    // Klockan måste alltid ticka varje sekund
     setInterval(() => {
         const el = document.getElementById('clock');
         if(el) el.innerText = new Date().toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
     }, 1000);
 
     const refreshData = async () => {
-        // DISPLAY HÄMTAR ENBART "PUBLISHED" DATA
+        // 1. Hämta all data
         let published = await fetchData('schedule_published');
-        const oldLegacy = await fetchData('schedule'); // Bakåtkompatibilitet
+        const oldLegacy = await fetchData('schedule'); 
         
         if (!published || Object.keys(published).length === 0) {
             published = oldLegacy;
@@ -607,19 +610,44 @@ function initDisplay() {
             fetchData('settings'), fetchData('message')
         ]);
         
-        globalScheduleData = published || {};
+        const currentData = published || {};
+
+        // 2. SKAPA EN "SNAPSHOT" AV ALLT SOM PÅVERKAR UTSEENDET
+        // Vi slår ihop schema, tema och meddelande till en enda textsträng
+        const newSnapshot = JSON.stringify({
+            schedule: currentData,
+            theme: settings?.theme || 'light',
+            msg: message || {}
+        });
+
+        // 3. JÄMFÖR: Har något ändrats sen sist?
+        if (newSnapshot === lastDataSnapshot) {
+            // INGEN FÖRÄNDRING - AVBRYT!
+            // Vi rör inte DOM:en, vilket gör sidan helt stabil och flimmerfri.
+            return; 
+        }
+
+        // 4. OM VI KOMMER HIT HAR NÅGOT ÄNDRATS -> UPPDATERA SKÄRMEN
+        console.log("Ny data upptäckt - Uppdaterar skärmen...");
+        lastDataSnapshot = newSnapshot; // Spara nya snapshoten
+        globalScheduleData = currentData;
         
         if(settings && settings.theme) applyTheme(settings.theme);
 
+        // Uppdatera marquee/meddelande
         const marqueeContainer = document.getElementById('marqueeContainer');
         const marqueeText = document.getElementById('marqueeText');
         if(marqueeContainer && marqueeText) {
             if(message && message.show && message.text) {
                 marqueeContainer.style.display = 'block';
+                // Uppdatera bara texten om den faktiskt är ny (för att inte starta om scrollen)
                 if(marqueeText.innerText !== message.text) marqueeText.innerText = message.text;
-            } else { marqueeContainer.style.display = 'none'; }
+            } else { 
+                marqueeContainer.style.display = 'none'; 
+            }
         }
 
+        // Datum och vecka
         const now = new Date();
         const iso = getISOWeek(now);
         const todayName = days[now.getDay() === 0 ? 6 : now.getDay() - 1];
@@ -630,6 +658,7 @@ function initDisplay() {
         const container = document.getElementById('mainContainer');
         if(!container) return;
 
+        // Rita rutnätet
         let html = `<div class="time-header-row"><div></div>${displayTimes.map(t => `<div class="time-header">${t}</div>`).join('')}</div>`;
 
         stations.forEach(st => {
@@ -644,8 +673,12 @@ function initDisplay() {
         });
         container.innerHTML = html;
     };
+
+    // Kör direkt vid start
     refreshData();
-    setInterval(refreshData, 10000);
+    
+    // Kör kontrollen var 15:e sekund (lite lugnare än 10s)
+    setInterval(refreshData, 15000);
 }
 
 /* =========================================
@@ -697,3 +730,4 @@ function generateImage() {
         btn.innerText = "📷 Spara som bild";
     });
 }
+
