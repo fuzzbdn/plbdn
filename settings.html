@@ -13,6 +13,7 @@
     <script src="script.js" defer></script>
 
     <style>
+        /* EXTRA CSS FÖR ATT STÄDA UPP SETTINGS-SIDAN */
         .settings-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
         .setting-card { background: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
@@ -24,14 +25,38 @@
         .save-btn { background-color: #007bff; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; }
         .save-btn:hover { background-color: #0056b3; }
         
-        /* Knappar för listor */
         .list-btn { border: none; background: none; cursor: pointer; font-size: 1.1rem; padding: 5px; }
         .list-btn:hover { opacity: 0.7; }
-
         .list-container { max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; background: #fafafa; }
-        
-        /* Cancel-knapp som visas vid editering */
         .cancel-edit-btn { background: #999; color: white; border: none; padding: 0 10px; border-radius: 4px; cursor: pointer; display: none; }
+
+        /* HEADER STYLING DIREKT HÄR FÖR SÄKERHETS SKULL */
+        .admin-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 15px 0;
+            color: #333;
+        }
+        .header-content {
+            max-width: 1200px; margin: 0 auto; padding: 0 20px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-content h1 { margin: 0; font-size: 1.5rem; color: #333; }
+        
+        /* Tillbaka-knappen - Ljusgrå med mörk text */
+        .back-link {
+            color: #333; 
+            text-decoration: none; 
+            background: #f0f0f0; 
+            padding: 8px 12px; 
+            border-radius: 4px; 
+            font-size: 0.9rem;
+            border: 1px solid #ccc;
+            font-weight: 600;
+        }
+        .back-link:hover { background: #e0e0e0; }
+
+        #currentUserDisplay { font-weight: 600; color: #333; margin-right: 10px; }
     </style>
 </head>
 <body id="page-settings">
@@ -40,10 +65,10 @@
         <div class="header-content">
             <div style="display:flex; align-items:center; gap:20px;">
                 <h1>⚙️ Inställningar</h1>
-                <a href="admin.html" style="color:white; text-decoration:none; background:rgba(255,255,255,0.2); padding:5px 10px; border-radius:4px; font-size:0.9rem;">⬅ Tillbaka</a>
+                <a href="admin.html" class="back-link">⬅ Tillbaka till Planering</a>
             </div>
-            <div style="display:flex; align-items:center; gap:15px;">
-                <span id="currentUserDisplay" style="font-weight:600; color:#eee;"></span>
+            <div style="display:flex; align-items:center;">
+                <span id="currentUserDisplay"></span>
                 <button id="logoutBtn" class="logout-btn">Logga ut</button>
             </div>
         </div>
@@ -89,10 +114,10 @@
                         <button id="addStationBtn" class="save-btn" style="width:auto; background:#4CAF50;">+</button>
                         <button id="cancelStationEditBtn" class="cancel-edit-btn">❌</button>
                     </div>
-                    <button id="addSpacerBtn" class="save-btn" style="background:#7f8c8d; font-size:0.85rem; padding:5px; margin-top:5px;">➕ Lägg till Mellanrum</button>
+                    <button id="addSpacerBtn" class="save-btn" style="background:#7f8c8d; font-size:0.85rem; padding:5px; margin-top:5px;">➕ Lägg till Mellanrum (Tom rad)</button>
                 </div>
                 <div style="margin-top:10px;">
-                    <h4 style="font-size:0.9rem; color:#666; margin-bottom:5px;">Lista:</h4>
+                    <h4 style="font-size:0.9rem; color:#666; margin-bottom:5px;">Listordning:</h4>
                     <div id="stationListContainer" class="list-container">Laddar...</div>
                 </div>
             </div>
