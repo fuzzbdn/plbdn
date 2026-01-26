@@ -6,8 +6,10 @@
     <title>Inställningar - STRUL</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="base.css">
-    <link rel="stylesheet" href="admin.css"> <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="admin.css">
+    
     <script src="script.js" defer></script>
 </head>
 <body id="page-settings">
@@ -59,17 +61,17 @@
             <div class="setting-card">
                 <h3>📍 Hantera Platser</h3>
                 <div class="form-group">
-                    <div style="display:flex; gap:5px;">
-                        <input type="text" id="newStationName" placeholder="Namn" style="flex:1;">
-                        <input type="color" id="newStationColor" value="#cccccc" style="width:40px; height:38px; padding:0; border:none; cursor:pointer;">
-                        <button id="addStationBtn" class="save-btn" style="width:auto;">+</button>
-                        <button id="cancelStationEditBtn" class="cancel-edit-btn">❌</button>
+                    <div class="flex-row" style="display:flex; gap:8px;">
+                        <input type="text" id="newStationName" placeholder="Namn" class="flexible-input" style="flex:1; min-width:0;">
+                        <input type="color" id="newStationColor" value="#cccccc" style="width:40px; height:38px; padding:0; border:none; cursor:pointer; flex-shrink:0;">
+                        <button id="addStationBtn" class="save-btn" style="width:auto; padding:0 15px; flex-shrink:0;">+</button>
+                        <button id="cancelStationEditBtn" class="cancel-edit-btn" style="flex-shrink:0;">❌</button>
                     </div>
                     <button id="addSpacerBtn" class="save-btn" style="background-color: #7f8c8d; margin-top:5px;">➕ Lägg till Mellanrum</button>
                 </div>
                 
                 <div style="margin-top:10px;">
-                    <h4 style="font-size:0.9rem; margin-bottom:5px; opacity:0.7;">Ordning (Använd pilarna):</h4>
+                    <h4 style="font-size:0.9rem; margin-bottom:5px; opacity:0.7;">Ordning (Dra och släpp ☰):</h4>
                     <div id="stationListContainer" class="list-container">Laddar...</div>
                 </div>
             </div>
@@ -116,5 +118,8 @@
 
         </div>
     </div>
+
+    <div id="toast">Sparat!</div>
+
 </body>
 </html>
