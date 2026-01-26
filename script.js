@@ -22,15 +22,21 @@ let globalScheduleData = {}, globalUserList = [];
    2. KOMMUNIKATION MED SERVER (API)
    ========================================= */
 
-// Hämta data (Kräver INGET lösenord - Publikt)
+// Hämta data (Publikt)
 async function fetchData(type) {
     try {
-        const res = await fetch(`/api/data-api?type=${type}`);
+        const headers = {};
+        // Om vi hämtar admins måste vi skicka token
+        if (type === 'admins') {
+            const token = sessionStorage.getItem('jwtToken');
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const res = await fetch(`/api/data-api?type=${type}`, { headers });
         if (!res.ok) throw new Error('Fetch failed');
         return await res.json();
     } catch (e) {
         console.error(e);
-        // Returnera tomma värden om något går fel
         if (type === 'users') return [];
         if (type === 'admins') return [];
         if (type === 'settings') return { theme: 'light' };
@@ -38,40 +44,38 @@ async function fetchData(type) {
     }
 }
 
-// Spara data (Kräver lösenord - Admin)
+// Spara data (Kräver Token)
 async function saveData(type, data) {
-    // Spara lokalt först för snabb respons i UI
     if(type === 'schedule') globalScheduleData = data;
     
-    const token = sessionStorage.getItem('authToken'); // Hämta sparad token
+    const token = sessionStorage.getItem('jwtToken'); // Vi hämtar JWT-token nu
     if (!token) {
-        alert("Du är utloggad. Logga in igen.");
+        alert("Sessionen har gått ut. Logga in igen.");
         window.location.href = "index.html";
         return;
     }
 
     try {
-        await fetch('/api/data-api', {
+        const res = await fetch('/api/data-api', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // Skicka med lösenordet
+                'Authorization': `Bearer ${token}` 
             },
             body: JSON.stringify({ type, data })
         });
+        if (!res.ok) throw new Error("Unauthorized");
     } catch (e) {
         console.error("Save failed:", e);
-        alert("Kunde inte spara till databasen.");
+        alert("Kunde inte spara. Logga in igen.");
     }
 }
 
 /* =========================================
-   3. TEMA-FUNKTIONER
+   3. TEMA & INIT
    ========================================= */
 function applyTheme(themeName) {
-    // Admin-sidan ska ALLTID vara ljus/standard
     if (document.body.id === 'page-admin') return;
-
     const themes = ['theme-dark', 'theme-jul', 'theme-pask', 'theme-matrix'];
     document.body.classList.remove(...themes);
     if (themeName && themeName !== 'light') {
@@ -79,9 +83,6 @@ function applyTheme(themeName) {
     }
 }
 
-/* =========================================
-   4. INITIERING
-   ========================================= */
 document.addEventListener('DOMContentLoaded', async () => {
     const pageId = document.body.id;
 
@@ -90,20 +91,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Ladda data
     const [schedule, users, settings] = await Promise.all([
-        fetchData('schedule'),
-        fetchData('users'),
-        fetchData('settings')
+        fetchData('schedule'), fetchData('users'), fetchData('settings')
     ]);
     globalScheduleData = schedule;
     globalUserList = users;
 
-    // Applicera tema (Display-sidan påverkas här)
     if (settings && settings.theme) applyTheme(settings.theme);
 
     if (pageId === 'page-admin') {
-        if (!sessionStorage.getItem('authToken')) {
+        if (!sessionStorage.getItem('jwtToken')) {
             window.location.href = "index.html";
             return;
         }
@@ -114,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* =========================================
-   5. LOGIN (INDEX.HTML)
+   4. LOGIN (SÄKER JWT)
    ========================================= */
 function initLogin() {
     const btn = document.getElementById('loginBtn');
@@ -125,24 +122,25 @@ function initLogin() {
         const password = passIn.value.trim();
         const username = userIn.value.trim();
         
-        // Skicka login-förfrågan till API
-        const res = await fetch('/api/data-api', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'login', username, password })
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-            // Spara lösenordet (token) i sessionen så vi kan spara data senare
-            // Om API returnerade "Master Admin", använd det inskrivna lösenordet som token
-            // Om API returnerade en användare, använd det inskrivna lösenordet som token
-            sessionStorage.setItem('authToken', password); 
-            sessionStorage.setItem('adminUser', data.user || username);
-            window.location.href = "admin.html";
-        } else {
-            alert("Fel användarnamn eller lösenord!");
+        try {
+            const res = await fetch('/api/data-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'login', username, password })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                // Spara JWT-token (inte lösenordet)
+                sessionStorage.setItem('jwtToken', data.token); 
+                sessionStorage.setItem('adminUser', data.user);
+                window.location.href = "admin.html";
+            } else {
+                alert("Fel användarnamn eller lösenord!");
+            }
+        } catch (e) {
+            alert("Kunde inte nå servern.");
         }
     };
 
@@ -151,30 +149,76 @@ function initLogin() {
 }
 
 /* =========================================
-   6. ADMIN-SIDAN
+   5. ADMIN-HANTERING (SÄKER)
+   ========================================= */
+function setupAdminManagement() {
+    const adminBtn = document.getElementById('manageAdminsBtn');
+    if (!adminBtn) return;
+
+    adminBtn.onclick = async () => {
+        const token = sessionStorage.getItem('jwtToken');
+        
+        // Hämta lista
+        let currentAdmins = await fetchData('admins');
+        const listText = currentAdmins.map(a => `- ${a.username}`).join('\n');
+        
+        const action = prompt(`ADMINS:\n${listText}\n\nSkriv 'ny' eller namnet på den du vill radera.`);
+        if (!action) return;
+
+        if (action.toLowerCase() === 'ny') {
+            const username = prompt("Användarnamn:");
+            const password = prompt("Lösenord:");
+            if (!username || !password) return;
+
+            // Anropa API för att skapa (Hashas på servern)
+            const res = await fetch('/api/data-api', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ action: 'add_admin', username, password })
+            });
+            
+            if (res.ok) alert("Admin skapad!");
+            else alert("Fel: Kunde inte skapa (kanske finns namnet redan?)");
+        } 
+        else {
+            if (confirm(`Radera ${action}?`)) {
+                const res = await fetch('/api/data-api', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ action: 'remove_admin', username: action })
+                });
+                if(res.ok) alert("Raderad.");
+                else alert("Kunde inte radera.");
+            }
+        }
+    };
+}
+
+/* =========================================
+   6. ADMIN OCH DISPLAY LOGIK (Resten är oförändrat)
    ========================================= */
 function initAdmin(settings) {
     const userDisplay = document.getElementById('currentUserDisplay');
     if(userDisplay) userDisplay.innerText = "Inloggad: " + (sessionStorage.getItem('adminUser') || 'Admin');
 
-    // Aktivera Admin-hantering (Skapa/Ta bort användare)
     setupAdminManagement();
 
     // Temaväljare
     const themeSelect = document.getElementById('themeSelect');
     const saveThemeBtn = document.getElementById('saveThemeBtn');
-    
-    // Sätt dropdown till nuvarande värde från DB
     if(themeSelect && settings?.theme) themeSelect.value = settings.theme;
 
     if(saveThemeBtn) {
         saveThemeBtn.onclick = async () => {
-            const newTheme = themeSelect.value;
-            await saveData('settings', { theme: newTheme });
-            
-            const oldText = saveThemeBtn.innerText;
-            saveThemeBtn.innerText = "Sparat till DB!";
-            setTimeout(() => saveThemeBtn.innerText = oldText, 2000);
+            await saveData('settings', { theme: themeSelect.value });
+            saveThemeBtn.innerText = "Sparat!";
+            setTimeout(() => saveThemeBtn.innerText = "Spara tema", 2000);
         };
     }
 
@@ -194,75 +238,18 @@ function initAdmin(settings) {
         selectedWeek = iso.week;
         selectedYear = iso.year;
         currentAdminDayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
-        
         if(dateDisplay) dateDisplay.innerText = `${days[currentAdminDayIndex]} v.${selectedWeek}, ${selectedYear}`;
         renderAdminGrid();
     }
 
-    // Knappar
     document.getElementById('logoutBtn').onclick = () => {
         sessionStorage.clear();
         window.location.href = "index.html";
     };
     setupSidebarAddUser();
     
-    // Export
     document.getElementById('printBtn').onclick = () => window.print();
     document.getElementById('exportBtn').onclick = generateImage;
-}
-
-/* --- FUNKTION FÖR ATT HANTERA ADMINS --- */
-function setupAdminManagement() {
-    const adminBtn = document.getElementById('manageAdminsBtn');
-    if (!adminBtn) return;
-
-    adminBtn.onclick = async () => {
-        // 1. Hämta nuvarande lista på admins från databasen
-        let currentAdmins = [];
-        try {
-            currentAdmins = await fetchData('admins');
-            if (!Array.isArray(currentAdmins)) currentAdmins = [];
-        } catch (e) { console.error(e); }
-
-        // Skapa textlista för prompten
-        const adminListText = currentAdmins.length > 0 
-            ? currentAdmins.map(a => `- ${a.username}`).join('\n') 
-            : "(Inga andra admins skapade än)";
-        
-        const action = prompt(
-            `HANTERA ADMINS\n\nNuvarande:\n${adminListText}\n\nSkriv 'ny' för att skapa, eller namnet på den du vill radera.`
-        );
-
-        if (!action) return;
-
-        if (action.toLowerCase() === 'ny') {
-            const username = prompt("Ange nytt användarnamn:");
-            if (!username) return;
-            const password = prompt("Ange lösenord:");
-            if (!password) return;
-
-            // Lägg till i listan
-            currentAdmins.push({ username, password });
-            
-            // Spara listan till databasen
-            await saveData('admins', currentAdmins);
-            alert(`Admin ${username} skapad!`);
-        } 
-        else {
-            // Försök hitta namnet för att radera
-            const exists = currentAdmins.some(a => a.username.toLowerCase() === action.toLowerCase());
-            
-            if (exists) {
-                if (confirm(`Radera admin "${action}" permanent?`)) {
-                    currentAdmins = currentAdmins.filter(a => a.username.toLowerCase() !== action.toLowerCase());
-                    await saveData('admins', currentAdmins);
-                    alert("Användaren raderad.");
-                }
-            } else {
-                alert("Hittade inte den användaren.");
-            }
-        }
-    };
 }
 
 function renderAdminGrid() {
@@ -279,13 +266,9 @@ function renderAdminGrid() {
         html += `<div class="station-row ${st.class}"><div class="station-label">${st.name}</div>`;
         dbTimes.forEach((time, idx) => {
             if ((st.name === "Info" || st.name === "PL") && idx === 2) { html += `<div></div>`; return; }
-            
             const key = `${prefix}${dayName}-${st.name}-${time}`;
             const val = globalScheduleData[key] || "";
-            
-            html += `<div class="shift-block ${val?'':'empty'}" 
-                     ondragover="event.preventDefault()" 
-                     ondrop="handleDrop(event, '${key}')">
+            html += `<div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event, '${key}')">
                      <span class="shift-text" contenteditable="true" onblur="saveShift('${key}', this.innerText)">${val}</span>
                      ${val ? `<button class="clear-btn" onclick="saveShift('${key}', '')">&times;</button>` : ''}
                      </div>`;
@@ -295,29 +278,17 @@ function renderAdminGrid() {
     container.innerHTML = html;
 }
 
-/* =========================================
-   7. DISPLAY-SIDAN
-   ========================================= */
 function initDisplay() {
-    // Uppdatera klockan
     setInterval(() => {
         const el = document.getElementById('clock');
         if(el) el.innerText = new Date().toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
     }, 1000);
 
     const refreshData = async () => {
-        // Hämta nytt data från databasen
-        const [data, settings] = await Promise.all([
-            fetchData('schedule'), 
-            fetchData('settings')
-        ]);
-        
+        const [data, settings] = await Promise.all([fetchData('schedule'), fetchData('settings')]);
         globalScheduleData = data;
-        
-        // Uppdatera temat om det ändrats i DB
         if(settings && settings.theme) applyTheme(settings.theme);
 
-        // Rendera schemat
         const now = new Date();
         const iso = getISOWeek(now);
         const todayName = days[now.getDay() === 0 ? 6 : now.getDay() - 1];
@@ -342,14 +313,10 @@ function initDisplay() {
         });
         container.innerHTML = html;
     };
-
     refreshData();
-    setInterval(refreshData, 10000); // Kollar databasen var 10:e sekund
+    setInterval(refreshData, 10000);
 }
 
-/* =========================================
-   HJÄLPFUNKTIONER
-   ========================================= */
 function getISOWeek(d) {
     const date = new Date(d.getTime());
     date.setHours(0, 0, 0, 0);
