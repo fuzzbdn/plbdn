@@ -37,7 +37,7 @@
             text-align: center;
         }
 
-        /* LOGO & TITEL */
+        /* LOGO */
         .logo-container {
             width: 80px;
             height: 80px;
@@ -56,25 +56,34 @@
             stroke-width: 1.5;
         }
 
+        /* TITEL & VERSION */
         .strul-title {
             font-size: 2.5rem;
             font-weight: 900;
             margin: 0 0 10px 0;
             color: #1a202c;
             letter-spacing: -1px;
-            /* För att kunna placera versionsnumret bredvid */
-            display: flex;
-            align-items: baseline;
-            justify-content: center;
-            gap: 8px; 
+            text-align: center; /* Centrerar texten */
         }
 
-        /* NY STYLING FÖR VERSIONSNUMRET */
+        /* En wrapper runt bara texten "STRUL" för att ankra versionstaggen */
+        .title-text-wrapper {
+            position: relative;
+            display: inline-block; /* Gör att boxen blir exakt lika bred som ordet STRUL */
+        }
+
         .version-tag {
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: 600;
-            color: #a0aec0; /* Ljusgrå färg */
+            color: #a0aec0;
             letter-spacing: 0;
+            
+            /* Magi för positionering */
+            position: absolute;
+            left: 100%; /* Skjuter den till högerkanten av STRUL */
+            bottom: 8px; /* Justerar höjden så den ligger snyggt mot baslinjen */
+            margin-left: 8px; /* Lite luft mellan texten och versionen */
+            white-space: nowrap; /* Förhindrar radbrytning */
         }
 
         .strul-desc {
@@ -196,7 +205,10 @@
                 </div>
                 
                 <h1 class="strul-title">
-                    STRUL <span class="version-tag">v1.0</span>
+                    <span class="title-text-wrapper">
+                        STRUL
+                        <span class="version-tag">v1.0</span>
+                    </span>
                 </h1>
                 
                 <p class="strul-desc">Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen</p>
