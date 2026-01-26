@@ -23,11 +23,11 @@ let globalStations = [], globalShifts = [];
 let selectedWeek = 0, selectedYear = 0, currentAdminDayIndex = 0;
 let globalScheduleData = {}, globalUserList = [];
 
-// Edit-variabler
+// Variabler för redigering
 let editingStationIndex = null;
 let editingShiftIndex = null;
 let editingAdminId = null;
-let dragSrcStationEl = null; // FÖR ATT DRA I LISTAN
+let dragSrcStationEl = null; // Variabel för att hålla reda på vad som dras
 
 /* =========================================
    2. TOAST NOTIFICATIONS (POPUP)
@@ -204,13 +204,13 @@ async function initSettings(currentSettings) {
         showToast("Meddelande uppdaterat!", "success");
     };
 
-    // STATIONER
+    // --- STATIONER (HÄR ÄR ÄNDRINGEN FÖR DRAG N DROP) ---
     const stName = document.getElementById('newStationName');
     const stColor = document.getElementById('newStationColor');
     const stBtn = document.getElementById('addStationBtn');
     const stCancel = document.getElementById('cancelStationEditBtn');
 
-    // HANTERA DRAG OCH SLÄPP FÖR LISTAN
+    // Drag-handlers
     window.handleStationDragStart = (e) => {
         dragSrcStationEl = e.target.closest('.draggable-station');
         e.dataTransfer.effectAllowed = 'move';
@@ -237,7 +237,7 @@ async function initSettings(currentSettings) {
             globalStations.splice(newIndex, 0, movedItem);
             
             await saveData('config_stations', globalStations);
-            renderStations(); // Rita om
+            renderStations(); 
         }
         return false;
     };
@@ -246,7 +246,7 @@ async function initSettings(currentSettings) {
         const cont = document.getElementById('stationListContainer');
         if(!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
         
-        // Här genererar vi HTML med Drag-handlers istället för pilar
+        // Ritar ut draggable-divar istället för knappar
         cont.innerHTML = globalStations.map((st, i) => {
             const dragAttr = `draggable="true" ondragstart="handleStationDragStart(event)" ondragover="handleStationDragOver(event)" ondrop="handleStationDrop(event)" data-index="${i}"`;
             
