@@ -20,9 +20,10 @@ const days = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "S�
 
 let selectedWeek = 0;
 let selectedYear = 0;
+let currentAdminDayIndex = 0;
 
 let globalScheduleData = {};
-let globalUserList = []; // Personal-lista
+let globalUserList = []; 
 
 /* =========================================
    2. DATA-API (SCHEMAN & PERSONAL)
@@ -129,7 +130,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Hämta data
     if (USE_CLOUD_DB) {
         try {
             [globalScheduleData, globalUserList] = await Promise.all([
@@ -142,7 +142,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         globalUserList = await fetchData('users');
     }
 
-    // Admin
     if (bodyId === 'page-admin') {
         if (sessionStorage.getItem('isLoggedIn') !== 'true') {
              window.location.href = "index.html"; 
@@ -153,12 +152,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         initThemeSelector(); 
         setupAdminManagement(); 
     } 
-    // Display
     else if (bodyId === 'page-display') {
         initDisplay();
     }
     
-    // Knappar
     const printBtn = document.getElementById('printBtn');
     if (printBtn) printBtn.addEventListener('click', printSchedule);
 
@@ -249,7 +246,6 @@ function setupAdminManagement() {
     adminBtn.addEventListener('click', async () => {
         const currentUser = sessionStorage.getItem('adminUser');
         
-        // Hämta lista
         let admins = [];
         try {
             const res = await fetch('/api/auth', {
@@ -268,7 +264,6 @@ function setupAdminManagement() {
 
         if (!userAction) return;
 
-        // SKAPA NY
         if (userAction.toLowerCase() === 'ny') {
             const newUser = prompt("Ange nytt användarnamn:");
             const newPass = prompt("Ange lösenord:");
@@ -283,7 +278,6 @@ function setupAdminManagement() {
                 else alert("Kunde inte skapa. (Finns namnet redan?)");
             }
         } 
-        // RADERA
         else if (userAction.toLowerCase() === 'radera' || userAction.toLowerCase() === 'ta bort') {
             const delUser = prompt("Vilken användare ska tas bort?");
             if (delUser) {
@@ -303,9 +297,6 @@ function setupAdminManagement() {
     });
 }
 
-let currentAdminDayIndex = getCurrentDayIndex();
-if (currentAdminDayIndex < 0) currentAdminDayIndex = 0; 
-
 window.onclick = function(event) {
     if (!event.target.closest('.dropdown-container')) closeAllDropdowns();
 }
@@ -318,24 +309,50 @@ function closeAllDropdowns() {
 }
 
 function initAdmin() {
-    // --- VISA INLOGGAD ANVÄNDARE (HÄR SKA DET LIGGA!) ---
     const userDisplay = document.getElementById('currentUserDisplay');
     const loggedInUser = sessionStorage.getItem('adminUser');
     
     if (userDisplay && loggedInUser) {
         userDisplay.innerText = `Inloggad: ${loggedInUser}`;
     }
-    // ----------------------------------------------------
 
-    const now = new Date();
-    const iso = getISOWeekAndYear(now);
-    selectedWeek = iso.week;
-    selectedYear = iso.year;
-
-    setupWeekNav();
+    setupDatePicker(); 
     setupSidebarAddUser(); 
-    renderNav();
     renderAdminGrid();
+}
+
+function setupDatePicker() {
+    const datePicker = document.getElementById('adminDatePicker');
+    const dateDisplay = document.getElementById('currentDateDisplay');
+    
+    if (!datePicker) return;
+
+    // Sätt dagens datum som default
+    const today = new Date();
+    datePicker.value = today.toISOString().split('T')[0];
+
+    const updateFromPicker = (dateValue) => {
+        const selectedDate = new Date(dateValue);
+        const iso = getISOWeekAndYear(selectedDate);
+        
+        selectedWeek = iso.week;
+        selectedYear = iso.year;
+        
+        let dayIdx = selectedDate.getDay(); 
+        currentAdminDayIndex = (dayIdx === 0) ? 6 : dayIdx - 1;
+
+        if (dateDisplay) {
+            dateDisplay.innerText = `${days[currentAdminDayIndex]} vecka ${selectedWeek}, ${selectedYear}`;
+        }
+
+        renderAdminGrid();
+    };
+
+    datePicker.addEventListener('change', (e) => {
+        updateFromPicker(e.target.value);
+    });
+
+    updateFromPicker(datePicker.value);
 }
 
 async function initThemeSelector() {
@@ -401,44 +418,6 @@ function setupSidebarAddUser() {
         addBtn.onclick = addUser;
         input.onkeydown = (e) => { if (e.key === 'Enter') addUser(); };
     }
-}
-
-function setupWeekNav() {
-    const prevBtn = document.getElementById('prevWeekBtn');
-    const nextBtn = document.getElementById('nextWeekBtn');
-    const display = document.getElementById('currentWeekDisplay');
-
-    if (!prevBtn || !nextBtn || !display) return;
-
-    function updateDisplay() {
-        display.innerText = `Vecka ${selectedWeek}, ${selectedYear}`;
-        const dateDisplay = document.getElementById('currentDateDisplay');
-        if (dateDisplay) dateDisplay.innerText = `Redigerar: ${days[currentAdminDayIndex]} (v.${selectedWeek})`;
-    }
-
-    prevBtn.onclick = () => {
-        if (selectedWeek === 1) { selectedYear--; selectedWeek = 52; } else { selectedWeek--; }
-        updateDisplay(); renderAdminGrid();
-    };
-
-    nextBtn.onclick = () => {
-        if (selectedWeek >= 52) { selectedYear++; selectedWeek = 1; } else { selectedWeek++; }
-        updateDisplay(); renderAdminGrid();
-    };
-    updateDisplay();
-}
-
-function renderNav() {
-    const nav = document.getElementById('weekNav');
-    if (!nav) return;
-    nav.innerHTML = '';
-    days.forEach((day, idx) => {
-        const btn = document.createElement('button');
-        btn.className = `day-btn ${idx === currentAdminDayIndex ? 'active' : ''}`;
-        btn.innerText = day;
-        btn.onclick = () => { currentAdminDayIndex = idx; renderNav(); renderAdminGrid(); };
-        nav.appendChild(btn);
-    });
 }
 
 function renderRoster() {
@@ -540,7 +519,6 @@ function renderAdminGrid() {
             const currentText = scheduleData[key] || "";
             if (!currentText.trim()) block.classList.add('empty');
 
-            // Drag & Drop
             block.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; block.classList.add('drag-over'); };
             block.ondragleave = () => { block.classList.remove('drag-over'); };
             block.ondrop = (e) => {
@@ -559,7 +537,6 @@ function renderAdminGrid() {
                 }
             };
 
-            // Text Input
             const textSpan = document.createElement('span');
             textSpan.className = 'shift-text';
             textSpan.innerText = currentText;
@@ -594,7 +571,6 @@ function renderAdminGrid() {
             textSpan.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } };
             block.appendChild(textSpan);
 
-            // Tools
             const toolsDiv = document.createElement('div');
             toolsDiv.className = 'admin-tools';
             const availableUsers = allUsers.filter(u => !usedUsersSet.has(u));
