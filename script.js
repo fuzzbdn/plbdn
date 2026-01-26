@@ -144,7 +144,7 @@ function initReset() {
 }
 
 /* =========================================
-   5. INSTÄLLNINGAR (MED SORTERING & EDIT)
+   5. INSTÄLLNINGAR (MED DRAG-N-DROP & EDIT)
    ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
@@ -165,13 +165,16 @@ async function initSettings(currentSettings) {
     const stBtn = document.getElementById('addStationBtn');
     const stCancel = document.getElementById('cancelStationEditBtn');
 
+    // Variabel för drag-n-drop
+    let draggedItemIndex = null;
+
     const renderStations = () => {
         const cont = document.getElementById('stationListContainer');
         if(!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
         
         cont.innerHTML = globalStations.map((st, i) => {
-            const upBtn = i > 0 ? `<button class="list-btn" onclick="moveStation(${i}, -1)" title="Flytta upp">⬆️</button>` : `<span style="display:inline-block;width:28px;"></span>`;
-            const downBtn = i < globalStations.length - 1 ? `<button class="list-btn" onclick="moveStation(${i}, 1)" title="Flytta ner">⬇️</button>` : `<span style="display:inline-block;width:28px;"></span>`;
+            // Drag-handtag (ikon) istället för pilar
+            const dragHandle = `<span style="cursor:grab; font-size:1.2rem; margin-right:10px; color:#888;">☰</span>`;
             
             const content = st.isSpacer 
                 ? `<i>--- Mellanrum ---</i>` 
@@ -179,12 +182,18 @@ async function initSettings(currentSettings) {
             
             const editBtn = st.isSpacer ? '' : `<button class="list-btn" onclick="startEditStation(${i})">✏️</button>`;
 
-            // HÄR ÄR ÄNDRINGEN (Location 1): background:#fff istället för #f9f9f9
+            // Notera: draggable="true" och event handlers
             return `
-                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; align-items:center; ${st.isSpacer?'background:#fff;color:#888;':''}">
+                <div class="station-list-item" 
+                     draggable="true" 
+                     data-index="${i}"
+                     ondragstart="handleStationDragStart(event, ${i})"
+                     ondragover="handleStationDragOver(event)"
+                     ondrop="handleStationDrop(event, ${i})"
+                     style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee; align-items:center; background:${st.isSpacer ? '#fff' : '#f9f9f9'}; ${st.isSpacer ? 'color:#888;' : ''}">
                     <div style="display:flex; align-items:center;">
-                        ${upBtn} ${downBtn}
-                        <span style="margin-left:10px;">${content}</span>
+                        ${dragHandle}
+                        <span style="margin-left:5px;">${content}</span>
                     </div>
                     <div>
                         ${editBtn}
@@ -194,14 +203,30 @@ async function initSettings(currentSettings) {
         }).join('');
     };
 
-    window.moveStation = async (index, direction) => {
-        const newIndex = index + direction;
-        if (newIndex < 0 || newIndex >= globalStations.length) return;
+    // --- DRAG N DROP LOGIK FÖR STATIONER ---
+    window.handleStationDragStart = (e, index) => {
+        draggedItemIndex = index;
+        e.dataTransfer.effectAllowed = 'move';
+        e.target.style.opacity = '0.5'; // Visuell feedback
+    };
+
+    window.handleStationDragOver = (e) => {
+        e.preventDefault(); // Nödvändigt för att tillåta drop
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    window.handleStationDrop = async (e, targetIndex) => {
+        e.preventDefault();
         
-        const temp = globalStations[index];
-        globalStations[index] = globalStations[newIndex];
-        globalStations[newIndex] = temp;
-        
+        // Återställ opacitet (för säkerhets skull renderar vi om allt ändå)
+        if (draggedItemIndex === null || draggedItemIndex === targetIndex) return;
+
+        // Flytta elementet i arrayen
+        const itemToMove = globalStations[draggedItemIndex];
+        globalStations.splice(draggedItemIndex, 1); // Ta bort från gammal plats
+        globalStations.splice(targetIndex, 0, itemToMove); // Lägg till på ny plats
+
+        draggedItemIndex = null;
         await saveData('config_stations', globalStations);
         renderStations();
     };
