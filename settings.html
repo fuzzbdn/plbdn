@@ -97,21 +97,33 @@
         </div>
 
         <div class="setting-card">
-            <h3>👤 Hantera Administratörer</h3>
-            <div class="form-group" style="background:#f9f9f9; padding:10px; border-radius:4px; border:1px solid #eee;">
-                <label>Lägg till ny admin:</label>
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="newAdminUser" placeholder="Användarnamn" style="flex:1;">
-                    <input type="text" id="newAdminPass" placeholder="Lösenord" style="flex:1;">
-                    <button id="addAdminBtn" class="sidebar-add-btn" style="width:40px; font-size:1.2rem;">+</button>
+                    <h3>👤 Hantera Administratörer</h3>
+                    
+                    <div class="form-group" style="background:#f9f9f9; padding:15px; border-radius:4px; border:1px solid #eee;">
+                        <label style="margin-bottom:10px; display:block;">Lägg till ny admin:</label>
+                        
+                        <div style="display:flex; gap:10px; margin-bottom:10px;">
+                            <input type="text" id="newAdminFirstName" placeholder="Förnamn" style="flex:1;">
+                            <input type="text" id="newAdminLastName" placeholder="Efternamn" style="flex:1;">
+                        </div>
+        
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="newAdminUser" placeholder="Användarnamn (t.ex. mormag01)" style="flex:1;">
+                            <input type="text" id="newAdminPass" placeholder="Lösenord" style="flex:1;">
+                            <button id="addAdminBtn" class="sidebar-add-btn" style="width:50px; font-size:1.2rem; background:#4CAF50;">+</button>
+                        </div>
+                    </div>
+        
+                    <div style="margin-top:20px;">
+                        <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:#666;">Nuvarande admins:</h4>
+                        <div style="max-height: 200px; overflow-y:auto; border-top:1px solid #eee;">
+                            <div id="adminListContainer">Laddar...</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div style="max-height: 200px; overflow-y:auto;">
-                <div id="adminListContainer">Laddar...</div>
-            </div>
-        </div>
 
     </div>
 
 </body>
+
 </html>
