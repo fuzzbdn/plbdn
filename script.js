@@ -1,8 +1,6 @@
 /* =========================================
    1. KONFIGURATION & GLOBALA VARIABLER
    ========================================= */
-
-// Standardvärden (används om inget finns i databasen än)
 const DEFAULT_STATIONS = [
     { name: "Björkliden", color: "#ffb74d" },
     { name: "Kiruna",     color: "#fff176" },
@@ -10,196 +8,148 @@ const DEFAULT_STATIONS = [
     { name: "Boden",      color: "#81c784" },
     { name: "Gällivare",  color: "#64b5f6" },
     { name: "Älvsbyn",    color: "#e0e0e0" },
-    { isSpacer: true }, 
+    { isSpacer: true },
     { name: "Info",       color: "#f06292" },
     { name: "PL",         color: "#0277bd" }
 ];
-
 const DEFAULT_SHIFTS = [
     { label: "Förmiddag",  time: "06:30 - 14:00" },
     { label: "Eftermiddag", time: "14:00 - 21:15" },
     { label: "Natt",        time: "21:15 - 06:30" }
 ];
-
 const days = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"];
 
-let globalStations = [];
-let globalShifts = [];
-
+let globalStations = [], globalShifts = [];
 let selectedWeek = 0, selectedYear = 0, currentAdminDayIndex = 0;
 let globalScheduleData = {}, globalUserList = [];
-let editingAdminId = null; 
+
 let editingStationIndex = null;
 let editingShiftIndex = null;
+let editingAdminId = null;
 
 /* =========================================
-   2. KOMMUNIKATION MED SERVER (API)
+   2. API & SPARANDE
    ========================================= */
 async function fetchData(type) {
     try {
         const headers = {};
-        if (type === 'admins') {
-            const token = sessionStorage.getItem('jwtToken');
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-        }
+        const token = sessionStorage.getItem('jwtToken');
+        if (token && type === 'admins') headers['Authorization'] = `Bearer ${token}`;
         const res = await fetch(`/api/data-api?type=${type}`, { headers });
-        if (!res.ok) throw new Error('Fetch failed');
+        if (!res.ok) throw new Error();
         return await res.json();
-    } catch (e) {
-        return null; 
-    }
+    } catch (e) { return null; }
 }
 
 async function saveData(type, data) {
     if(type.startsWith('schedule')) globalScheduleData = data;
     if(type === 'config_stations') globalStations = data;
     if(type === 'config_shifts') globalShifts = data;
-    
+
     const token = sessionStorage.getItem('jwtToken');
-    if (!token) {
-        alert("Sessionen har gått ut. Logga in igen.");
-        window.location.href = "index.html";
-        return;
-    }
+    if (!token) { alert("Logga in igen."); window.location.href="index.html"; return; }
 
     try {
-        const res = await fetch('/api/data-api', {
+        await fetch('/api/data-api', {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
-            },
+            headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
             body: JSON.stringify({ type, data })
         });
-        if (!res.ok) throw new Error("Unauthorized");
         return true;
-    } catch (e) {
-        alert("Kunde inte spara.");
-        return false;
-    }
+    } catch (e) { alert("Kunde inte spara."); return false; }
 }
 
 function applyTheme(themeName) {
     if (document.body.id === 'page-admin' || document.body.id === 'page-settings') return;
-    const themes = ['theme-dark', 'theme-jul', 'theme-pask', 'theme-matrix'];
-    document.body.classList.remove(...themes);
-    if (themeName && themeName !== 'light') {
-        document.body.classList.add(`theme-${themeName}`);
-    }
+    document.body.classList.remove('theme-dark','theme-jul','theme-pask','theme-matrix');
+    if (themeName && themeName !== 'light') document.body.classList.add(`theme-${themeName}`);
 }
 
 /* =========================================
-   3. INITIERING
+   3. INIT
    ========================================= */
 document.addEventListener('DOMContentLoaded', async () => {
     const pageId = document.body.id;
-
     if (pageId === 'page-login') { initLogin(); return; }
     if (pageId === 'page-reset') { initReset(); return; }
 
     const [users, settings, dbStations, dbShifts] = await Promise.all([
-        fetchData('users'), 
-        fetchData('settings'),
-        fetchData('config_stations'),
-        fetchData('config_shifts')
+        fetchData('users'), fetchData('settings'), fetchData('config_stations'), fetchData('config_shifts')
     ]);
 
     globalUserList = Array.isArray(users) ? users : [];
     globalStations = (Array.isArray(dbStations) && dbStations.length > 0) ? dbStations : DEFAULT_STATIONS;
     globalShifts = (Array.isArray(dbShifts) && dbShifts.length > 0) ? dbShifts : DEFAULT_SHIFTS;
 
-    if (settings && settings.theme) applyTheme(settings.theme);
+    if (settings?.theme) applyTheme(settings.theme);
 
-    if (pageId === 'page-admin') {
-        if (!checkAuth()) return;
-        initAdmin();
-    } else if (pageId === 'page-settings') {
-        if (!checkAuth()) return;
-        initSettings(settings);
-    } else if (pageId === 'page-display') {
-        initDisplay();
-    }
+    if (pageId === 'page-admin') { if(checkAuth()) initAdmin(); }
+    else if (pageId === 'page-settings') { if(checkAuth()) initSettings(settings); }
+    else if (pageId === 'page-display') { initDisplay(); }
 });
 
 function checkAuth() {
-    if (!sessionStorage.getItem('jwtToken')) {
-        window.location.href = "index.html";
-        return false;
-    }
+    if (!sessionStorage.getItem('jwtToken')) { window.location.href="index.html"; return false; }
     return true;
 }
 
 /* =========================================
-   4. LOGIN & RESET (FIXAD ENTER-KNAPP)
+   4. LOGIN
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
     const userIn = document.getElementById('usernameInput');
     const passIn = document.getElementById('passwordInput');
-    const toForgot = document.getElementById('forgotPassLink');
-    const toLogin = document.getElementById('backToLoginLink');
-    const resetBtn = document.getElementById('sendResetBtn');
-    const resetEmail = document.getElementById('resetEmailInput');
 
     const doLogin = async () => {
         try {
-            const res = await fetch('/api/data-api', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'login', username: userIn.value.trim(), password: passIn.value.trim() })
-            });
-            const data = await res.json();
-            if (data.success) {
-                sessionStorage.setItem('jwtToken', data.token); 
-                sessionStorage.setItem('adminUser', data.user);
-                sessionStorage.setItem('adminName', data.name);
+            const res = await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'login', username:userIn.value.trim(), password:passIn.value.trim()}) });
+            const d = await res.json();
+            if(d.success) {
+                sessionStorage.setItem('jwtToken', d.token); sessionStorage.setItem('adminUser', d.user); sessionStorage.setItem('adminName', d.name);
                 window.location.href = "admin.html";
             } else alert("Fel uppgifter!");
-        } catch (e) { alert("Serverfel"); }
+        } catch(e) { alert("Serverfel"); }
     };
 
     if(loginBtn) loginBtn.onclick = doLogin;
-
-    // FIX: Lyssna på Enter i båda fälten
-    const handleEnter = (e) => { if(e.key === 'Enter') doLogin(); };
-    if(passIn) passIn.onkeydown = handleEnter;
+    
+    // FIX: Enter fungerar i båda fälten
+    const handleEnter = (e) => { if(e.key==='Enter') doLogin(); };
     if(userIn) userIn.onkeydown = handleEnter;
+    if(passIn) passIn.onkeydown = handleEnter;
 
-    if(toForgot) toForgot.onclick = (e) => { e.preventDefault(); document.getElementById('loginForm').style.display='none'; document.getElementById('forgotForm').style.display='block'; };
-    if(toLogin) toLogin.onclick = (e) => { e.preventDefault(); document.getElementById('forgotForm').style.display='none'; document.getElementById('loginForm').style.display='block'; };
-
+    const forgotLink = document.getElementById('forgotPassLink');
+    if(forgotLink) forgotLink.onclick = (e) => { e.preventDefault(); document.getElementById('loginForm').style.display='none'; document.getElementById('forgotForm').style.display='block'; };
+    
+    const resetBtn = document.getElementById('sendResetBtn');
     if(resetBtn) resetBtn.onclick = async () => {
-        if(!resetEmail.value) return alert("Ange e-post");
-        resetBtn.innerText = "SKICKAR...";
-        await fetch('/api/data-api', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action:'request_reset', email: resetEmail.value}) });
-        alert("Om e-posten finns har en länk skickats.");
-        resetBtn.innerText = "ÅTERSTÄLL";
+        const email = document.getElementById('resetEmailInput').value;
+        if(!email) return alert("Ange e-post");
+        await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'request_reset', email}) });
+        alert("Länk skickad."); window.location.reload();
     };
 }
-
 function initReset() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    if(!token) return document.getElementById('resetMessage').innerText = "Ingen token.";
-    
+    const t = new URLSearchParams(window.location.search).get('token');
+    if(!t) return;
     document.getElementById('resetSubmitBtn').onclick = async () => {
         const p1 = document.getElementById('newPassInput').value;
         const p2 = document.getElementById('confirmPassInput').value;
-        if(p1!==p2) return alert("Matchar ej");
-        const res = await fetch('/api/data-api', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action:'perform_reset', token, newPassword: p1}) });
-        if(res.ok) window.location.href = "index.html";
-        else alert("Fel.");
+        if(p1!==p2) return alert("Ej match");
+        const res = await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'perform_reset', token:t, newPassword:p1}) });
+        if(res.ok) window.location.href="index.html";
     };
 }
 
 /* =========================================
-   5. INSTÄLLNINGAR (MED EDIT)
+   5. INSTÄLLNINGAR (MED SORTERING & EDIT)
    ========================================= */
 async function initSettings(currentSettings) {
-    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName') || 'Admin');
+    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
 
     const themeSelect = document.getElementById('themeSelect');
-    if(themeSelect && currentSettings?.theme) themeSelect.value = currentSettings.theme;
+    if(currentSettings?.theme) themeSelect.value = currentSettings.theme;
     document.getElementById('saveThemeBtn').onclick = () => saveData('settings', { theme: themeSelect.value });
 
     const msgIn = document.getElementById('displayMessageInput');
@@ -208,45 +158,65 @@ async function initSettings(currentSettings) {
     if(msg) { msgIn.value = msg.text||""; msgCheck.checked = msg.show||false; }
     document.getElementById('saveMessageBtn').onclick = () => saveData('message', { text: msgIn.value, show: msgCheck.checked });
 
-    // --- STATIONER ---
+    // --- PLATSER (STATIONER) ---
     const stName = document.getElementById('newStationName');
     const stColor = document.getElementById('newStationColor');
     const stBtn = document.getElementById('addStationBtn');
     const stCancel = document.getElementById('cancelStationEditBtn');
 
     const renderStations = () => {
-        if (!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
-        document.getElementById('stationListContainer').innerHTML = globalStations.map((st, i) => {
-            if (st.isSpacer) return `
-                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; background:#f9f9f9; color:#888;">
-                    <i>--- Mellanrum ---</i>
-                    <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
-                </div>`;
+        const cont = document.getElementById('stationListContainer');
+        if(!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
+        
+        cont.innerHTML = globalStations.map((st, i) => {
+            const upBtn = i > 0 ? `<button class="list-btn" onclick="moveStation(${i}, -1)" title="Flytta upp">⬆️</button>` : `<span style="display:inline-block;width:28px;"></span>`;
+            const downBtn = i < globalStations.length - 1 ? `<button class="list-btn" onclick="moveStation(${i}, 1)" title="Flytta ner">⬇️</button>` : `<span style="display:inline-block;width:28px;"></span>`;
+            
+            const content = st.isSpacer 
+                ? `<i>--- Mellanrum ---</i>` 
+                : `<div style="display:flex; align-items:center; gap:10px;"><div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc;"></div><strong>${st.name}</strong></div>`;
+            
+            const editBtn = st.isSpacer ? '' : `<button class="list-btn" onclick="startEditStation(${i})">✏️</button>`;
+
             return `
-            <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; align-items:center;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc;"></div>
-                    <strong>${st.name}</strong>
-                </div>
-                <div>
-                    <button class="list-btn" onclick="startEditStation(${i})">✏️</button>
-                    <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
-                </div>
-            </div>`;
+                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; align-items:center; ${st.isSpacer?'background:#f9f9f9;color:#888;':''}">
+                    <div style="display:flex; align-items:center;">
+                        ${upBtn} ${downBtn}
+                        <span style="margin-left:10px;">${content}</span>
+                    </div>
+                    <div>
+                        ${editBtn}
+                        <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
+                    </div>
+                </div>`;
         }).join('');
     };
-    
+
+    window.moveStation = async (index, direction) => {
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= globalStations.length) return;
+        
+        // Byt plats i arrayen
+        const temp = globalStations[index];
+        globalStations[index] = globalStations[newIndex];
+        globalStations[newIndex] = temp;
+        
+        await saveData('config_stations', globalStations);
+        renderStations();
+    };
+
     window.startEditStation = (i) => {
         editingStationIndex = i;
         stName.value = globalStations[i].name;
         stColor.value = globalStations[i].color;
         stBtn.innerText = "💾";
-        stBtn.style.background = "#2196F3";
+        stBtn.style.background = "#2196F3"; // Blå för editering, grön annars
         stCancel.style.display = "block";
     };
 
     const resetSt = () => {
-        editingStationIndex = null; stName.value = ""; stBtn.innerText = "+"; stBtn.style.background = "#4CAF50"; stCancel.style.display = "none";
+        editingStationIndex = null; stName.value = ""; stBtn.innerText = "+"; stBtn.style.background = ""; // Återgår till CSS-klassen (grön)
+        stCancel.style.display = "none";
     };
     stCancel.onclick = resetSt;
 
@@ -274,14 +244,14 @@ async function initSettings(currentSettings) {
     };
     renderStations();
 
-    // --- PASS ---
+    // --- PASS (SHIFTS) ---
     const shLabel = document.getElementById('newShiftLabel');
     const shTime = document.getElementById('newShiftTime');
     const shBtn = document.getElementById('addShiftBtn');
     const shCancel = document.getElementById('cancelShiftEditBtn');
 
     const renderShifts = () => {
-        if (!Array.isArray(globalShifts)) globalShifts = DEFAULT_SHIFTS;
+        if(!Array.isArray(globalShifts)) globalShifts = DEFAULT_SHIFTS;
         document.getElementById('shiftListContainer').innerHTML = globalShifts.map((sh, i) => `
             <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee;">
                 <div><strong>${sh.label}</strong> <span style="color:#666;">(${sh.time})</span></div>
@@ -302,7 +272,8 @@ async function initSettings(currentSettings) {
     };
 
     const resetSh = () => {
-        editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = "#4CAF50"; shCancel.style.display = "none";
+        editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = ""; // Återgår till grön
+        shCancel.style.display = "none";
     };
     shCancel.onclick = resetSh;
 
@@ -339,7 +310,7 @@ async function initSettings(currentSettings) {
         document.getElementById('adminListContainer').innerHTML = admins.map(a => {
             const json = JSON.stringify(a).replace(/"/g, '&quot;');
             return `
-            <div style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">
+            <div style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
                 <span>${a.first_name||''} ${a.last_name||''} (${a.username})</span>
                 <div>
                     <button class="list-btn" onclick="startEditAdmin(${json})">✏️</button>
@@ -365,7 +336,7 @@ async function initSettings(currentSettings) {
 
     const resetAdm = () => {
         editingAdminId = null; admUser.value = ""; admPass.value = ""; admFirst.value = ""; admLast.value = ""; admEmail.value = "";
-        admPass.placeholder = "Lösenord"; admBtn.innerText = "+"; admBtn.style.background = "#28a745"; admCancel.style.display = "none";
+        admPass.placeholder = "Lösenord"; admBtn.innerText = "+"; admBtn.style.background = ""; admCancel.style.display = "none";
     };
     admCancel.onclick = resetAdm;
 
@@ -394,23 +365,19 @@ async function initSettings(currentSettings) {
 }
 
 /* =========================================
-   6. ADMIN (PLANERING)
+   6. ADMIN PLANERING & PRINT
    ========================================= */
 async function initAdmin() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
 
     let draft = await fetchData('schedule_draft');
     const published = await fetchData('schedule_published');
-    const oldLegacy = await fetchData('schedule');
-    
-    if(!draft || Object.keys(draft).length === 0) draft = (published && Object.keys(published).length > 0) ? published : oldLegacy;
-    globalScheduleData = draft || {}; 
+    const old = await fetchData('schedule');
+    if(!draft || Object.keys(draft).length===0) draft = (published && Object.keys(published).length>0) ? published : old;
+    globalScheduleData = draft || {};
 
     document.getElementById('publishBtn').onclick = async () => {
-        if(confirm("Publicera?")) {
-            await saveData('schedule_published', globalScheduleData);
-            alert("Publicerat!");
-        }
+        if(confirm("Publicera?")) { await saveData('schedule_published', globalScheduleData); alert("Publicerat!"); }
     };
 
     const picker = document.getElementById('adminDatePicker');
@@ -421,146 +388,108 @@ async function initAdmin() {
         const d = new Date(dateStr);
         const iso = getISOWeek(d);
         selectedWeek = iso.week; selectedYear = iso.year;
-        currentAdminDayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
+        currentAdminDayIndex = d.getDay()===0?6:d.getDay()-1;
         document.getElementById('currentDateDisplay').innerText = `${days[currentAdminDayIndex]} v.${selectedWeek}, ${selectedYear}`;
         renderAdminGrid();
     }
     updateGrid(picker.value);
 
-    document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href = "index.html"; };
+    document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     document.getElementById('exportBtn').onclick = generateImage;
     
     document.getElementById('printBtn').onclick = () => {
-        const printContainer = document.getElementById('print-container') || document.createElement('div');
-        printContainer.id = 'print-container';
-        if(!document.body.contains(printContainer)) document.body.appendChild(printContainer);
-        printContainer.innerHTML = getScheduleHtmlForPrint();
+        const pc = document.getElementById('print-container') || document.createElement('div');
+        pc.id = 'print-container';
+        if(!document.body.contains(pc)) document.body.appendChild(pc);
+        pc.innerHTML = getScheduleHtmlForPrint();
         window.print();
-        setTimeout(() => printContainer.innerHTML = '', 1000);
+        setTimeout(() => pc.innerHTML='', 1000);
     };
     setupSidebarAddUser();
 }
 
 function renderAdminGrid() {
-    const container = document.getElementById('scheduleContainer');
+    const cont = document.getElementById('scheduleContainer');
     renderRoster();
-    if(!container) return;
+    if(!cont) return;
 
     const dayName = days[currentAdminDayIndex];
     const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
 
-    if (!Array.isArray(globalShifts) || globalShifts.length === 0) globalShifts = DEFAULT_SHIFTS;
-    if (!Array.isArray(globalStations) || globalStations.length === 0) globalStations = DEFAULT_STATIONS;
+    if(!Array.isArray(globalShifts) || !globalShifts.length) globalShifts = DEFAULT_SHIFTS;
+    if(!Array.isArray(globalStations) || !globalStations.length) globalStations = DEFAULT_STATIONS;
 
     let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${s.time}</div>`).join('')}</div>`;
 
     globalStations.forEach(st => {
-        if (st.isSpacer) {
-            html += `<div class="station-row" style="grid-column: 1 / -1; height: 30px;"></div>`;
-            return; 
-        }
-
-        html += `<div class="station-row">
-            <div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
+        if(st.isSpacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#f5f5f5;"></div>`; return; }
         
-        globalShifts.forEach((shift) => {
-            const key = `${prefix}${st.name}-${shift.time}`;
+        html += `<div class="station-row"><div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
+        globalShifts.forEach(sh => {
+            const key = `${prefix}${st.name}-${sh.time}`;
             const val = globalScheduleData[key] || "";
-            
-            html += `<div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event, '${key}')">
-                     <span class="shift-text" contenteditable="true" onblur="saveShift('${key}', this.innerText)">${val}</span>
-                     ${val ? `<button class="clear-btn" onclick="saveShift('${key}', '')">&times;</button>` : ''}
-                     </div>`;
+            html += `<div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event,'${key}')">
+                <span class="shift-text" contenteditable="true" onblur="saveShift('${key}', this.innerText)">${val}</span>
+                ${val ? `<button class="clear-btn" onclick="saveShift('${key}', '')">&times;</button>`:''}</div>`;
         });
         html += `</div>`;
     });
-    container.innerHTML = html;
+    cont.innerHTML = html;
 }
 
 function isLight(color) {
     if(!color) return true;
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    return (((r * 299) + (g * 587) + (b * 114)) / 1000) >= 128;
+    const h = color.replace('#','');
+    const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
+    return ((r*299 + g*587 + b*114)/1000) >= 128;
 }
 
 function renderRoster() {
     const list = document.getElementById('draggableUserList');
     if(!list) return;
-    const dayName = days[currentAdminDayIndex];
-    const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
-    const working = new Set();
-    Object.keys(globalScheduleData).forEach(k => {
-        if(k.startsWith(prefix) && globalScheduleData[k]) globalScheduleData[k].split('/').forEach(n=>working.add(n.trim()));
-    });
-    list.innerHTML = globalUserList.filter(u => !working.has(u)).map(u => 
-        `<div class="draggable-item" draggable="true" ondragstart="event.dataTransfer.setData('text', '${u}')">
-            ${u} <button class="remove-user-btn" onclick="removeUser('${u}')">&times;</button>
-        </div>`
-    ).join('');
+    const day = days[currentAdminDayIndex];
+    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+    const work = new Set();
+    Object.keys(globalScheduleData).forEach(k => { if(k.startsWith(prefix) && globalScheduleData[k]) globalScheduleData[k].split('/').forEach(n=>work.add(n.trim())); });
+    list.innerHTML = globalUserList.filter(u=>!work.has(u)).map(u => 
+        `<div class="draggable-item" draggable="true" ondragstart="event.dataTransfer.setData('text','${u}')">${u} <button class="remove-user-btn" onclick="removeUser('${u}')">&times;</button></div>`).join('');
 }
 
-async function saveShift(key, val) {
-    globalScheduleData[key] = val.trim();
-    await saveData('schedule_draft', globalScheduleData);
-    renderAdminGrid();
-}
-
-async function handleDrop(e, key) {
-    e.preventDefault();
-    const name = e.dataTransfer.getData("text");
-    let c = globalScheduleData[key] || "";
-    if(c.includes(name)) return;
-    await saveShift(key, c ? c+" / "+name : name);
-}
+async function saveShift(k, v) { globalScheduleData[k] = v.trim(); await saveData('schedule_draft', globalScheduleData); renderAdminGrid(); }
+async function handleDrop(e, k) { e.preventDefault(); const n = e.dataTransfer.getData("text"); let c = globalScheduleData[k]||""; if(!c.includes(n)) await saveShift(k, c?c+" / "+n:n); }
 
 /* =========================================
-   7. DISPLAY-SIDAN
+   7. DISPLAY
    ========================================= */
-let lastSnap = "";
+let lastSnap="";
 function initDisplay() {
-    setInterval(() => document.getElementById('clock').innerText=new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}), 1000);
-
+    setInterval(()=>document.getElementById('clock').innerText=new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}),1000);
     const refresh = async () => {
         let pub = await fetchData('schedule_published');
-        const oldLegacy = await fetchData('schedule'); 
-        if(!pub || Object.keys(pub).length===0) pub = oldLegacy;
-
+        if(!pub || !Object.keys(pub).length) pub = await fetchData('schedule');
         const [sets, msg] = await Promise.all([fetchData('settings'), fetchData('message')]);
         
         const snap = JSON.stringify({s:pub, t:sets?.theme, m:msg});
-        if(snap === lastSnap) return;
-        lastSnap = snap;
+        if(snap === lastSnap) return; lastSnap=snap;
         globalScheduleData = pub || {};
 
         if(sets?.theme) applyTheme(sets.theme);
         const mq = document.getElementById('marqueeContainer');
-        if(mq) { mq.style.display = (msg?.show && msg?.text) ? 'block' : 'none'; if(msg?.text) document.getElementById('marqueeText').innerText = msg.text; }
+        if(mq) { mq.style.display=(msg?.show&&msg?.text)?'block':'none'; if(msg?.text) document.getElementById('marqueeText').innerText=msg.text; }
 
-        const now = new Date();
-        const iso = getISOWeek(now);
-        const today = days[now.getDay()===0?6:now.getDay()-1];
+        const now = new Date(), iso = getISOWeek(now), today = days[now.getDay()===0?6:now.getDay()-1];
         document.getElementById('mainTitle').innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
-
-        const cont = document.getElementById('mainContainer');
         
-        if (!Array.isArray(globalShifts) || globalShifts.length === 0) globalShifts = DEFAULT_SHIFTS;
-        if (!Array.isArray(globalStations) || globalStations.length === 0) globalStations = DEFAULT_STATIONS;
+        const cont = document.getElementById('mainContainer');
+        if(!Array.isArray(globalShifts) || !globalShifts.length) globalShifts = DEFAULT_SHIFTS;
+        if(!Array.isArray(globalStations) || !globalStations.length) globalStations = DEFAULT_STATIONS;
 
         let html = `<div class="time-header-row"><div></div>${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}</div>`;
-
         globalStations.forEach(st => {
-            if (st.isSpacer) {
-                html += `<div class="display-row" style="grid-column: 1 / -1; height: 4vh;"></div>`;
-                return;
-            }
-
-            html += `<div class="display-row">
-                <div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
-            globalShifts.forEach(shift => {
-                const key = `y${iso.year}w${iso.week}-${today}-${st.name}-${shift.time}`;
+            if(st.isSpacer) { html += `<div class="display-row" style="grid-column:1/-1; height:4vh;"></div>`; return; }
+            html += `<div class="display-row"><div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
+            globalShifts.forEach(sh => {
+                const key = `y${iso.year}w${iso.week}-${today}-${st.name}-${sh.time}`;
                 const val = globalScheduleData[key] || "";
                 html += `<div class="shift-card ${val?'':'empty'}">${val}</div>`;
             });
@@ -575,81 +504,42 @@ function initDisplay() {
    8. EXPORT & PRINT
    ========================================= */
 function getScheduleHtmlForPrint() {
-    const dayName = days[currentAdminDayIndex];
     const dateText = document.getElementById('currentDateDisplay').innerText;
-    
-    const shiftsToUse = (Array.isArray(globalShifts) && globalShifts.length > 0) ? globalShifts : DEFAULT_SHIFTS;
-    const stationsToUse = (Array.isArray(globalStations) && globalStations.length > 0) ? globalStations : DEFAULT_STATIONS;
+    const day = days[currentAdminDayIndex];
+    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+    const shifts = (Array.isArray(globalShifts)&&globalShifts.length)?globalShifts:DEFAULT_SHIFTS;
+    const stations = (Array.isArray(globalStations)&&globalStations.length)?globalStations:DEFAULT_STATIONS;
 
-    let html = `
-        <div style="font-family: sans-serif; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h1 style="font-size: 24px; margin: 0;">Bemanningsschema - ${dateText}</h1>
-            </div>
-            <div style="display: grid; grid-template-columns: 150px repeat(${shiftsToUse.length}, 1fr); gap: 10px; text-align: center; font-weight: bold; margin-bottom: 10px;">
-                <div></div>
-                ${shiftsToUse.map(s => `<div style="border:1px solid #000; padding:5px; background:#ddd;">${s.label}<br><span style="font-size:0.8em; font-weight:normal;">${s.time}</span></div>`).join('')}
-            </div>
-    `;
+    let html = `<div style="font-family:sans-serif; padding:20px;"><div style="text-align:center; margin-bottom:20px;"><h1 style="font-size:24px; margin:0;">Bemanningsschema - ${dateText}</h1></div>
+    <div style="display:grid; grid-template-columns:150px repeat(${shifts.length},1fr); gap:10px; text-align:center; font-weight:bold; margin-bottom:10px;">
+    <div></div>${shifts.map(s=>`<div style="border:1px solid #000; padding:5px; background:#ddd;">${s.label}<br><span style="font-size:0.8em; font-weight:normal;">${s.time}</span></div>`).join('')}</div>`;
 
-    const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
-
-    stationsToUse.forEach(st => {
-        if (st.isSpacer) {
-            html += `<div style="grid-column: 1 / -1; height: 30px;"></div>`;
-            return;
-        }
-
-        const bg = st.color;
-        const fg = isLight(bg) ? '#000' : '#fff';
-        
-        html += `<div style="display: grid; grid-template-columns: 150px repeat(${shiftsToUse.length}, 1fr); gap: 10px; margin-bottom: 10px;">
-            <div style="background-color:${bg}; color:${fg}; font-weight:bold; padding:10px; display:flex; align-items:center; justify-content:center; border:1px solid #000;">${st.name}</div>`;
-            
-        shiftsToUse.forEach(shift => {
-            const key = `${prefix}${st.name}-${shift.time}`;
-            const val = globalScheduleData[key] || "";
+    stations.forEach(st => {
+        if(st.isSpacer) { html += `<div style="grid-column:1/-1; height:30px;"></div>`; return; }
+        const bg = st.color, fg = isLight(bg)?'#000':'#fff';
+        html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length},1fr); gap:10px; margin-bottom:10px;">
+            <div style="background:${bg}; color:${fg}; font-weight:bold; padding:10px; display:flex; align-items:center; justify-content:center; border:1px solid #000;">${st.name}</div>`;
+        shifts.forEach(sh => {
+            const val = globalScheduleData[`${prefix}${st.name}-${sh.time}`] || "";
             html += `<div style="display:flex; align-items:center; justify-content:center; text-align:center; min-height:50px; padding:5px; font-weight:bold; border:1px solid #000; background:#fff;">${val}</div>`;
         });
         html += `</div>`;
     });
-    
     return html + `</div>`;
 }
-
 function generateImage() {
-    const btn = document.getElementById('exportBtn');
-    const txt = btn.innerText;
-    btn.innerText = "Genererar...";
-    
-    const div = document.createElement('div');
-    div.style.position = 'absolute'; div.style.top = '-9999px'; div.style.left = '0'; div.style.width = '1200px'; div.style.background = '#fff';
-    div.innerHTML = getScheduleHtmlForPrint();
-    document.body.appendChild(div);
-
-    if (typeof html2canvas === 'undefined') return alert("Ladda om sidan");
-
-    html2canvas(div, { scale: 2 }).then(c => {
-        const a = document.createElement('a');
-        a.download = `Schema-${days[currentAdminDayIndex]}.jpg`;
-        a.href = c.toDataURL('image/jpeg', 0.9);
-        a.click();
-        document.body.removeChild(div);
-        btn.innerText = txt;
+    const btn=document.getElementById('exportBtn'), txt=btn.innerText; btn.innerText="Genererar...";
+    const div=document.createElement('div'); div.style.cssText="position:absolute; top:-9999px; left:0; width:1200px; background:#fff;";
+    div.innerHTML=getScheduleHtmlForPrint(); document.body.appendChild(div);
+    if(typeof html2canvas==='undefined') return alert("Ladda om sidan");
+    html2canvas(div,{scale:2}).then(c=>{
+        const a=document.createElement('a'); a.download=`Schema-${days[currentAdminDayIndex]}.jpg`; a.href=c.toDataURL('image/jpeg',0.9); a.click();
+        document.body.removeChild(div); btn.innerText=txt;
     });
 }
-
-function getISOWeek(d) {
-    const date = new Date(d.getTime()); date.setHours(0,0,0,0);
-    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
-    const w1 = new Date(date.getFullYear(), 0, 4);
-    return { week: 1 + Math.round(((date.getTime() - w1.getTime()) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7), year: date.getFullYear() };
-}
+function getISOWeek(d) { const date=new Date(d.getTime()); date.setHours(0,0,0,0); date.setDate(date.getDate()+3-(date.getDay()+6)%7); const w1=new Date(date.getFullYear(),0,4); return {week:1+Math.round(((date.getTime()-w1.getTime())/86400000-3+(w1.getDay()+6)%7)/7), year:date.getFullYear()}; }
 function setupSidebarAddUser() {
     const btn=document.getElementById('sidebarAddBtn'), inp=document.getElementById('sidebarNewName');
-    if(btn&&inp) {
-        const add=async()=>{if(inp.value){globalUserList.push(inp.value);globalUserList.sort();await saveData('users',globalUserList);inp.value='';renderRoster();}};
-        btn.onclick=add; inp.onkeydown=e=>{if(e.key==='Enter')add();};
-    }
+    if(btn&&inp) { btn.onclick=async()=>{if(inp.value){globalUserList.push(inp.value);globalUserList.sort();await saveData('users',globalUserList);inp.value='';renderRoster();}}; inp.onkeydown=e=>{if(e.key==='Enter')btn.click();} }
 }
 async function removeUser(u) { if(confirm('Ta bort '+u+'?')){globalUserList=globalUserList.filter(user=>user!==u);await saveData('users',globalUserList);renderRoster();} }
