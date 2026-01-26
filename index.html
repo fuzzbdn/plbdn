@@ -12,7 +12,7 @@
     <script src="script.js" defer></script>
 
     <style>
-        /* INLOGGNINGS-SPECIFIK CSS (För att matcha gammal design) */
+        /* INLOGGNINGS-SPECIFIK CSS */
         .login-view {
             background-color: #f0f4f8;
             display: flex;
@@ -62,6 +62,19 @@
             margin: 0 0 10px 0;
             color: #1a202c;
             letter-spacing: -1px;
+            /* För att kunna placera versionsnumret bredvid */
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 8px; 
+        }
+
+        /* NY STYLING FÖR VERSIONSNUMRET */
+        .version-tag {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #a0aec0; /* Ljusgrå färg */
+            letter-spacing: 0;
         }
 
         .strul-desc {
@@ -85,7 +98,7 @@
             font-size: 1rem;
             outline: none;
             transition: border-color 0.2s;
-            box-sizing: border-box; /* Viktigt för att padding inte ska spräcka bredden */
+            box-sizing: border-box;
         }
 
         .input-group input:focus {
@@ -149,7 +162,7 @@
             padding: 0 10px;
         }
 
-        /* LÄNKAR (Glömt lösenord) */
+        /* LÄNKAR */
         .link-text {
             color: #0277bd;
             font-size: 0.9rem;
@@ -161,7 +174,6 @@
         
         .link-text:hover { text-decoration: underline; }
         
-        /* Dölj views som inte är aktiva */
         #forgotForm { display: none; }
     </style>
 </head>
@@ -182,7 +194,11 @@
                         <path d="M9.5 13.5l-3 3"></path><circle cx="5.5" cy="17.5" r="1.5"></circle>
                     </svg>
                 </div>
-                <h1 class="strul-title">STRUL</h1>
+                
+                <h1 class="strul-title">
+                    STRUL <span class="version-tag">v1.0</span>
+                </h1>
+                
                 <p class="strul-desc">Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen</p>
             </div>
             
