@@ -22,7 +22,7 @@ const DEFAULT_SHIFTS = [
 
 const days = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"];
 
-// Dessa fylls nu på från databasen istället för att vara konstanta
+// Dessa fylls nu på från databasen
 let globalStations = [];
 let globalShifts = [];
 
@@ -44,10 +44,7 @@ async function fetchData(type) {
         if (!res.ok) throw new Error('Fetch failed');
         return await res.json();
     } catch (e) {
-        if (type === 'users' || type === 'admins') return [];
-        if (type === 'settings') return { theme: 'light' };
-        if (type === 'message') return { text: '', show: false };
-        // Returnera null för stations/shifts så vi kan ladda defaults
+        // Returnera null vid fel så vi kan hantera fallbacks
         return null; 
     }
 }
@@ -108,9 +105,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         fetchData('config_shifts')
     ]);
 
-    globalUserList = users || [];
-    globalStations = dbStations || DEFAULT_STATIONS;
-    globalShifts = dbShifts || DEFAULT_SHIFTS;
+    // VIKTIG FIX: Kontrollera att det vi fått faktiskt är en lista (Array).
+    // Om databasen returnerar {} (tomt objekt) måste vi använda defaults.
+    globalUserList = Array.isArray(users) ? users : [];
+    
+    globalStations = (Array.isArray(dbStations) && dbStations.length > 0) 
+        ? dbStations 
+        : DEFAULT_STATIONS;
+
+    globalShifts = (Array.isArray(dbShifts) && dbShifts.length > 0) 
+        ? dbShifts 
+        : DEFAULT_SHIFTS;
 
     if (settings && settings.theme) applyTheme(settings.theme);
 
@@ -134,7 +139,7 @@ function checkAuth() {
 }
 
 /* =========================================
-   4. LOGIN & RESET (Kvar som förut)
+   4. LOGIN & RESET
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -193,7 +198,7 @@ function initReset() {
 }
 
 /* =========================================
-   5. INSTÄLLNINGSSIDA (UPPDATERAD FÖR PLATSER/PASS)
+   5. INSTÄLLNINGSSIDA (FIXAD)
    ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName') || 'Admin');
@@ -215,6 +220,9 @@ async function initSettings(currentSettings) {
     const stList = document.getElementById('stationListContainer');
 
     const renderStations = () => {
+        // Kontrollera att globalStations verkligen är en array innan map
+        if (!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
+        
         stList.innerHTML = globalStations.map((st, idx) => `
             <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; align-items:center;">
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -247,6 +255,8 @@ async function initSettings(currentSettings) {
     const shList = document.getElementById('shiftListContainer');
 
     const renderShifts = () => {
+        if (!Array.isArray(globalShifts)) globalShifts = DEFAULT_SHIFTS;
+
         shList.innerHTML = globalShifts.map((sh, idx) => `
             <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee;">
                 <div><strong>${sh.label}</strong> <span style="color:#666; font-size:0.85em;">(${sh.time})</span></div>
@@ -270,11 +280,11 @@ async function initSettings(currentSettings) {
     };
     renderShifts();
 
-    // --- ADMINS (Samma som förut) ---
-    // (Förkortad kod här för att spara plats, men logiken är samma som innan)
+    // --- ADMINS ---
     const adminList = document.getElementById('adminListContainer');
     const renderAdmins = async () => {
-        const admins = await fetchData('admins');
+        let admins = await fetchData('admins');
+        if (!Array.isArray(admins)) admins = [];
         adminList.innerHTML = admins.map(a => `
             <div style="padding:5px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">
                 <span>${a.first_name||''} ${a.last_name||''} (${a.username})</span>
@@ -310,6 +320,7 @@ async function initAdmin() {
     const published = await fetchData('schedule_published');
     const oldLegacy = await fetchData('schedule');
     
+    // Säkerställ att vi inte kraschar om vi får {}
     if(!draft || Object.keys(draft).length === 0) draft = (published && Object.keys(published).length > 0) ? published : oldLegacy;
     globalScheduleData = draft || {}; 
 
@@ -337,7 +348,6 @@ async function initAdmin() {
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href = "index.html"; };
     document.getElementById('exportBtn').onclick = generateImage;
     
-    // Print logic
     document.getElementById('printBtn').onclick = () => {
         const printContainer = document.getElementById('print-container') || document.createElement('div');
         printContainer.id = 'print-container';
@@ -350,7 +360,6 @@ async function initAdmin() {
     setupSidebarAddUser();
 }
 
-// RENDERA RUTNÄTET (MED DYNAMISKA PLATSER & PASS)
 function renderAdminGrid() {
     const container = document.getElementById('scheduleContainer');
     renderRoster();
@@ -359,17 +368,17 @@ function renderAdminGrid() {
     const dayName = days[currentAdminDayIndex];
     const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
 
-    // HEADER: Använd shift.label (Förmiddag) istället för shift.time
+    // Säkerställ att globalShifts och globalStations är laddade
+    if (!Array.isArray(globalShifts) || globalShifts.length === 0) globalShifts = DEFAULT_SHIFTS;
+    if (!Array.isArray(globalStations) || globalStations.length === 0) globalStations = DEFAULT_STATIONS;
+
     let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${s.label}</div>`).join('')}</div>`;
 
     globalStations.forEach(st => {
-        // Använd style för färg istället för klass
         html += `<div class="station-row">
             <div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
         
         globalShifts.forEach((shift) => {
-            // Vi använder fortfarande shift.time som ID i databasen för att inte tappa gammal data
-            // Men om du skapar helt nya pass så blir deras tid IDt.
             const key = `${prefix}${st.name}-${shift.time}`;
             const val = globalScheduleData[key] || "";
             
@@ -383,7 +392,6 @@ function renderAdminGrid() {
     container.innerHTML = html;
 }
 
-// HJÄLP: Avgör om text ska vara svart eller vit baserat på bakgrundsfärg
 function isLight(color) {
     const hex = color.replace('#', '');
     const r = parseInt(hex.substr(0, 2), 16);
@@ -432,7 +440,9 @@ function initDisplay() {
 
     const refresh = async () => {
         let pub = await fetchData('schedule_published');
-        if(!pub || Object.keys(pub).length===0) pub = await fetchData('schedule');
+        const oldLegacy = await fetchData('schedule'); 
+        if(!pub || Object.keys(pub).length===0) pub = oldLegacy;
+
         const [sets, msg] = await Promise.all([fetchData('settings'), fetchData('message')]);
         
         const snap = JSON.stringify({s:pub, t:sets?.theme, m:msg});
@@ -450,6 +460,11 @@ function initDisplay() {
         document.getElementById('mainTitle').innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
 
         const cont = document.getElementById('mainContainer');
+        
+        // Säkra listor även för display
+        if (!Array.isArray(globalShifts) || globalShifts.length === 0) globalShifts = DEFAULT_SHIFTS;
+        if (!Array.isArray(globalStations) || globalStations.length === 0) globalStations = DEFAULT_STATIONS;
+
         let html = `<div class="time-header-row"><div></div>${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}</div>`;
 
         globalStations.forEach(st => {
@@ -474,27 +489,31 @@ function getScheduleHtmlForPrint() {
     const dayName = days[currentAdminDayIndex];
     const dateText = document.getElementById('currentDateDisplay').innerText;
     
+    // Säkra listor
+    const shiftsToUse = (Array.isArray(globalShifts) && globalShifts.length > 0) ? globalShifts : DEFAULT_SHIFTS;
+    const stationsToUse = (Array.isArray(globalStations) && globalStations.length > 0) ? globalStations : DEFAULT_STATIONS;
+
     let html = `
         <div style="font-family: sans-serif; padding: 20px;">
             <div style="text-align: center; margin-bottom: 20px;">
                 <h1 style="font-size: 24px; margin: 0;">Bemanningsschema - ${dateText}</h1>
             </div>
-            <div style="display: grid; grid-template-columns: 150px repeat(${globalShifts.length}, 1fr); gap: 10px; text-align: center; font-weight: bold; margin-bottom: 10px;">
+            <div style="display: grid; grid-template-columns: 150px repeat(${shiftsToUse.length}, 1fr); gap: 10px; text-align: center; font-weight: bold; margin-bottom: 10px;">
                 <div></div>
-                ${globalShifts.map(s => `<div style="border:1px solid #000; padding:5px; background:#ddd;">${s.label}<br><span style="font-size:0.8em; font-weight:normal;">${s.time}</span></div>`).join('')}
+                ${shiftsToUse.map(s => `<div style="border:1px solid #000; padding:5px; background:#ddd;">${s.label}<br><span style="font-size:0.8em; font-weight:normal;">${s.time}</span></div>`).join('')}
             </div>
     `;
 
     const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
 
-    globalStations.forEach(st => {
+    stationsToUse.forEach(st => {
         const bg = st.color;
         const fg = isLight(bg) ? '#000' : '#fff';
         
-        html += `<div style="display: grid; grid-template-columns: 150px repeat(${globalShifts.length}, 1fr); gap: 10px; margin-bottom: 10px;">
+        html += `<div style="display: grid; grid-template-columns: 150px repeat(${shiftsToUse.length}, 1fr); gap: 10px; margin-bottom: 10px;">
             <div style="background-color:${bg}; color:${fg}; font-weight:bold; padding:10px; display:flex; align-items:center; justify-content:center; border:1px solid #000;">${st.name}</div>`;
             
-        globalShifts.forEach(shift => {
+        shiftsToUse.forEach(shift => {
             const key = `${prefix}${st.name}-${shift.time}`;
             const val = globalScheduleData[key] || "";
             html += `<div style="display:flex; align-items:center; justify-content:center; text-align:center; min-height:50px; padding:5px; font-weight:bold; border:1px solid #000; background:#fff;">${val}</div>`;
