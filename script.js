@@ -47,7 +47,7 @@ async function saveData(type, data) {
     if(type === 'config_shifts') globalShifts = data;
 
     const token = sessionStorage.getItem('jwtToken');
-    if (!token) { alert("Logga in igen."); window.location.href="index.html"; return; }
+    if (!token) { showToast("Logga in igen!"); window.location.href="index.html"; return; }
 
     try {
         await fetch('/api/data-api', {
@@ -94,7 +94,7 @@ function checkAuth() {
 }
 
 /* =========================================
-   4. LOGIN (Uppdaterad med Toast)
+   4. LOGIN
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -113,7 +113,6 @@ function initLogin() {
     };
 
     if(loginBtn) loginBtn.onclick = doLogin;
-    
     const handleEnter = (e) => { if(e.key==='Enter') doLogin(); };
     if(userIn) userIn.onkeydown = handleEnter;
     if(passIn) passIn.onkeydown = handleEnter;
@@ -139,7 +138,6 @@ function initLogin() {
         
         await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'request_reset', email}) });
         showToast("Återställningslänk skickad!");
-        
         setTimeout(() => { window.location.reload(); }, 2000);
     };
 }
@@ -162,7 +160,7 @@ function initReset() {
 }
 
 /* =========================================
-   5. INSTÄLLNINGAR (TOAST & FIXAR)
+   5. INSTÄLLNINGAR
    ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
@@ -170,10 +168,9 @@ async function initSettings(currentSettings) {
     // TEMA
     const themeSelect = document.getElementById('themeSelect');
     if(currentSettings?.theme) themeSelect.value = currentSettings.theme;
-    
     document.getElementById('saveThemeBtn').onclick = async () => {
         await saveData('settings', { theme: themeSelect.value });
-        showToast("Tema sparat!"); // Feedback
+        showToast("Tema sparat!");
     };
 
     // MEDDELANDE
@@ -181,13 +178,12 @@ async function initSettings(currentSettings) {
     const msgCheck = document.getElementById('showMessageCheckbox');
     const msg = await fetchData('message');
     if(msg) { msgIn.value = msg.text||""; msgCheck.checked = msg.show||false; }
-    
     document.getElementById('saveMessageBtn').onclick = async () => {
         await saveData('message', { text: msgIn.value, show: msgCheck.checked });
-        showToast("Meddelande uppdaterat!"); // Feedback
+        showToast("Meddelande uppdaterat!");
     };
 
-    // --- PLATSER (STATIONER) ---
+    // --- PLATSER ---
     const stName = document.getElementById('newStationName');
     const stColor = document.getElementById('newStationColor');
     const stBtn = document.getElementById('addStationBtn');
@@ -225,7 +221,6 @@ async function initSettings(currentSettings) {
         }).join('');
     };
 
-    // DRAG-N-DROP LOGIK
     window.handleStationDragStart = (e, index) => { draggedItemIndex = index; e.dataTransfer.effectAllowed = 'move'; e.target.style.opacity = '0.5'; };
     window.handleStationDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
     window.handleStationDrop = async (e, targetIndex) => {
@@ -243,9 +238,9 @@ async function initSettings(currentSettings) {
         editingStationIndex = i;
         stName.value = globalStations[i].name;
         stColor.value = globalStations[i].color;
-        stBtn.innerText = "💾"; // Ikon för spara
+        stBtn.innerText = "💾";
         stBtn.style.background = "#2196F3";
-        stCancel.style.display = "block"; // Visa kryss
+        stCancel.style.display = "block";
     };
 
     const resetSt = () => {
@@ -276,16 +271,16 @@ async function initSettings(currentSettings) {
         showToast("Mellanrum tillagt");
     };
 
+    // FIX: Ta bort confirm-rutan
     window.deleteStation = async (i) => {
-        if(!confirm("Ta bort?")) return;
         globalStations.splice(i, 1);
         await saveData('config_stations', globalStations);
         renderStations();
-        showToast("Borttaget");
+        showToast("Plats borttagen 🗑️");
     };
     renderStations();
 
-    // --- PASS (SHIFTS) ---
+    // --- PASS ---
     const shLabel = document.getElementById('newShiftLabel');
     const shTime = document.getElementById('newShiftTime');
     const shBtn = document.getElementById('addShiftBtn');
@@ -329,11 +324,12 @@ async function initSettings(currentSettings) {
         showToast("Pass sparat!");
     };
 
+    // FIX: Ta bort confirm-rutan
     window.deleteShift = async (i) => {
-        if(!confirm("Ta bort?")) return;
         globalShifts.splice(i, 1);
         await saveData('config_shifts', globalShifts);
         renderShifts();
+        showToast("Pass borttaget 🗑️");
     };
     renderShifts();
 
@@ -397,9 +393,11 @@ async function initSettings(currentSettings) {
         showToast("Admin sparad!");
     };
 
+    // FIX: Ta bort confirm-rutan
     window.deleteAdmin = async(u) => { 
-        if(confirm("Ta bort?")) await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) });
+        await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) });
         renderAdmins(); 
+        showToast("Admin borttagen 🗑️");
     };
     renderAdmins();
 
@@ -418,11 +416,10 @@ async function initAdmin() {
     if(!draft || Object.keys(draft).length===0) draft = (published && Object.keys(published).length>0) ? published : old;
     globalScheduleData = draft || {};
 
+    // FIX: Ta bort confirm-rutan
     document.getElementById('publishBtn').onclick = async () => {
-        if(confirm("Publicera?")) { 
-            await saveData('schedule_published', globalScheduleData); 
-            showToast("Publicerat!"); 
-        }
+        await saveData('schedule_published', globalScheduleData); 
+        showToast("Schemat är publicerat! 📡");
     };
 
     const picker = document.getElementById('adminDatePicker');
@@ -519,7 +516,7 @@ function generateImage() {
     const btn=document.getElementById('exportBtn'), txt=btn.innerText; btn.innerText="Genererar...";
     const div=document.createElement('div'); div.style.cssText="position:absolute; top:-9999px; left:0; width:1200px; background:#fff;";
     div.innerHTML=getScheduleHtmlForPrint(); document.body.appendChild(div);
-    if(typeof html2canvas==='undefined') return alert("Ladda om sidan");
+    if(typeof html2canvas==='undefined') return showToast("Ladda om sidan!");
     html2canvas(div,{scale:2}).then(c=>{
         const a=document.createElement('a'); a.download=`Schema-${days[currentAdminDayIndex]}.jpg`; a.href=c.toDataURL('image/jpeg',0.9); a.click();
         document.body.removeChild(div); btn.innerText=txt;
@@ -530,7 +527,15 @@ function setupSidebarAddUser() {
     const btn=document.getElementById('sidebarAddBtn'), inp=document.getElementById('sidebarNewName');
     if(btn&&inp) { btn.onclick=async()=>{if(inp.value){globalUserList.push(inp.value);globalUserList.sort();await saveData('users',globalUserList);inp.value='';renderRoster();}}; inp.onkeydown=e=>{if(e.key==='Enter')btn.click();} }
 }
-async function removeUser(u) { if(confirm('Ta bort '+u+'?')){globalUserList=globalUserList.filter(user=>user!==u);await saveData('users',globalUserList);renderRoster();} }
+
+// FIX: Ta bort confirm-rutan
+async function removeUser(u) {
+    globalUserList = globalUserList.filter(user => user !== u);
+    await saveData('users', globalUserList);
+    renderRoster();
+    showToast(`${u} borttagen`);
+}
+
 function escapeHtml(text) { return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : ""; }
 function getScheduleHtmlForPrint() { return document.getElementById('scheduleContainer').innerHTML; } 
 
