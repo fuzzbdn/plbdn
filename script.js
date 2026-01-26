@@ -71,11 +71,12 @@ function getISOWeekAndYear(date) {
     return { week: week, year: d.getFullYear() };
 }
 
+// DENNA FUNKTION FIXAR TEMAT
 function applyTheme(themeName) {
     const knownThemes = ['theme-dark', 'theme-jul', 'theme-pask', 'theme-matrix'];
-    document.body.classList.remove(...knownThemes);
+    document.body.classList.remove(...knownThemes); // Rensa gamla teman
     if (themeName && themeName !== 'light') {
-        document.body.classList.add(`theme-${themeName}`);
+        document.body.classList.add(`theme-${themeName}`); // Aktivera nytt tema
     }
 }
 
@@ -90,7 +91,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Ladda data
     const [schedule, users, settings] = await Promise.all([
         fetchData('schedule'),
         fetchData('users'),
@@ -99,6 +99,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     globalScheduleData = schedule;
     globalUserList = users;
+    
+    // Aktivera lagrat tema direkt vid start
     if (settings && settings.theme) applyTheme(settings.theme);
 
     if (bodyId === 'page-admin') {
@@ -118,7 +120,7 @@ function initAdmin() {
     
     setupDatePicker();
     setupSidebarAddUser();
-    initThemeSelector();
+    initThemeSelector(); // Starta temaväljaren
     setupAdminManagement();
 
     const logoutBtn = document.getElementById('logoutBtn');
@@ -144,7 +146,6 @@ function setupDatePicker() {
     const display = document.getElementById('currentDateDisplay');
     if (!picker) return;
 
-    // Sätt dagens datum som standard
     picker.value = new Date().toISOString().split('T')[0];
 
     const update = (dateStr) => {
@@ -272,7 +273,7 @@ async function removeUser(name) {
 }
 
 /* =========================================
-   7. EXPORT
+   7. EXPORT & UTSKRIFT
    ========================================= */
 function getScheduleHtmlForPrint() {
     const datePicker = document.getElementById('adminDatePicker');
@@ -337,9 +338,6 @@ function generateScheduleImage() {
         link.click();
         document.body.removeChild(temp);
         btn.innerText = originalText;
-    }).catch(e => {
-        console.error(e);
-        btn.innerText = "Fel vid export";
     });
 }
 
@@ -374,6 +372,7 @@ function initLogin() {
     loginBtn.onclick = performLogin;
 }
 
+// FIXAD TEMAVÄLJARE
 async function initThemeSelector() {
     const select = document.getElementById('themeSelect');
     const saveBtn = document.getElementById('saveThemeBtn');
@@ -381,8 +380,8 @@ async function initThemeSelector() {
 
     saveBtn.onclick = async () => {
         const theme = select.value;
-        await saveData('settings', { theme });
-        applyTheme(theme);
+        await saveData('settings', { theme }); // Spara till DB
+        applyTheme(theme); // Uppdatera UI direkt
         saveBtn.innerText = "Sparat!";
         setTimeout(() => saveBtn.innerText = "Spara tema", 2000);
     };
@@ -414,6 +413,8 @@ function initDisplay() {
     const loadData = async () => {
         const [data, settings] = await Promise.all([fetchData('schedule'), fetchData('settings')]);
         globalScheduleData = data;
+        
+        // Uppdatera temat på displayen
         if (settings && settings.theme) applyTheme(settings.theme);
         
         const now = new Date(), iso = getISOWeekAndYear(now);
