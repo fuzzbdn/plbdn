@@ -52,17 +52,9 @@
                 <div class="grid-container" id="scheduleContainer"></div>
             </div>
             
-            <footer class="export-container">
-                <div class="theme-controls">
-                    <span>Tema:</span>
-                    <select id="themeSelect">
-                        <option value="light">Ljust (Standard)</option>
-                        <option value="dark">Mörkt (Dark Mode)</option>
-                        <option value="jul">Norrsken (Aurora)</option>
-                        <option value="pask">Påsktema (Pastell)</option>
-                        <option value="matrix">Matrix (Hacker)</option>
-                    </select>
-                    <button id="saveThemeBtn" class="export-button">Spara tema</button>
+            <footer class="export-container" style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
+                <div class="left-actions">
+                    <a href="settings.html" class="export-button" style="text-decoration:none; background:#555;">⚙️ Inställningar</a>
                 </div>
                 <div class="action-buttons">
                     <button id="printBtn" class="export-button">🖨️ Skriv ut</button>
@@ -75,3 +67,4 @@
 <div id="print-container"></div>
 </body>
 </html>
+
