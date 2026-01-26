@@ -2,7 +2,7 @@
    1. KONFIGURATION & GLOBALA VARIABLER
    ========================================= */
 
-// Standardvärden (används om inget finns i databasen än)
+// Standardvärden med ett mellanrum inlagt som exempel
 const DEFAULT_STATIONS = [
     { name: "Björkliden", color: "#ffb74d" },
     { name: "Kiruna",     color: "#fff176" },
@@ -10,6 +10,7 @@ const DEFAULT_STATIONS = [
     { name: "Boden",      color: "#81c784" },
     { name: "Gällivare",  color: "#64b5f6" },
     { name: "Älvsbyn",    color: "#e0e0e0" },
+    { isSpacer: true }, // <--- Tom rad
     { name: "Info",       color: "#f06292" },
     { name: "PL",         color: "#0277bd" }
 ];
@@ -22,7 +23,6 @@ const DEFAULT_SHIFTS = [
 
 const days = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"];
 
-// Dessa fylls nu på från databasen
 let globalStations = [];
 let globalShifts = [];
 
@@ -43,14 +43,10 @@ async function fetchData(type) {
         const res = await fetch(`/api/data-api?type=${type}`, { headers });
         if (!res.ok) throw new Error('Fetch failed');
         return await res.json();
-    } catch (e) {
-        // Returnera null vid fel så vi kan hantera fallbacks
-        return null; 
-    }
+    } catch (e) { return null; }
 }
 
 async function saveData(type, data) {
-    // Uppdatera minnet direkt
     if(type === 'schedule' || type === 'schedule_draft' || type === 'schedule_published') globalScheduleData = data;
     if(type === 'config_stations') globalStations = data;
     if(type === 'config_shifts') globalShifts = data;
@@ -65,10 +61,7 @@ async function saveData(type, data) {
     try {
         const res = await fetch('/api/data-api', {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ type, data })
         });
         if (!res.ok) throw new Error("Unauthorized");
@@ -83,13 +76,11 @@ function applyTheme(themeName) {
     if (document.body.id === 'page-admin' || document.body.id === 'page-settings') return;
     const themes = ['theme-dark', 'theme-jul', 'theme-pask', 'theme-matrix'];
     document.body.classList.remove(...themes);
-    if (themeName && themeName !== 'light') {
-        document.body.classList.add(`theme-${themeName}`);
-    }
+    if (themeName && themeName !== 'light') document.body.classList.add(`theme-${themeName}`);
 }
 
 /* =========================================
-   3. INITIERING (ROUTING)
+   3. INITIERING
    ========================================= */
 document.addEventListener('DOMContentLoaded', async () => {
     const pageId = document.body.id;
@@ -97,44 +88,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pageId === 'page-login') { initLogin(); return; }
     if (pageId === 'page-reset') { initReset(); return; }
 
-    // HÄMTA KONFIGURATIONER
     const [users, settings, dbStations, dbShifts] = await Promise.all([
-        fetchData('users'), 
-        fetchData('settings'),
-        fetchData('config_stations'),
-        fetchData('config_shifts')
+        fetchData('users'), fetchData('settings'), fetchData('config_stations'), fetchData('config_shifts')
     ]);
 
-    // VIKTIG FIX: Kontrollera att det vi fått faktiskt är en lista (Array).
-    // Om databasen returnerar {} (tomt objekt) måste vi använda defaults.
     globalUserList = Array.isArray(users) ? users : [];
-    
-    globalStations = (Array.isArray(dbStations) && dbStations.length > 0) 
-        ? dbStations 
-        : DEFAULT_STATIONS;
-
-    globalShifts = (Array.isArray(dbShifts) && dbShifts.length > 0) 
-        ? dbShifts 
-        : DEFAULT_SHIFTS;
+    globalStations = (Array.isArray(dbStations) && dbStations.length > 0) ? dbStations : DEFAULT_STATIONS;
+    globalShifts = (Array.isArray(dbShifts) && dbShifts.length > 0) ? dbShifts : DEFAULT_SHIFTS;
 
     if (settings && settings.theme) applyTheme(settings.theme);
 
-    if (pageId === 'page-admin') {
-        if (!checkAuth()) return;
-        initAdmin();
-    } else if (pageId === 'page-settings') {
-        if (!checkAuth()) return;
-        initSettings(settings);
-    } else if (pageId === 'page-display') {
-        initDisplay();
-    }
+    if (pageId === 'page-admin') { if (!checkAuth()) return; initAdmin(); }
+    else if (pageId === 'page-settings') { if (!checkAuth()) return; initSettings(settings); }
+    else if (pageId === 'page-display') { initDisplay(); }
 });
 
 function checkAuth() {
-    if (!sessionStorage.getItem('jwtToken')) {
-        window.location.href = "index.html";
-        return false;
-    }
+    if (!sessionStorage.getItem('jwtToken')) { window.location.href = "index.html"; return false; }
     return true;
 }
 
@@ -169,15 +139,13 @@ function initLogin() {
 
     if(loginBtn) loginBtn.onclick = doLogin;
     if(passIn) passIn.onkeydown = (e) => { if(e.key === 'Enter') doLogin(); };
-
     if(toForgot) toForgot.onclick = (e) => { e.preventDefault(); document.getElementById('loginForm').style.display='none'; document.getElementById('forgotForm').style.display='block'; };
     if(toLogin) toLogin.onclick = (e) => { e.preventDefault(); document.getElementById('forgotForm').style.display='none'; document.getElementById('loginForm').style.display='block'; };
-
     if(resetBtn) resetBtn.onclick = async () => {
         if(!resetEmail.value) return alert("Ange e-post");
         resetBtn.innerText = "SKICKAR...";
         await fetch('/api/data-api', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action:'request_reset', email: resetEmail.value}) });
-        alert("Om e-posten finns har en länk skickats (kolla loggen för test).");
+        alert("Länk skickad (kolla logg).");
         resetBtn.innerText = "ÅTERSTÄLL";
     };
 }
@@ -186,7 +154,6 @@ function initReset() {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     if(!token) return document.getElementById('resetMessage').innerText = "Ingen token.";
-    
     document.getElementById('resetSubmitBtn').onclick = async () => {
         const p1 = document.getElementById('newPassInput').value;
         const p2 = document.getElementById('confirmPassInput').value;
@@ -198,12 +165,11 @@ function initReset() {
 }
 
 /* =========================================
-   5. INSTÄLLNINGSSIDA (FIXAD)
+   5. INSTÄLLNINGSSIDA (MED MELLANRUM)
    ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName') || 'Admin');
 
-    // --- TEMA & MEDDELANDE ---
     const themeSelect = document.getElementById('themeSelect');
     if(themeSelect && currentSettings?.theme) themeSelect.value = currentSettings.theme;
     document.getElementById('saveThemeBtn').onclick = () => saveData('settings', { theme: themeSelect.value });
@@ -214,24 +180,32 @@ async function initSettings(currentSettings) {
     if(msg) { msgIn.value = msg.text||""; msgCheck.checked = msg.show||false; }
     document.getElementById('saveMessageBtn').onclick = () => saveData('message', { text: msgIn.value, show: msgCheck.checked });
 
-    // --- HANTERA PLATSER (STATIONER) ---
+    // --- HANTERA PLATSER ---
     const stNameIn = document.getElementById('newStationName');
     const stColorIn = document.getElementById('newStationColor');
     const stList = document.getElementById('stationListContainer');
 
     const renderStations = () => {
-        // Kontrollera att globalStations verkligen är en array innan map
         if (!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
-        
-        stList.innerHTML = globalStations.map((st, idx) => `
+        stList.innerHTML = globalStations.map((st, idx) => {
+            // Om det är ett mellanrum
+            if (st.isSpacer) {
+                return `
+                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; background:#f0f0f0; color:#888;">
+                    <div style="font-style:italic;">--- MELLANRUM ---</div>
+                    <button onclick="deleteStation(${idx})" style="border:none; background:none; cursor:pointer;">🗑️</button>
+                </div>`;
+            }
+            // Vanlig station
+            return `
             <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; align-items:center;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc;"></div>
                     <strong>${st.name}</strong>
                 </div>
                 <button onclick="deleteStation(${idx})" style="border:none; background:none; cursor:pointer;">🗑️</button>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     };
     
     document.getElementById('addStationBtn').onclick = async () => {
@@ -241,22 +215,29 @@ async function initSettings(currentSettings) {
         stNameIn.value = "";
         renderStations();
     };
+
+    // NYTT: Lägg till mellanrum
+    document.getElementById('addSpacerBtn').onclick = async () => {
+        globalStations.push({ isSpacer: true });
+        await saveData('config_stations', globalStations);
+        renderStations();
+    };
+
     window.deleteStation = async (idx) => {
-        if(!confirm("Ta bort plats?")) return;
+        if(!confirm("Ta bort?")) return;
         globalStations.splice(idx, 1);
         await saveData('config_stations', globalStations);
         renderStations();
     };
     renderStations();
 
-    // --- HANTERA PASS (SHIFTS) ---
+    // --- HANTERA PASS ---
     const shLabelIn = document.getElementById('newShiftLabel');
     const shTimeIn = document.getElementById('newShiftTime');
     const shList = document.getElementById('shiftListContainer');
 
     const renderShifts = () => {
         if (!Array.isArray(globalShifts)) globalShifts = DEFAULT_SHIFTS;
-
         shList.innerHTML = globalShifts.map((sh, idx) => `
             <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee;">
                 <div><strong>${sh.label}</strong> <span style="color:#666; font-size:0.85em;">(${sh.time})</span></div>
@@ -266,7 +247,7 @@ async function initSettings(currentSettings) {
     };
 
     document.getElementById('addShiftBtn').onclick = async () => {
-        if(!shLabelIn.value || !shTimeIn.value) return alert("Fyll i både etikett och tid");
+        if(!shLabelIn.value || !shTimeIn.value) return alert("Fyll i allt");
         globalShifts.push({ label: shLabelIn.value, time: shTimeIn.value });
         await saveData('config_shifts', globalShifts);
         shLabelIn.value = ""; shTimeIn.value = "";
@@ -297,7 +278,7 @@ async function initSettings(currentSettings) {
         const f = document.getElementById('newAdminFirstName').value;
         const l = document.getElementById('newAdminLastName').value;
         const e = document.getElementById('newAdminEmail').value;
-        if(!u || !p) return alert("Användarnamn/Lösenord krävs");
+        if(!u || !p) return alert("Krävs: Användarnamn & Lösen");
         await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'add_admin', username:u, password:p, firstName:f, lastName:l, email:e}) });
         renderAdmins();
     };
@@ -306,12 +287,11 @@ async function initSettings(currentSettings) {
         renderAdmins(); 
     };
     renderAdmins();
-    
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
 }
 
 /* =========================================
-   6. ADMIN (PLANERING)
+   6. ADMIN PLANERING
    ========================================= */
 async function initAdmin() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
@@ -320,7 +300,6 @@ async function initAdmin() {
     const published = await fetchData('schedule_published');
     const oldLegacy = await fetchData('schedule');
     
-    // Säkerställ att vi inte kraschar om vi får {}
     if(!draft || Object.keys(draft).length === 0) draft = (published && Object.keys(published).length > 0) ? published : oldLegacy;
     globalScheduleData = draft || {}; 
 
@@ -356,7 +335,6 @@ async function initAdmin() {
         window.print();
         setTimeout(() => printContainer.innerHTML = '', 1000);
     };
-    
     setupSidebarAddUser();
 }
 
@@ -368,13 +346,18 @@ function renderAdminGrid() {
     const dayName = days[currentAdminDayIndex];
     const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
 
-    // Säkerställ att globalShifts och globalStations är laddade
     if (!Array.isArray(globalShifts) || globalShifts.length === 0) globalShifts = DEFAULT_SHIFTS;
     if (!Array.isArray(globalStations) || globalStations.length === 0) globalStations = DEFAULT_STATIONS;
 
     let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${s.label}</div>`).join('')}</div>`;
 
     globalStations.forEach(st => {
+        // HANTERA MELLANRUM
+        if (st.isSpacer) {
+            html += `<div class="station-row" style="grid-column: 1 / -1; height: 30px;"></div>`;
+            return; 
+        }
+
         html += `<div class="station-row">
             <div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
         
@@ -393,12 +376,12 @@ function renderAdminGrid() {
 }
 
 function isLight(color) {
+    if(!color) return true;
     const hex = color.replace('#', '');
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
-    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-    return yiq >= 128;
+    return (((r * 299) + (g * 587) + (b * 114)) / 1000) >= 128;
 }
 
 function renderRoster() {
@@ -461,13 +444,18 @@ function initDisplay() {
 
         const cont = document.getElementById('mainContainer');
         
-        // Säkra listor även för display
         if (!Array.isArray(globalShifts) || globalShifts.length === 0) globalShifts = DEFAULT_SHIFTS;
         if (!Array.isArray(globalStations) || globalStations.length === 0) globalStations = DEFAULT_STATIONS;
 
         let html = `<div class="time-header-row"><div></div>${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}</div>`;
 
         globalStations.forEach(st => {
+            // HANTERA MELLANRUM PÅ DISPLAY
+            if (st.isSpacer) {
+                html += `<div class="display-row" style="grid-column: 1 / -1; height: 4vh;"></div>`;
+                return;
+            }
+
             html += `<div class="display-row">
                 <div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
             globalShifts.forEach(shift => {
@@ -489,7 +477,6 @@ function getScheduleHtmlForPrint() {
     const dayName = days[currentAdminDayIndex];
     const dateText = document.getElementById('currentDateDisplay').innerText;
     
-    // Säkra listor
     const shiftsToUse = (Array.isArray(globalShifts) && globalShifts.length > 0) ? globalShifts : DEFAULT_SHIFTS;
     const stationsToUse = (Array.isArray(globalStations) && globalStations.length > 0) ? globalStations : DEFAULT_STATIONS;
 
@@ -507,6 +494,12 @@ function getScheduleHtmlForPrint() {
     const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
 
     stationsToUse.forEach(st => {
+        // HANTERA MELLANRUM VID PRINT
+        if (st.isSpacer) {
+            html += `<div style="grid-column: 1 / -1; height: 30px;"></div>`;
+            return;
+        }
+
         const bg = st.color;
         const fg = isLight(bg) ? '#000' : '#fff';
         
