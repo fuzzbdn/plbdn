@@ -22,33 +22,29 @@ let globalScheduleData = {}, globalUserList = [];
    2. KOMMUNIKATION MED SERVER (API)
    ========================================= */
 
-// Hämta data (Publikt)
 async function fetchData(type) {
     try {
         const headers = {};
-        // Om vi hämtar admins måste vi skicka token
         if (type === 'admins') {
             const token = sessionStorage.getItem('jwtToken');
             if (token) headers['Authorization'] = `Bearer ${token}`;
         }
-
         const res = await fetch(`/api/data-api?type=${type}`, { headers });
         if (!res.ok) throw new Error('Fetch failed');
         return await res.json();
     } catch (e) {
         console.error(e);
-        if (type === 'users') return [];
-        if (type === 'admins') return [];
+        if (type === 'users' || type === 'admins') return [];
         if (type === 'settings') return { theme: 'light' };
+        if (type === 'message') return { text: '', show: false };
         return {};
     }
 }
 
-// Spara data (Kräver Token)
 async function saveData(type, data) {
     if(type === 'schedule') globalScheduleData = data;
     
-    const token = sessionStorage.getItem('jwtToken'); // Vi hämtar JWT-token nu
+    const token = sessionStorage.getItem('jwtToken');
     if (!token) {
         alert("Sessionen har gått ut. Logga in igen.");
         window.location.href = "index.html";
@@ -65,17 +61,19 @@ async function saveData(type, data) {
             body: JSON.stringify({ type, data })
         });
         if (!res.ok) throw new Error("Unauthorized");
+        return true;
     } catch (e) {
         console.error("Save failed:", e);
-        alert("Kunde inte spara. Logga in igen.");
+        alert("Kunde inte spara.");
+        return false;
     }
 }
 
 /* =========================================
-   3. TEMA & INIT
+   3. TEMA-FUNKTIONER
    ========================================= */
 function applyTheme(themeName) {
-    if (document.body.id === 'page-admin') return;
+    if (document.body.id === 'page-admin' || document.body.id === 'page-settings') return;
     const themes = ['theme-dark', 'theme-jul', 'theme-pask', 'theme-matrix'];
     document.body.classList.remove(...themes);
     if (themeName && themeName !== 'light') {
@@ -83,6 +81,9 @@ function applyTheme(themeName) {
     }
 }
 
+/* =========================================
+   4. INITIERING
+   ========================================= */
 document.addEventListener('DOMContentLoaded', async () => {
     const pageId = document.body.id;
 
@@ -91,6 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    // Ladda data
     const [schedule, users, settings] = await Promise.all([
         fetchData('schedule'), fetchData('users'), fetchData('settings')
     ]);
@@ -99,19 +101,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (settings && settings.theme) applyTheme(settings.theme);
 
+    // Routing
     if (pageId === 'page-admin') {
-        if (!sessionStorage.getItem('jwtToken')) {
-            window.location.href = "index.html";
-            return;
-        }
-        initAdmin(settings);
+        if (!checkAuth()) return;
+        initAdmin();
+    } else if (pageId === 'page-settings') {
+        if (!checkAuth()) return;
+        initSettings(settings); // Ny funktion för inställningssidan
     } else if (pageId === 'page-display') {
         initDisplay();
     }
 });
 
+function checkAuth() {
+    if (!sessionStorage.getItem('jwtToken')) {
+        window.location.href = "index.html";
+        return false;
+    }
+    return true;
+}
+
 /* =========================================
-   4. LOGIN (SÄKER JWT)
+   5. LOGIN (SÄKER JWT)
    ========================================= */
 function initLogin() {
     const btn = document.getElementById('loginBtn');
@@ -132,7 +143,6 @@ function initLogin() {
             const data = await res.json();
             
             if (data.success) {
-                // Spara JWT-token (inte lösenordet)
                 sessionStorage.setItem('jwtToken', data.token); 
                 sessionStorage.setItem('adminUser', data.user);
                 window.location.href = "admin.html";
@@ -149,80 +159,120 @@ function initLogin() {
 }
 
 /* =========================================
-   5. ADMIN-HANTERING (SÄKER)
+   6. INSTÄLLNINGSSIDA (NY!)
    ========================================= */
-function setupAdminManagement() {
-    const adminBtn = document.getElementById('manageAdminsBtn');
-    if (!adminBtn) return;
+async function initSettings(currentSettings) {
+    const userDisplay = document.getElementById('currentUserDisplay');
+    if(userDisplay) userDisplay.innerText = "Inloggad: " + (sessionStorage.getItem('adminUser') || 'Admin');
 
-    adminBtn.onclick = async () => {
-        const token = sessionStorage.getItem('jwtToken');
-        
-        // Hämta lista
-        let currentAdmins = await fetchData('admins');
-        const listText = currentAdmins.map(a => `- ${a.username}`).join('\n');
-        
-        const action = prompt(`ADMINS:\n${listText}\n\nSkriv 'ny' eller namnet på den du vill radera.`);
-        if (!action) return;
+    // 1. TEMA-INSTÄLLNINGAR
+    const themeSelect = document.getElementById('themeSelect');
+    const saveThemeBtn = document.getElementById('saveThemeBtn');
+    if(themeSelect && currentSettings?.theme) themeSelect.value = currentSettings.theme;
 
-        if (action.toLowerCase() === 'ny') {
-            const username = prompt("Användarnamn:");
-            const password = prompt("Lösenord:");
-            if (!username || !password) return;
-
-            // Anropa API för att skapa (Hashas på servern)
-            const res = await fetch('/api/data-api', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ action: 'add_admin', username, password })
-            });
-            
-            if (res.ok) alert("Admin skapad!");
-            else alert("Fel: Kunde inte skapa (kanske finns namnet redan?)");
-        } 
-        else {
-            if (confirm(`Radera ${action}?`)) {
-                const res = await fetch('/api/data-api', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ action: 'remove_admin', username: action })
-                });
-                if(res.ok) alert("Raderad.");
-                else alert("Kunde inte radera.");
-            }
+    saveThemeBtn.onclick = async () => {
+        const success = await saveData('settings', { theme: themeSelect.value });
+        if(success) {
+            saveThemeBtn.innerText = "Sparat!";
+            setTimeout(() => saveThemeBtn.innerText = "Spara Tema", 2000);
         }
+    };
+
+    // 2. MEDDELANDE-INSTÄLLNINGAR
+    const msgInput = document.getElementById('displayMessageInput');
+    const showCheck = document.getElementById('showMessageCheckbox');
+    const msgBtn = document.getElementById('saveMessageBtn');
+    
+    // Hämta nuvarande meddelande
+    const currentMsg = await fetchData('message');
+    if(currentMsg) {
+        msgInput.value = currentMsg.text || "";
+        showCheck.checked = currentMsg.show || false;
+    }
+
+    msgBtn.onclick = async () => {
+        const data = { text: msgInput.value, show: showCheck.checked };
+        const success = await saveData('message', data);
+        if(success) {
+            msgBtn.innerText = "Sparat!";
+            setTimeout(() => msgBtn.innerText = "Uppdatera", 2000);
+        }
+    };
+
+    // 3. ADMIN-HANTERING
+    const listContainer = document.getElementById('adminListContainer');
+    const addBtn = document.getElementById('addAdminBtn');
+    const newUserInput = document.getElementById('newAdminUser');
+    const newPassInput = document.getElementById('newAdminPass');
+
+    const renderAdmins = async () => {
+        listContainer.innerHTML = "Laddar...";
+        const admins = await fetchData('admins');
+        
+        if(admins.length === 0) {
+            listContainer.innerHTML = "<p>Inga admins hittades.</p>";
+            return;
+        }
+
+        listContainer.innerHTML = admins.map(a => `
+            <div class="admin-list-item">
+                <span>${a.username}</span>
+                <button class="remove-user-btn" onclick="deleteAdmin('${a.username}')">🗑️</button>
+            </div>
+        `).join('');
+    };
+
+    addBtn.onclick = async () => {
+        const username = newUserInput.value.trim();
+        const password = newPassInput.value.trim();
+        if(!username || !password) return alert("Fyll i både namn och lösenord");
+
+        const token = sessionStorage.getItem('jwtToken');
+        const res = await fetch('/api/data-api', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ action: 'add_admin', username, password })
+        });
+
+        if(res.ok) {
+            newUserInput.value = "";
+            newPassInput.value = "";
+            renderAdmins();
+        } else {
+            alert("Kunde inte skapa användare (kanske finns namnet redan?)");
+        }
+    };
+
+    // Global funktion för att kunna kallas från HTML-strängen
+    window.deleteAdmin = async (username) => {
+        if(!confirm(`Ta bort admin ${username}?`)) return;
+        const token = sessionStorage.getItem('jwtToken');
+        const res = await fetch('/api/data-api', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ action: 'remove_admin', username })
+        });
+        if(res.ok) renderAdmins();
+        else alert("Kunde inte ta bort (du kan inte ta bort dig själv).");
+    };
+
+    // Ladda listan direkt
+    renderAdmins();
+
+    // Logga ut
+    document.getElementById('logoutBtn').onclick = () => {
+        sessionStorage.clear();
+        window.location.href = "index.html";
     };
 }
 
 /* =========================================
-   6. ADMIN OCH DISPLAY LOGIK (Resten är oförändrat)
+   7. ADMIN-SIDAN (PLANERING)
    ========================================= */
-function initAdmin(settings) {
+function initAdmin() {
     const userDisplay = document.getElementById('currentUserDisplay');
     if(userDisplay) userDisplay.innerText = "Inloggad: " + (sessionStorage.getItem('adminUser') || 'Admin');
 
-    setupAdminManagement();
-
-    // Temaväljare
-    const themeSelect = document.getElementById('themeSelect');
-    const saveThemeBtn = document.getElementById('saveThemeBtn');
-    if(themeSelect && settings?.theme) themeSelect.value = settings.theme;
-
-    if(saveThemeBtn) {
-        saveThemeBtn.onclick = async () => {
-            await saveData('settings', { theme: themeSelect.value });
-            saveThemeBtn.innerText = "Sparat!";
-            setTimeout(() => saveThemeBtn.innerText = "Spara tema", 2000);
-        };
-    }
-
-    // Datumväljare
     const picker = document.getElementById('adminDatePicker');
     const dateDisplay = document.getElementById('currentDateDisplay');
     
@@ -278,6 +328,9 @@ function renderAdminGrid() {
     container.innerHTML = html;
 }
 
+/* =========================================
+   8. DISPLAY-SIDAN
+   ========================================= */
 function initDisplay() {
     setInterval(() => {
         const el = document.getElementById('clock');
@@ -285,9 +338,27 @@ function initDisplay() {
     }, 1000);
 
     const refreshData = async () => {
-        const [data, settings] = await Promise.all([fetchData('schedule'), fetchData('settings')]);
+        const [data, settings, message] = await Promise.all([
+            fetchData('schedule'), 
+            fetchData('settings'),
+            fetchData('message')
+        ]);
+        
         globalScheduleData = data;
         if(settings && settings.theme) applyTheme(settings.theme);
+
+        // Uppdatera meddelandet
+        const marqueeContainer = document.getElementById('marqueeContainer');
+        const marqueeText = document.getElementById('marqueeText');
+        if(marqueeContainer && marqueeText) {
+            if(message && message.show && message.text) {
+                marqueeContainer.style.display = 'block';
+                // Endast uppdatera text om den ändrats för att undvika "hopp"
+                if(marqueeText.innerText !== message.text) marqueeText.innerText = message.text;
+            } else {
+                marqueeContainer.style.display = 'none';
+            }
+        }
 
         const now = new Date();
         const iso = getISOWeek(now);
@@ -317,6 +388,9 @@ function initDisplay() {
     setInterval(refreshData, 10000);
 }
 
+/* =========================================
+   HJÄLPFUNKTIONER
+   ========================================= */
 function getISOWeek(d) {
     const date = new Date(d.getTime());
     date.setHours(0, 0, 0, 0);
