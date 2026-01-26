@@ -152,18 +152,19 @@
 
             <div class="setting-card">
                 <h3>📍 Hantera Platser</h3>
-                <p style="font-size:0.85rem; color:#666; margin-bottom:10px;">Lägg till stationer och välj deras färg.</p>
+                <p style="font-size:0.85rem; color:#666; margin-bottom:10px;">Lägg till stationer eller mellanrum för layout.</p>
                 
                 <div class="form-group">
-                    <div style="display:flex; gap:5px;">
+                    <div style="display:flex; gap:5px; margin-bottom:5px;">
                         <input type="text" id="newStationName" placeholder="Namn (t.ex. Reception)" style="flex:1;">
                         <input type="color" id="newStationColor" value="#cccccc" style="width:50px; height:40px; padding:0; border:none; cursor:pointer;" title="Välj färg">
-                        <button id="addStationBtn" class="sidebar-add-btn" style="background:#4CAF50;">+</button>
+                        <button id="addStationBtn" class="sidebar-add-btn" style="background:#4CAF50;" title="Lägg till station">+</button>
                     </div>
+                    <button id="addSpacerBtn" class="save-btn" style="background:#7f8c8d; font-size:0.9rem; padding:5px;">➕ Lägg till Mellanrum (Tom rad)</button>
                 </div>
 
                 <div style="margin-top:10px;">
-                    <h4 style="font-size:0.9rem; color:#666; margin-bottom:5px;">Nuvarande platser:</h4>
+                    <h4 style="font-size:0.9rem; color:#666; margin-bottom:5px;">Listordning:</h4>
                     <div id="stationListContainer" class="list-container">Laddar...</div>
                 </div>
             </div>
@@ -221,3 +222,4 @@
 
 </body>
 </html>
+
