@@ -767,27 +767,28 @@ function generateScheduleImage() {
 function getScheduleHtmlForPrint() {
     const activeDayIndex = currentAdminDayIndex; 
     const activeDayName = days[activeDayIndex];
-    const now = new Date();
+    const datePicker = document.getElementById('adminDatePicker');
+    const displayDate = datePicker ? new Date(datePicker.value).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' }) : "";
     
+    // Korrigerad färgkarta som matchar admin.css/style.css exakt
     const COLOR_MAP = {
-        "color-bjorkliden": { solid: "#43a047", transparent: "rgba(67, 160, 71, 0.4)", border: "rgba(67, 160, 71, 0.6)" },
-        "color-kiruna":     { solid: "#546e7a", transparent: "rgba(84, 110, 122, 0.4)", border: "rgba(84, 110, 122, 0.6)" },
-        "color-bastutrask": { solid: "#d81b60", transparent: "rgba(216, 27, 96, 0.4)", border: "rgba(216, 27, 96, 0.6)" },
-        "color-boden":      { solid: "#fb8c00", transparent: "rgba(251, 140, 0, 0.4)", border: "rgba(251, 140, 0, 0.6)" },
-        "color-gallivare":  { solid: "#8e24aa", transparent: "rgba(142, 36, 170, 0.4)", border: "rgba(142, 36, 170, 0.6)" },
-        "color-alvsbyn":    { solid: "#039be5", transparent: "rgba(3, 155, 229, 0.4)", border: "rgba(3, 155, 229, 0.6)" },
-        "color-info":       { solid: "#00acc1", transparent: "rgba(0, 172, 193, 0.4)", border: "rgba(0, 172, 193, 0.6)" },
-        "color-pl":         { solid: "#3949ab", transparent: "rgba(57, 73, 171, 0.4)", border: "rgba(57, 73, 171, 0.6)" }
+        "color-bjorkliden": { solid: "#ffb300", transparent: "rgba(255, 179, 0, 0.15)", border: "rgba(255, 179, 0, 0.6)", text: "#000" },
+        "color-kiruna":     { solid: "#fff176", transparent: "rgba(255, 241, 118, 0.25)", border: "rgba(255, 241, 118, 0.8)", text: "#000" },
+        "color-bastutrask": { solid: "#e53935", transparent: "rgba(229, 57, 53, 0.15)", border: "rgba(229, 57, 53, 0.6)", text: "#000" },
+        "color-boden":      { solid: "#7cb342", transparent: "rgba(124, 179, 66, 0.15)", border: "rgba(124, 179, 66, 0.6)", text: "#000" },
+        "color-gallivare":  { solid: "#64b5f6", transparent: "rgba(100, 181, 246, 0.15)", border: "rgba(100, 181, 246, 0.6)", text: "#000" },
+        "color-alvsbyn":    { solid: "#bdbdbd", transparent: "rgba(189, 189, 189, 0.20)", border: "rgba(189, 189, 189, 0.6)", text: "#000" },
+        "color-info":       { solid: "#ec407a", transparent: "rgba(236, 64, 122, 0.15)", border: "rgba(236, 64, 122, 0.6)", text: "#000" },
+        "color-pl":         { solid: "#0277bd", transparent: "rgba(2, 119, 189, 0.15)", border: "rgba(2, 119, 189, 0.6)", text: "#fff" }
     };
 
-    const dateFormatted = now.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' });
-    const mainTitleText = `Vi som jobbar ${activeDayName} ${dateFormatted} (v.${selectedWeek})`;
+    const mainTitleText = `Vi som jobbar ${activeDayName} ${displayDate} (v.${selectedWeek})`;
 
     let htmlContent = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; font-family: 'Inter', sans-serif;">
             <h1 style="font-size:2.2rem; color:#222; margin:0;">${mainTitleText}</h1>
         </div>
-        <div style="display:grid; grid-template-columns: 150px 1fr 1fr 1fr; gap:10px; margin-bottom:10px; padding-bottom:5px; border-bottom:2px solid #eee; font-weight:bold; text-align:center;">
+        <div style="display:grid; grid-template-columns: 150px 1fr 1fr 1fr; gap:10px; margin-bottom:10px; padding-bottom:5px; border-bottom:2px solid #eee; font-weight:bold; text-align:center; font-family: 'Inter', sans-serif;">
             <div></div>
             ${displayTimes.map(t => `<div>${t}</div>`).join('')}
         </div>
@@ -797,15 +798,16 @@ function getScheduleHtmlForPrint() {
     const weekPrefix = `y${selectedYear}w${selectedWeek}-`; 
 
     stations.forEach(station => {
-        const color = COLOR_MAP[station.class] || { solid: "#666", transparent: "#eee", border: "#ccc" };
+        const color = COLOR_MAP[station.class] || { solid: "#666", transparent: "#eee", border: "#ccc", text: "#000" };
         const isInfo = station.name === 'Info';
         const rowStyle = isInfo ? 'margin-top:50px;' : '';
 
         const labelStyle = `
-            background-color: ${color.solid}; color: #fff; 
+            background-color: ${color.solid}; color: ${color.text}; 
             font-weight: bold; padding: 10px; border-radius: 4px;
             display:flex; align-items:center; justify-content:center;
-            min-height:50px;
+            min-height:50px; text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            font-family: 'Inter', sans-serif;
         `;
         
         htmlContent += `
@@ -824,6 +826,7 @@ function getScheduleHtmlForPrint() {
             let cardStyle = `
                 display:flex; align-items:center; justify-content:center; text-align:center; 
                 min-height:50px; border-radius:4px; padding:10px; font-weight:bold; font-size:1.1rem;
+                font-family: 'Inter', sans-serif;
             `;
 
             if (isEmpty) {
