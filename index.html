@@ -72,25 +72,49 @@
             </div>
 
             <div class="form-section">
-                <div class="input-wrapper">
-                    <input type="text" id="usernameInput" placeholder="ANVÄNDARNAMN" autocomplete="off" style="margin-bottom: 15px;">
-                    
-                    <input type="password" id="passwordInput" placeholder="LÖSENORD" autocomplete="off">
-                    
-                    <div class="input-status"></div>
+                
+                <div id="loginForm">
+                    <div class="input-wrapper">
+                        <input type="text" id="usernameInput" placeholder="ANVÄNDARNAMN" autocomplete="off" style="margin-bottom: 15px;">
+                        <input type="password" id="passwordInput" placeholder="LÖSENORD" autocomplete="off">
+                    </div>
+
+                    <button id="loginBtn" class="login-btn" style="margin-top: 20px;">
+                        <span>LOGGA IN</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+
+                    <div style="text-align:center; margin-top:15px;">
+                        <a href="#" id="forgotPassLink" class="display-link" style="font-size:0.8rem;">GLÖMT LÖSENORD?</a>
+                    </div>
                 </div>
 
-                <button id="loginBtn" class="login-btn">
-                    <span>LOGGA IN</span>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </button>
+                <div id="forgotForm" style="display:none;">
+                    <p style="color:#aaa; font-family:'Inter', sans-serif; font-size:0.9rem; margin-bottom:20px; line-height:1.5;">
+                        Ange din e-postadress kopplad till ditt konto.
+                    </p>
+                    
+                    <div class="input-wrapper">
+                        <input type="email" id="resetEmailInput" placeholder="DIN E-POST" autocomplete="off">
+                    </div>
+
+                    <button id="sendResetBtn" class="login-btn" style="margin-top: 20px;">
+                        <span>ÅTERSTÄLL</span>
+                    </button>
+
+                    <div style="text-align:center; margin-top:15px;">
+                        <a href="#" id="backToLoginLink" class="display-link" style="font-size:0.8rem;">TILLBAKA</a>
+                    </div>
+                </div>
+
             </div>
 
             <div class="footer-links">
                 <a href="display.html" class="display-link">[ VISA STATUSSKÄRM ]</a>
             </div>
 
-        </div> <div class="scan-lines"></div>
+        </div> 
+        <div class="scan-lines"></div>
     </div>
 
 </body>
