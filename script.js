@@ -25,7 +25,6 @@ let editingAdminId = null;
 async function fetchData(type) {
     try {
         const headers = {};
-        // Skicka med token om vi hämtar skyddad data
         if (type === 'admins') {
             const token = sessionStorage.getItem('jwtToken');
             if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -34,7 +33,6 @@ async function fetchData(type) {
         if (!res.ok) throw new Error('Fetch failed');
         return await res.json();
     } catch (e) {
-        // Returnera tomma värden vid fel så sidan inte kraschar
         if (type === 'users' || type === 'admins') return [];
         if (type === 'settings') return { theme: 'light' };
         if (type === 'message') return { text: '', show: false };
@@ -43,7 +41,10 @@ async function fetchData(type) {
 }
 
 async function saveData(type, data) {
-    if(type === 'schedule') globalScheduleData = data;
+    // Om vi sparar schemat, uppdatera den globala variabeln direkt för snabb respons
+    if(type === 'schedule' || type === 'schedule_draft' || type === 'schedule_published') {
+        globalScheduleData = data;
+    }
     
     const token = sessionStorage.getItem('jwtToken');
     if (!token) {
@@ -64,13 +65,13 @@ async function saveData(type, data) {
         if (!res.ok) throw new Error("Unauthorized");
         return true;
     } catch (e) {
+        console.error(e);
         alert("Kunde inte spara.");
         return false;
     }
 }
 
 function applyTheme(themeName) {
-    // Admin och Inställningar ska alltid vara ljusa/neutrala
     if (document.body.id === 'page-admin' || document.body.id === 'page-settings') return;
     
     const themes = ['theme-dark', 'theme-jul', 'theme-pask', 'theme-matrix'];
@@ -89,23 +90,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pageId === 'page-login') { initLogin(); return; }
     if (pageId === 'page-reset') { initReset(); return; }
 
-    // Ladda all data parallellt
-    const [schedule, users, settings] = await Promise.all([
-        fetchData('schedule'), fetchData('users'), fetchData('settings')
+    // Hämta grunddata
+    const [users, settings] = await Promise.all([
+        fetchData('users'), fetchData('settings')
     ]);
-    globalScheduleData = schedule;
     globalUserList = users;
 
     if (settings && settings.theme) applyTheme(settings.theme);
 
-    // Starta rätt sida
+    // Välj init-funktion baserat på sida
     if (pageId === 'page-admin') {
         if (!checkAuth()) return;
+        // Admin laddar sitt eget schema (Draft)
         initAdmin();
     } else if (pageId === 'page-settings') {
         if (!checkAuth()) return;
         initSettings(settings);
     } else if (pageId === 'page-display') {
+        // Display laddar sitt eget schema (Published)
         initDisplay();
     }
 });
@@ -161,7 +163,7 @@ function initLogin() {
     if(loginBtn) loginBtn.onclick = doLogin;
     if(passIn) passIn.onkeydown = (e) => { if(e.key === 'Enter') doLogin(); };
 
-    // -- VÄXLA MELLAN LOGIN OCH GLÖMT LÖSENORD --
+    // -- VÄXLA VYER --
     if(toForgotLink) {
         toForgotLink.onclick = (e) => {
             e.preventDefault();
@@ -177,7 +179,7 @@ function initLogin() {
         };
     }
 
-    // -- BEGÄR ÅTERSTÄLLNINGSLÄNK --
+    // -- SKICKA ÅTERSTÄLLNINGSLÄNK --
     if(resetBtn) {
         resetBtn.onclick = async () => {
             const email = resetEmailIn.value.trim();
@@ -247,7 +249,7 @@ function initReset() {
                     setTimeout(() => window.location.href = "index.html", 2000);
                 } else {
                     msg.style.color = "red";
-                    msg.innerText = data.error || "Länken är ogiltig eller har gått ut.";
+                    msg.innerText = data.error || "Länken ogiltig.";
                     submitBtn.innerText = "FÖRSÖK IGEN";
                 }
             } catch(e) {
@@ -279,7 +281,7 @@ async function initSettings(currentSettings) {
         };
     }
 
-    // --- MEDDELANDE TILL SKÄRMEN ---
+    // --- MEDDELANDE ---
     const msgInput = document.getElementById('displayMessageInput');
     const showCheck = document.getElementById('showMessageCheckbox');
     const msgBtn = document.getElementById('saveMessageBtn');
@@ -339,7 +341,6 @@ async function initSettings(currentSettings) {
         }).join('');
     };
 
-    // Skapa / Spara Admin
     if(actionBtn) {
         actionBtn.onclick = async () => {
             const firstName = inputFirst.value.trim();
@@ -370,12 +371,11 @@ async function initSettings(currentSettings) {
                 resetForm();
                 renderAdmins();
             } else {
-                alert("Kunde inte spara (användarnamn/epost upptaget?)");
+                alert("Kunde inte spara.");
             }
         };
     }
 
-    // Starta redigering
     window.startEditAdmin = (user) => {
         editingAdminId = user.id;
         inputFirst.value = user.first_name || "";
@@ -435,12 +435,46 @@ async function initSettings(currentSettings) {
 }
 
 /* =========================================
-   7. ADMIN (PLANERING)
+   7. ADMIN (PLANERING) & PUBLICERING
    ========================================= */
-function initAdmin() {
+async function initAdmin() {
     const displayName = sessionStorage.getItem('adminName') || sessionStorage.getItem('adminUser') || 'Admin';
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + displayName;
 
+    // --- HÄMTA UTKAST I FÖRSTA HAND ---
+    let draft = await fetchData('schedule_draft');
+    const published = await fetchData('schedule_published');
+    const oldLegacy = await fetchData('schedule');
+
+    // Fallback: Om inget utkast finns, ta publicerat. Finns inte det, ta legacy.
+    if (!draft || Object.keys(draft).length === 0) {
+        if (published && Object.keys(published).length > 0) draft = published;
+        else draft = oldLegacy;
+    }
+    
+    globalScheduleData = draft || {}; 
+
+    // --- PUBLICERA KNAPP ---
+    const pubBtn = document.getElementById('publishBtn');
+    if(pubBtn) {
+        pubBtn.onclick = async () => {
+            if(confirm("Vill du publicera ändringarna till statusskärmen?")) {
+                pubBtn.innerText = "Publicerar...";
+                // Kopiera nuvarande data (draft) till published
+                const success = await saveData('schedule_published', globalScheduleData);
+                if(success) {
+                    pubBtn.innerText = "✅ Publicerat!";
+                    pubBtn.style.backgroundColor = "#1b5e20";
+                    setTimeout(() => {
+                        pubBtn.innerText = "📡 Publicera";
+                        pubBtn.style.backgroundColor = "#2e7d32";
+                    }, 3000);
+                }
+            }
+        };
+    }
+
+    // --- ÖVRIG INIT ---
     const picker = document.getElementById('adminDatePicker');
     const dateDisplay = document.getElementById('currentDateDisplay');
     
@@ -470,14 +504,10 @@ function initAdmin() {
     document.getElementById('exportBtn').onclick = generateImage;
 }
 
-// ---------------------------------------------
-// GRID & LOGIK FÖR PLANERING (RENDER ROSTER)
-// ---------------------------------------------
+// Renderar både schemat (Grid) och sidolistan (Roster)
 function renderAdminGrid() {
     const container = document.getElementById('scheduleContainer');
-    
-    // Rita upp sidolistan med personal
-    renderRoster(); 
+    renderRoster(); // Uppdatera listan varje gång vi ritar om
     
     if(!container) return;
 
@@ -504,30 +534,27 @@ function renderAdminGrid() {
     container.innerHTML = html;
 }
 
-// ---------------------------------------------
-// DEN SMARTA LISTAN (Visar bara tillgängliga)
-// ---------------------------------------------
+// SMART LISTA: Filtrera bort de som redan jobbar IDAG
 function renderRoster() {
     const list = document.getElementById('draggableUserList');
     if(!list) return;
 
-    // 1. Vilken dag är det?
     const dayName = days[currentAdminDayIndex];
     const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
 
-    // 2. Hitta alla som redan jobbar den här dagen
+    // Hitta alla som jobbar idag
     const usersWorkingToday = new Set();
     Object.keys(globalScheduleData).forEach(key => {
         if (key.startsWith(prefix)) {
             const val = globalScheduleData[key];
             if (val) {
-                // Dela upp om det står "Anna / Bertil"
+                // Hantera flera namn i samma ruta ("Anna / Bertil")
                 val.split('/').forEach(n => usersWorkingToday.add(n.trim()));
             }
         }
     });
 
-    // 3. Filtrera bort de som jobbar
+    // Visa bara de som inte jobbar
     const availableUsers = globalUserList.filter(user => !usersWorkingToday.has(user));
 
     list.innerHTML = availableUsers.map(u => 
@@ -537,22 +564,24 @@ function renderRoster() {
     ).join('');
 }
 
-// ---------------------------------------------
-// DRAG AND DROP (Tar INTE bort från listan permanent)
-// ---------------------------------------------
+// SPARA & DRAG-AND-DROP (MOT DRAFT)
+async function saveShift(key, val) {
+    globalScheduleData[key] = val.trim();
+    // VIKTIGT: Spara alltid som UTKAST (draft) i Admin-läge
+    await saveData('schedule_draft', globalScheduleData);
+    renderAdminGrid();
+}
+
 async function handleDrop(e, key) {
     e.preventDefault();
     const name = e.dataTransfer.getData("text");
     
     let current = globalScheduleData[key] || "";
-    
-    // Undvik dubbletter i samma ruta
-    if (current.includes(name)) return;
+    if (current.includes(name)) return; // Inga dubbletter i samma ruta
 
     if(current) current += " / " + name;
     else current = name;
     
-    // Spara (detta kommer också uppdatera Roster via saveShift -> renderAdminGrid -> renderRoster)
     await saveShift(key, current);
 }
 
@@ -566,14 +595,22 @@ function initDisplay() {
     }, 1000);
 
     const refreshData = async () => {
-        const [data, settings, message] = await Promise.all([
-            fetchData('schedule'), fetchData('settings'), fetchData('message')
+        // DISPLAY HÄMTAR ENBART "PUBLISHED" DATA
+        let published = await fetchData('schedule_published');
+        const oldLegacy = await fetchData('schedule'); // Bakåtkompatibilitet
+        
+        if (!published || Object.keys(published).length === 0) {
+            published = oldLegacy;
+        }
+
+        const [settings, message] = await Promise.all([
+            fetchData('settings'), fetchData('message')
         ]);
         
-        globalScheduleData = data;
+        globalScheduleData = published || {};
+        
         if(settings && settings.theme) applyTheme(settings.theme);
 
-        // Rullande text
         const marqueeContainer = document.getElementById('marqueeContainer');
         const marqueeText = document.getElementById('marqueeText');
         if(marqueeContainer && marqueeText) {
@@ -600,7 +637,7 @@ function initDisplay() {
             dbTimes.forEach((time, idx) => {
                 if ((st.name === "Info" || st.name === "PL") && idx === 2) return;
                 const key = `y${iso.year}w${iso.week}-${todayName}-${st.name}-${time}`;
-                const val = data[key] || "";
+                const val = globalScheduleData[key] || "";
                 html += `<div class="shift-card ${val?'':'empty'}">${val}</div>`;
             });
             html += `</div>`;
@@ -623,13 +660,6 @@ function getISOWeek(d) {
     return { week, year: date.getFullYear() };
 }
 
-async function saveShift(key, val) {
-    globalScheduleData[key] = val.trim();
-    await saveData('schedule', globalScheduleData);
-    renderAdminGrid(); // Detta ritar om både rutor och listan
-}
-
-// Snabb-tillägg från sidomenyn
 function setupSidebarAddUser() {
     const btn = document.getElementById('sidebarAddBtn');
     const inp = document.getElementById('sidebarNewName');
@@ -649,7 +679,7 @@ function setupSidebarAddUser() {
 }
 
 async function removeUser(u) {
-    if(confirm('Ta bort ' + u + ' från listan permanent?')) {
+    if(confirm('Ta bort ' + u + ' permanent från systemet?')) {
         globalUserList = globalUserList.filter(user => user !== u);
         await saveData('users', globalUserList);
         renderRoster();
