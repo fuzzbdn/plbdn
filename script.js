@@ -159,91 +159,122 @@ function initLogin() {
 }
 
 /* =========================================
-   6. INSTÄLLNINGSSIDA (NY!)
+   6. INSTÄLLNINGSSIDA (UPPDATERAD MED NAMN)
    ========================================= */
 async function initSettings(currentSettings) {
     const userDisplay = document.getElementById('currentUserDisplay');
     if(userDisplay) userDisplay.innerText = "Inloggad: " + (sessionStorage.getItem('adminUser') || 'Admin');
 
-    // 1. TEMA-INSTÄLLNINGAR
+    // 1. TEMA
     const themeSelect = document.getElementById('themeSelect');
     const saveThemeBtn = document.getElementById('saveThemeBtn');
     if(themeSelect && currentSettings?.theme) themeSelect.value = currentSettings.theme;
 
-    saveThemeBtn.onclick = async () => {
-        const success = await saveData('settings', { theme: themeSelect.value });
-        if(success) {
-            saveThemeBtn.innerText = "Sparat!";
-            setTimeout(() => saveThemeBtn.innerText = "Spara Tema", 2000);
-        }
-    };
+    if(saveThemeBtn) {
+        saveThemeBtn.onclick = async () => {
+            const success = await saveData('settings', { theme: themeSelect.value });
+            if(success) {
+                saveThemeBtn.innerText = "Sparat!";
+                setTimeout(() => saveThemeBtn.innerText = "Spara Tema", 2000);
+            }
+        };
+    }
 
-    // 2. MEDDELANDE-INSTÄLLNINGAR
+    // 2. MEDDELANDE
     const msgInput = document.getElementById('displayMessageInput');
     const showCheck = document.getElementById('showMessageCheckbox');
     const msgBtn = document.getElementById('saveMessageBtn');
     
-    // Hämta nuvarande meddelande
     const currentMsg = await fetchData('message');
     if(currentMsg) {
         msgInput.value = currentMsg.text || "";
         showCheck.checked = currentMsg.show || false;
     }
 
-    msgBtn.onclick = async () => {
-        const data = { text: msgInput.value, show: showCheck.checked };
-        const success = await saveData('message', data);
-        if(success) {
-            msgBtn.innerText = "Sparat!";
-            setTimeout(() => msgBtn.innerText = "Uppdatera", 2000);
-        }
-    };
+    if(msgBtn) {
+        msgBtn.onclick = async () => {
+            const data = { text: msgInput.value, show: showCheck.checked };
+            const success = await saveData('message', data);
+            if(success) {
+                msgBtn.innerText = "Sparat!";
+                setTimeout(() => msgBtn.innerText = "Uppdatera", 2000);
+            }
+        };
+    }
 
-    // 3. ADMIN-HANTERING
+    // 3. ADMIN-HANTERING (MED FÖR & EFTERNAMN)
     const listContainer = document.getElementById('adminListContainer');
     const addBtn = document.getElementById('addAdminBtn');
-    const newUserInput = document.getElementById('newAdminUser');
-    const newPassInput = document.getElementById('newAdminPass');
+    
+    // Inputs
+    const inputFirst = document.getElementById('newAdminFirstName');
+    const inputLast = document.getElementById('newAdminLastName');
+    const inputUser = document.getElementById('newAdminUser');
+    const inputPass = document.getElementById('newAdminPass');
 
     const renderAdmins = async () => {
         listContainer.innerHTML = "Laddar...";
         const admins = await fetchData('admins');
         
         if(admins.length === 0) {
-            listContainer.innerHTML = "<p>Inga admins hittades.</p>";
+            listContainer.innerHTML = "<p style='padding:10px; color:#888;'>Inga admins hittades.</p>";
             return;
         }
 
-        listContainer.innerHTML = admins.map(a => `
-            <div class="admin-list-item">
-                <span>${a.username}</span>
-                <button class="remove-user-btn" onclick="deleteAdmin('${a.username}')">🗑️</button>
+        listContainer.innerHTML = admins.map(a => {
+            // Visa namn snyggt. Om namn saknas, visa bara tomt.
+            const fullName = (a.first_name || a.last_name) 
+                ? `<strong>${a.first_name || ''} ${a.last_name || ''}</strong>` 
+                : `<em style="color:#888;">(Inget namn)</em>`;
+
+            return `
+            <div class="admin-list-item" style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:1rem;">${fullName}</div>
+                    <div style="font-size:0.85rem; color:#666;">@${a.username}</div>
+                </div>
+                <button class="remove-user-btn" onclick="deleteAdmin('${a.username}')" title="Ta bort" style="font-size:1.2rem;">🗑️</button>
             </div>
-        `).join('');
+            `;
+        }).join('');
     };
 
-    addBtn.onclick = async () => {
-        const username = newUserInput.value.trim();
-        const password = newPassInput.value.trim();
-        if(!username || !password) return alert("Fyll i både namn och lösenord");
+    if(addBtn) {
+        addBtn.onclick = async () => {
+            const firstName = inputFirst.value.trim();
+            const lastName = inputLast.value.trim();
+            const username = inputUser.value.trim();
+            const password = inputPass.value.trim();
 
-        const token = sessionStorage.getItem('jwtToken');
-        const res = await fetch('/api/data-api', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ action: 'add_admin', username, password })
-        });
+            if(!username || !password) return alert("Du måste fylla i användarnamn och lösenord!");
 
-        if(res.ok) {
-            newUserInput.value = "";
-            newPassInput.value = "";
-            renderAdmins();
-        } else {
-            alert("Kunde inte skapa användare (kanske finns namnet redan?)");
-        }
-    };
+            const token = sessionStorage.getItem('jwtToken');
+            const res = await fetch('/api/data-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ 
+                    action: 'add_admin', 
+                    username, 
+                    password,
+                    firstName, // Skicka med nya fälten
+                    lastName 
+                })
+            });
 
-    // Global funktion för att kunna kallas från HTML-strängen
+            if(res.ok) {
+                // Rensa fälten
+                inputFirst.value = "";
+                inputLast.value = "";
+                inputUser.value = "";
+                inputPass.value = "";
+                renderAdmins();
+            } else {
+                alert("Kunde inte skapa användare (användarnamnet kanske är upptaget?)");
+            }
+        };
+    }
+
+    // Global delete-funktion
     window.deleteAdmin = async (username) => {
         if(!confirm(`Ta bort admin ${username}?`)) return;
         const token = sessionStorage.getItem('jwtToken');
@@ -260,12 +291,14 @@ async function initSettings(currentSettings) {
     renderAdmins();
 
     // Logga ut
-    document.getElementById('logoutBtn').onclick = () => {
-        sessionStorage.clear();
-        window.location.href = "index.html";
-    };
+    const logoutBtn = document.getElementById('logoutBtn');
+    if(logoutBtn) {
+        logoutBtn.onclick = () => {
+            sessionStorage.clear();
+            window.location.href = "index.html";
+        };
+    }
 }
-
 /* =========================================
    7. ADMIN-SIDAN (PLANERING)
    ========================================= */
@@ -462,3 +495,4 @@ function generateImage() {
         btn.innerText = "📷 Spara som bild";
     });
 }
+
