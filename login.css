@@ -100,7 +100,7 @@
     font-size: 1rem;
     outline: none;
     transition: border-color 0.2s;
-    box-sizing: border-box; /* Viktigt för att padding inte ska spräcka bredden */
+    box-sizing: border-box;
     background: #fff;
     color: #333;
 }
@@ -193,4 +193,31 @@
 /* Dölj glömt-lösenord-formuläret som standard */
 #forgotForm {
     display: none;
+}
+
+/* --- TOAST NOTIFICATION (Ny för index) --- */
+.toast {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 8px;
+    padding: 16px;
+    position: fixed;
+    z-index: 9999;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    font-size: 1rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    opacity: 0;
+    transition: opacity 0.3s, bottom 0.3s;
+}
+
+.toast.show {
+    visibility: visible;
+    opacity: 1;
+    bottom: 50px;
 }
