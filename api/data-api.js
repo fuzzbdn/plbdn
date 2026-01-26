@@ -1,105 +1,89 @@
 const { Pool } = require('pg');
 
-// Koppling till Neon (hämtas från Environment Variables)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false } // Krävs ofta för Neon/moln-db
+  ssl: { rejectUnauthorized: false }
 });
 
-// Enkelt lösenordsskydd (hämtas från Environment Variables)
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
-export default async function handler(req, res) {
-  // 1. Hantera CORS (så din frontend får prata med backend)
+module.exports = async function handler(req, res) {
+  // CORS-headers (Låter frontend prata med backend)
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
-  );
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  // Hantera preflight-förfrågningar (OPTIONS)
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
 
   try {
-    // === GET: Hämta data ===
+    // ---------------------------------------------------------
+    // 1. GET (HÄMTA) - KRÄVER INGET LÖSENORD (För Display-sidan)
+    // ---------------------------------------------------------
     if (req.method === 'GET') {
       const { type } = req.query;
-
-      // --- ÄNDRING 1: Tillåt 'settings' här ---
-      // Vi kollar nu om typen är någon av de tillåtna
-      const allowedTypes = ['schedule', 'users', 'settings'];
       
-      if (!allowedTypes.includes(type)) {
-        return res.status(400).json({ error: "Invalid type parameter" });
-      }
-      // ----------------------------------------
-
+      // Hämta data från DB
       const result = await pool.query('SELECT data FROM app_storage WHERE key = $1', [type]);
       
       if (result.rows.length > 0) {
         return res.status(200).json(result.rows[0].data);
       } else {
-        // --- ÄNDRING 2: Snyggare hantering av standardvärden ---
-        let defaultData = {};
-        if (type === 'users') defaultData = [];
-        if (type === 'settings') defaultData = { theme: 'light' }; // Standardtema om inget finns sparat
-        
-        return res.status(200).json(defaultData);
-        // -------------------------------------------------------
+        // Standardvärden om databasen är tom
+        if (type === 'settings') return res.status(200).json({ theme: 'light' });
+        if (type === 'users') return res.status(200).json([]);
+        return res.status(200).json({});
       }
     }
 
-    // === POST: Spara data ELLER Verifiera lösenord ===
+    // ---------------------------------------------------------
+    // 2. POST (SPARA) - KRÄVER LÖSENORD (För Admin-sidan)
+    // ---------------------------------------------------------
     if (req.method === 'POST') {
-      // 1. Kolla lösenord (Authorization header)
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.split(' ')[1]; // "Bearer <lösenord>"
 
+      // Verifiera inloggning (Login-anropet skickar action: 'login' i body, hanteras separat eller här)
+      // Här kollar vi om headern matchar lösenordet
       if (token !== ADMIN_PASSWORD) {
-        return res.status(401).json({ error: "Fel lösenord" });
+         // Specialfall: Om det är ett inloggningsförsök kollar vi body istället
+         if (req.body.action === 'login') {
+             if (req.body.password === ADMIN_PASSWORD) {
+                 return res.status(200).json({ success: true, token: ADMIN_PASSWORD });
+             } else {
+                 return res.status(401).json({ success: false, error: "Fel lösenord" });
+             }
+         }
+         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      // 2. Hämta data från body
-      const bodyData = req.body; 
-      const dataType = bodyData.type;
-      const dataPayload = bodyData.data;
-
-      // Hantera verifiering (Login)
-      if (dataType === 'verify') {
-          return res.status(200).json({ success: true, message: "Lösenord godkänt" });
+      // Om vi har rätt token, spara data
+      const { type, data } = req.body;
+      
+      if (type && data) {
+          await pool.query(
+            `INSERT INTO app_storage (key, data) VALUES ($1, $2) 
+             ON CONFLICT (key) DO UPDATE SET data = $2`,
+            [type, JSON.stringify(data)]
+          );
+          return res.status(200).json({ success: true });
       }
-
-      // Validera data för sparning
-      if (!dataType || !dataPayload) {
-        return res.status(400).json({ error: "Missing data or type" });
+      
+      // Om det bara var en inloggningskoll (action: login) som gick igenom ovan
+      if (req.body.action === 'login') {
+          return res.status(200).json({ success: true });
       }
-
-      // OBS: POST-delen behöver ingen ändring!
-      // Eftersom den sparar baserat på `dataType` som skickas från frontend,
-      // kommer den automatiskt spara 'settings' när frontend skickar det.
-
-      // 3. Spara till Neon (UPSERT - Uppdatera om finns, annars skapa)
-      await pool.query(
-        `INSERT INTO app_storage (key, data) 
-         VALUES ($1, $2) 
-         ON CONFLICT (key) 
-         DO UPDATE SET data = $2`,
-        [dataType, JSON.stringify(dataPayload)]
-      );
-
-      return res.status(200).json({ success: true });
+      
+      return res.status(400).json({ error: "No data provided" });
     }
 
-    // Om annan metod än GET eller POST används
     return res.status(405).json({ error: "Method not allowed" });
 
   } catch (error) {
-    console.error("Database error:", error);
-    return res.status(500).json({ error: "Internal Server Error", details: error.message });
+    console.error("API Error:", error);
+    return res.status(500).json({ error: error.message });
   }
-}
+};
