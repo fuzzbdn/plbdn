@@ -496,40 +496,33 @@ async function initAdmin() {
     setupSidebarAddUser();
     document.getElementById('exportBtn').onclick = generateImage;
 
-    // --- UTSKRIFT (FIXAD) ---
+// --- UTSKRIFT (MED SKALNING) ---
     const printBtn = document.getElementById('printBtn');
     if (printBtn) {
         printBtn.onclick = () => {
-            // Hämta innehåll att skriva ut
             const gridContent = document.getElementById('scheduleContainer').innerHTML;
             const dateText = document.getElementById('currentDateDisplay').innerText;
             const printContainer = document.getElementById('print-container');
 
-            if (!printContainer) return alert("Hittar inte utskrifts-containern!");
+            if (!printContainer) return alert("Saknar print-container!");
 
-            // Fyll den dolda containern
             printContainer.innerHTML = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h1>Bemanningsschema</h1>
-                    <h2 style="margin: 0;">${dateText}</h2>
+                <div style="text-align: center; margin-bottom: 10px;">
+                    <h1 style="margin:0; font-size: 24px;">Bemanningsschema</h1>
+                    <h3 style="margin:5px 0 15px 0;">${dateText}</h3>
                 </div>
-                <div class="schedule-card" style="border: 1px solid #ccc;">
+                <div class="print-scale-wrapper" style="width:100%;">
                     <div class="grid-container">
                         ${gridContent}
                     </div>
                 </div>
             `;
 
-            // Skriv ut
             window.print();
             
-            // Städa upp
-            setTimeout(() => {
-                printContainer.innerHTML = '';
-            }, 1000);
+            setTimeout(() => { printContainer.innerHTML = ''; }, 1000);
         };
     }
-}
 
 // Rendera admin-rutnätet
 function renderAdminGrid() {
@@ -740,3 +733,4 @@ function generateImage() {
         btn.innerText = "📷 Spara som bild";
     });
 }
+
