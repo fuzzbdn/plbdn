@@ -23,7 +23,8 @@ let selectedYear = 0;
 let currentAdminDayIndex = 0;
 
 let globalScheduleData = {};
-let globalUserList = []; 
+let globalUserList = [];
+let globalSettings = {}; // Håller koll på temat
 
 /* =========================================
    2. DATA-API (FETCH & SAVE)
@@ -42,6 +43,7 @@ async function fetchData(type) {
 async function saveData(type, data) {
     if (type === 'schedule') globalScheduleData = data;
     if (type === 'users') globalUserList = data;
+    if (type === 'settings') globalSettings = data;
 
     try {
         const currentUser = sessionStorage.getItem('adminUser') || 'unknown';
@@ -63,8 +65,13 @@ async function saveData(type, data) {
    3. TEMA-FUNKTIONER
    ========================================= */
 function applyTheme(themeName) {
+    // VIKTIGT: Vi applicerar BARA temat om vi är på display-sidan.
+    // Admin-sidan ska alltid vara standard (Ljus).
+    if (document.body.id !== 'page-display') return;
+
     const knownThemes = ['theme-dark', 'theme-jul', 'theme-pask', 'theme-matrix'];
     document.body.classList.remove(...knownThemes);
+    
     if (themeName && themeName !== 'light') {
         document.body.classList.add(`theme-${themeName}`);
     }
@@ -90,7 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Ladda data
+    // Ladda all data
     try {
         const [schedule, users, settings] = await Promise.all([
             fetchData('schedule'),
@@ -100,9 +107,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         globalScheduleData = schedule || {};
         globalUserList = users || [];
+        globalSettings = settings || { theme: 'light' };
         
-        if (settings && settings.theme) {
-            applyTheme(settings.theme);
+        // Applicera temat direkt (men funktionen applyTheme stoppar det om vi är på Admin)
+        if (globalSettings.theme) {
+            applyTheme(globalSettings.theme);
         }
     } catch (err) {
         console.error("Init fel:", err);
@@ -128,7 +137,7 @@ function initAdmin() {
     
     setupDatePicker();
     setupSidebarAddUser();
-    initThemeSelector();
+    initThemeSelector(); // Sätter upp dropdownen
     setupAdminManagement();
 
     const logoutBtn = document.getElementById('logoutBtn');
@@ -155,7 +164,6 @@ function setupDatePicker() {
         selectedWeek = iso.week;
         selectedYear = iso.year;
         
-        // Hitta dagens index (0 = Måndag, 6 = Söndag)
         let dayIdx = d.getDay(); 
         currentAdminDayIndex = (dayIdx === 0) ? 6 : dayIdx - 1;
         
@@ -265,20 +273,28 @@ async function removeUser(name) {
 }
 
 /* =========================================
-   7. TEMAVÄLJARE
+   7. TEMAVÄLJARE (Admin-sidan)
    ========================================= */
 async function initThemeSelector() {
     const select = document.getElementById('themeSelect');
     const saveBtn = document.getElementById('saveThemeBtn');
     if (!select || !saveBtn) return;
 
+    // Sätt dropdown till det nuvarande temat (så man ser vad som är aktivt)
+    if (globalSettings.theme) {
+        select.value = globalSettings.theme;
+    }
+
     saveBtn.onclick = async () => {
         const theme = select.value;
+        // Spara till databasen
         await saveData('settings', { theme: theme });
-        applyTheme(theme);
+        
+        // Vi kör INTE applyTheme() här, för vi vill inte ändra admin-sidan.
+        // Display-sidan kommer plocka upp ändringen nästa gång den uppdaterar.
         
         const originalText = saveBtn.innerText;
-        saveBtn.innerText = "Sparat!";
+        saveBtn.innerText = "Sparat till Display!";
         setTimeout(() => saveBtn.innerText = originalText, 2000);
     };
 }
@@ -351,25 +367,23 @@ function setupAdminManagement() {
 }
 
 /* =========================================
-   10. DISPLAY (FIXAD)
+   10. DISPLAY (Visar temat)
    ========================================= */
 function initDisplay() {
-    // Starta klockan
     setInterval(() => {
         const clock = document.getElementById('clock');
         if (clock) clock.innerText = new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     }, 1000);
 
     const loadData = async () => {
-        // Hämta data och tema
         const [data, settings] = await Promise.all([fetchData('schedule'), fetchData('settings')]);
         globalScheduleData = data;
         
+        // HÄR applicerar vi temat, eftersom vi är på display-sidan
         if (settings && settings.theme) applyTheme(settings.theme);
         
         const now = new Date();
-        // HÄR VAR FELET: iso saknades innan det användes
-        const iso = getISOWeekAndYear(now); 
+        const iso = getISOWeekAndYear(now);
         const todayName = days[now.getDay() === 0 ? 6 : now.getDay() - 1];
         
         const title = document.getElementById('mainTitle');
@@ -396,7 +410,6 @@ function initDisplay() {
         container.innerHTML = html;
     };
     
-    // Kör direkt och sedan var 15:e sekund
     loadData();
-    setInterval(loadData, 15000);
+    setInterval(loadData, 15000); // Uppdaterar var 15:e sekund
 }
