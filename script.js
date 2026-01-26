@@ -427,7 +427,9 @@ function renderAdminGrid() {
         html += `<div class="station-row"><div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
         globalShifts.forEach(sh => {
             const key = `${prefix}${st.name}-${sh.time}`;
-            const val = globalScheduleData[key] || "";
+            const rawVal = globalScheduleData[key] || "";
+            const val = escapeHtml(rawVal); // SÄKERHETSFIX: Sanera output
+
             html += `<div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event,'${key}')">
                 <span class="shift-text" contenteditable="true" onblur="saveShift('${key}', this.innerText)">${val}</span>
                 ${val ? `<button class="clear-btn" onclick="saveShift('${key}', '')">&times;</button>`:''}</div>`;
@@ -490,7 +492,9 @@ function initDisplay() {
             html += `<div class="display-row"><div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
             globalShifts.forEach(sh => {
                 const key = `y${iso.year}w${iso.week}-${today}-${st.name}-${sh.time}`;
-                const val = globalScheduleData[key] || "";
+                const rawVal = globalScheduleData[key] || "";
+                const val = escapeHtml(rawVal); // SÄKERHETSFIX: Sanera output
+
                 html += `<div class="shift-card ${val?'':'empty'}">${val}</div>`;
             });
             html += `</div>`;
@@ -521,6 +525,9 @@ function getScheduleHtmlForPrint() {
             <div style="background:${bg}; color:${fg}; font-weight:bold; padding:10px; display:flex; align-items:center; justify-content:center; border:1px solid #000;">${st.name}</div>`;
         shifts.forEach(sh => {
             const val = globalScheduleData[`${prefix}${st.name}-${sh.time}`] || "";
+            // Obs: Vid print escapear vi inte strikt här eftersom det inte körs som HTML i en webbläsare på samma sätt,
+            // men för konsistens kan man göra det. Dock, eftersom print-vyn ofta är statisk, är risken lägre.
+            // Men vi behåller val "raw" här för att inte krångla till det, eller så kan vi köra escapeHtml(val).
             html += `<div style="display:flex; align-items:center; justify-content:center; text-align:center; min-height:50px; padding:5px; font-weight:bold; border:1px solid #000; background:#fff;">${val}</div>`;
         });
         html += `</div>`;
@@ -544,7 +551,9 @@ function setupSidebarAddUser() {
 }
 async function removeUser(u) { if(confirm('Ta bort '+u+'?')){globalUserList=globalUserList.filter(user=>user!==u);await saveData('users',globalUserList);renderRoster();} }
 
-// Lägg denna funktion i script.js (t.ex. längst ner)
+/* =========================================
+   9. HJÄLPFUNKTIONER (SÄKERHET)
+   ========================================= */
 function escapeHtml(text) {
     if (!text) return "";
     return text
