@@ -28,7 +28,6 @@
     color: var(--header-text);
 }
 
-/* Datumväljaren */
 .admin-header input[type="date"] {
     padding: 5px 10px;
     border: 1px solid var(--input-border);
@@ -38,7 +37,6 @@
     background: var(--input-bg);
 }
 
-/* Inloggad-text */
 #currentUserDisplay {
     font-weight: 500;
     color: var(--text-color);
@@ -46,7 +44,6 @@
     opacity: 0.8;
 }
 
-/* Logga ut-knappen */
 .logout-btn {
     background-color: #ffebee;
     color: #c62828;
@@ -58,11 +55,8 @@
     font-size: 0.9rem;
     transition: background 0.2s;
 }
-.logout-btn:hover {
-    background-color: #ffcdd2;
-}
+.logout-btn:hover { background-color: #ffcdd2; }
 
-/* Tillbaka-länk (används på settings-sidan) */
 .back-link {
     color: var(--text-color);
     text-decoration: none;
@@ -74,9 +68,7 @@
     font-weight: 600;
     margin-left: 15px;
 }
-.back-link:hover {
-    background: var(--border-color);
-}
+.back-link:hover { background: var(--border-color); }
 
 /* =========================================
    2. ADMIN LAYOUT & SIDEBAR
@@ -194,12 +186,9 @@ body {
 .remove-user-btn:hover { opacity: 1; color: #e03131; }
 
 /* =========================================
-   3. SCHEDULE GRID (Admin)
+   3. SCHEDULE GRID
    ========================================= */
-.schedule-card-wrapper {
-    flex-grow: 1;
-    min-width: 0;
-}
+.schedule-card-wrapper { flex-grow: 1; min-width: 0; }
 
 #scheduleContainer {
     background: var(--card-bg);
@@ -261,9 +250,7 @@ body {
     border: 2px dashed #2196f3 !important;
     transform: scale(1.02);
 }
-.shift-block.empty {
-    background-color: var(--bg-color) !important;
-}
+.shift-block.empty { background-color: var(--bg-color) !important; }
 
 .shift-text {
     font-weight: 600;
@@ -284,63 +271,10 @@ body {
 }
 
 /* =========================================
-   4. FÄRGER & TEMAN
+   4. SETTINGS & LIST DRAG-DROP
    ========================================= */
-/* Stationernas färger (samma som display) */
-.color-bjorkliden .station-label { background-color: #ffb300; color: #000; }
-.color-bjorkliden .shift-block { border-left: 4px solid #ffb300; }
-
-.color-kiruna .station-label { background-color: #fff176; color: #000; }
-.color-kiruna .shift-block { border-left: 4px solid #fff176; }
-
-.color-bastutrask .station-label { background-color: #e53935; color: #000; }
-.color-bastutrask .shift-block { border-left: 4px solid #e53935; }
-
-.color-boden .station-label { background-color: #7cb342; color: #000; }
-.color-boden .shift-block { border-left: 4px solid #7cb342; }
-
-.color-gallivare .station-label { background-color: #64b5f6; color: #000; }
-.color-gallivare .shift-block { border-left: 4px solid #64b5f6; }
-
-.color-alvsbyn .station-label { background-color: #bdbdbd; color: #000; }
-.color-alvsbyn .shift-block { border-left: 4px solid #bdbdbd; }
-
-.color-info .station-label { background-color: #ec407a; color: #000; }
-.color-info .shift-block { border-left: 4px solid #ec407a; }
-.station-row.color-info { margin-top: 50px; border-top: none; }
-
-.color-pl .station-label { background-color: #0277bd; color: #fff; }
-.color-pl .shift-block { border-left: 4px solid #0277bd; }
-.station-row.color-pl { margin-top: 10px; border-top: none; }
-
-/* Matrix-tema overrides för Admin */
-body.theme-matrix .station-label {
-    background-color: #000 !important;
-    border: 1px solid #00ff41 !important;
-    color: #00ff41 !important;
-    box-shadow: 0 0 5px #00ff41;
-}
-body.theme-matrix .shift-block {
-    border: 1px solid #003300 !important;
-    border-left: 4px solid #00ff41 !important;
-}
-
-/* =========================================
-   5. SETTINGS.HTML - SPECIFIK DESIGN
-   (Detta är den nya koden för inställningssidan)
-   ========================================= */
-
-.settings-container { 
-    max-width: 1200px; 
-    margin: 0 auto; 
-    padding: 20px; 
-}
-
-.settings-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
-    gap: 20px; 
-}
+.settings-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
 
 .setting-card { 
     background: var(--card-bg); 
@@ -350,58 +284,29 @@ body.theme-matrix .shift-block {
     box-shadow: var(--shadow); 
     color: var(--card-text);
 }
+.setting-card h3 { margin-top: 0; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; color: var(--header-text); }
 
-.setting-card h3 { 
-    margin-top: 0; 
-    border-bottom: 2px solid var(--border-color); 
-    padding-bottom: 10px; 
-    margin-bottom: 15px; 
-    color: var(--header-text); 
-}
+.form-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-weight: 600; font-size: 0.9rem; color: var(--text-color); opacity: 0.8; }
 
-.form-group { 
-    margin-bottom: 15px; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 5px; 
-}
-
-.form-group label { 
-    font-weight: 600; 
-    font-size: 0.9rem; 
-    color: var(--text-color); 
-    opacity: 0.8;
-}
-
-/* Inputs & Selects */
 select, input[type="text"], input[type="password"], input[type="email"] {
     padding: 8px;
     border-radius: 4px;
     border: 1px solid var(--input-border);
     background: var(--input-bg);
     color: var(--text-color);
-    font-family: inherit;
     font-size: 1rem;
 }
 
-/* Spara-knappar (Gröna) */
 .save-btn { 
     background-color: var(--btn-primary, #4CAF50); 
     color: var(--btn-text, white); 
-    border: none; 
-    padding: 10px; 
-    border-radius: 4px; 
-    cursor: pointer; 
-    font-weight: bold; 
-    width: 100%; 
-    font-size: 0.95rem;
-    transition: background 0.2s;
+    border: none; padding: 10px; border-radius: 4px; 
+    cursor: pointer; font-weight: bold; width: 100%; 
+    font-size: 0.95rem; transition: background 0.2s;
 }
-.save-btn:hover { 
-    opacity: 0.9; 
-}
+.save-btn:hover { opacity: 0.9; }
 
-/* Listor och småknappar i settings */
 .list-container { 
     max-height: 300px; 
     overflow-y: auto; 
@@ -410,175 +315,40 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     background: var(--input-bg); 
 }
 
-.list-btn { 
-    border: none; 
-    background: none; 
-    cursor: pointer; 
-    font-size: 1.1rem; 
-    padding: 5px; 
-    color: var(--text-color);
-}
-.list-btn:hover { 
-    background-color: rgba(0,0,0,0.05); 
-    border-radius: 4px; 
-}
-
-.cancel-edit-btn { 
-    background: #999; 
-    color: white; 
-    border: none; 
-    padding: 0 10px; 
-    border-radius: 4px; 
-    cursor: pointer; 
-    display: none; 
-}
-
-/* Export / Footer */
-.export-container {
-    display: flex;
-    justify-content: space-between;
+/* Stil för rader som kan dras i listan */
+.draggable-station {
+    display: flex; 
+    justify-content: space-between; 
+    padding: 8px; 
+    border-bottom: 1px solid var(--border-color); 
     align-items: center;
-    margin-top: 20px;
-    border-top: 1px solid var(--border-color);
-    padding-top: 20px;
+    background-color: var(--bg-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: grab;
 }
-.export-button {
-    background: #333;
-    color: white;
-    border: none;
-    padding: 10px 18px;
-    cursor: pointer;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 0.95rem;
-    text-decoration: none;
-    margin-left: 10px;
-    transition: background 0.2s;
+.draggable-station.dragging {
+    opacity: 0.5;
+    background-color: #e3f2fd;
+    border: 1px dashed #2196F3;
 }
+.drag-handle {
+    cursor: grab;
+    font-size: 1.2rem;
+    color: #999;
+    margin-right: 10px;
+    user-select: none;
+}
+
+.list-btn { border: none; background: none; cursor: pointer; font-size: 1.1rem; padding: 5px; color: var(--text-color); }
+.list-btn:hover { background-color: rgba(0,0,0,0.05); border-radius: 4px; }
+.cancel-edit-btn { background: #999; color: white; border: none; padding: 0 10px; border-radius: 4px; cursor: pointer; display: none; }
+
+.export-container { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+.export-button { background: #333; color: white; border: none; padding: 10px 18px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 0.95rem; text-decoration: none; margin-left: 10px; }
 .export-button:hover { background: #555; }
 
 /* =========================================
-   6. UTSKRIFT (PRINT)
-   ========================================= */
-@media print {
-    @page {
-        size: A4 landscape;
-        margin: 10mm;
-    }
-
-    body * {
-        visibility: hidden;
-        height: 0;
-        overflow: hidden;
-    }
-
-    #print-container, #print-container * {
-        visibility: visible;
-        height: auto;
-        overflow: visible;
-    }
-
-    #print-container {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        background: white;
-    }
-
-    * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    #print-container .grid-container {
-        display: grid;
-        grid-template-columns: 120px repeat(3, 1fr);
-        width: 100%;
-        border: 2px solid #000;
-        font-family: sans-serif;
-        font-size: 10pt;
-    }
-
-    #print-container .header-row,
-    #print-container .station-row {
-        display: contents;
-    }
-
-    #print-container .header-row div {
-        background-color: #ddd !important;
-        color: #000 !important;
-        font-weight: bold;
-        border: 1px solid #000;
-        padding: 5px;
-        text-align: center;
-    }
-
-    #print-container .station-label {
-        font-weight: bold;
-        border: 1px solid #000;
-        color: #000 !important;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 5px;
-    }
-
-    /* Print-färger */
-    #print-container .color-bjorkliden .station-label { background-color: #ffb74d !important; }
-    #print-container .color-kiruna .station-label     { background-color: #fff176 !important; }
-    #print-container .color-bastutrask .station-label { background-color: #e57373 !important; }
-    #print-container .color-boden .station-label      { background-color: #81c784 !important; }
-    #print-container .color-gallivare .station-label  { background-color: #64b5f6 !important; }
-    #print-container .color-alvsbyn .station-label    { background-color: #e0e0e0 !important; }
-    #print-container .color-info .station-label       { background-color: #f06292 !important; }
-    #print-container .color-pl .station-label         { background-color: #0277bd !important; color: #fff !important; }
-
-    #print-container .shift-block {
-        border: 1px solid #000;
-        background-color: #fff !important;
-        min-height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 4px;
-    }
-
-    .clear-btn { display: none !important; }
-    [contenteditable] { border: none; outline: none; }
-    .empty { background-color: #f9f9f9 !important; }
-}
-
-
-
-/* =========================================
-   SETTINGS.HTML - FIXAR & TILLÄGG
-   ========================================= */
-
-/* FIX: Se till att färgväljaren och knapparna INTE krymper */
-.form-group .flex-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    width: 100%;
-}
-
-/* Namnfältet får ta all ledig plats, men måste kunna krympa */
-.form-group input[type="text"].flexible-input {
-    flex: 1 1 auto;
-    min-width: 0; /* VIKTIGT: Förhindrar att fältet vägrar krympa */
-}
-
-/* Färgväljare och knappar får ALDRIG krympa */
-.form-group input[type="color"],
-.form-group .save-btn,
-.form-group .cancel-edit-btn {
-    flex: 0 0 auto; /* Lås storleken */
-}
-
-/* =========================================
-   TOAST NOTIFICATIONS (Uppdaterad)
+   5. TOAST NOTIFICATIONS (FIXAD!)
    ========================================= */
 #toast-container {
     position: fixed;
@@ -588,6 +358,7 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    pointer-events: none; /* Klicka igenom containern */
 }
 
 .toast {
@@ -600,12 +371,13 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     transform: translateY(20px);
     transition: opacity 0.3s, transform 0.3s;
     font-weight: 500;
-    min-width: 200px;
+    min-width: 250px;
     display: flex;
     align-items: center;
     gap: 10px;
     font-family: 'Inter', sans-serif;
     font-size: 0.95rem;
+    pointer-events: auto; /* Gör toasten klickbar/synlig */
 }
 
 .toast.show {
@@ -613,7 +385,36 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     transform: translateY(0);
 }
 
-/* Färgkoder */
 .toast.success { background-color: #4CAF50; border-left: 5px solid #2E7D32; }
 .toast.error   { background-color: #f44336; border-left: 5px solid #c62828; }
 .toast.info    { background-color: #2196F3; border-left: 5px solid #1565C0; }
+
+/* =========================================
+   6. PRINT
+   ========================================= */
+@media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    body * { visibility: hidden; height: 0; overflow: hidden; }
+    #print-container, #print-container * { visibility: visible; height: auto; overflow: visible; }
+    #print-container { position: absolute; left: 0; top: 0; width: 100%; background: white; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    
+    #print-container .grid-container {
+        display: grid; grid-template-columns: 120px repeat(3, 1fr); width: 100%; border: 2px solid #000; font-family: sans-serif; font-size: 10pt;
+    }
+    #print-container .header-row, #print-container .station-row { display: contents; }
+    #print-container .header-row div { background-color: #ddd !important; color: #000 !important; font-weight: bold; border: 1px solid #000; padding: 5px; text-align: center; }
+    #print-container .station-label { font-weight: bold; border: 1px solid #000; color: #000 !important; display: flex; align-items: center; justify-content: center; padding: 5px; }
+    #print-container .shift-block { border: 1px solid #000; background-color: #fff !important; min-height: 40px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 4px; }
+    
+    #print-container .color-bjorkliden .station-label { background-color: #ffb74d !important; }
+    #print-container .color-kiruna .station-label     { background-color: #fff176 !important; }
+    #print-container .color-bastutrask .station-label { background-color: #e57373 !important; }
+    #print-container .color-boden .station-label      { background-color: #81c784 !important; }
+    #print-container .color-gallivare .station-label  { background-color: #64b5f6 !important; }
+    #print-container .color-alvsbyn .station-label    { background-color: #e0e0e0 !important; }
+    #print-container .color-info .station-label       { background-color: #f06292 !important; }
+    #print-container .color-pl .station-label         { background-color: #0277bd !important; color: #fff !important; }
+    
+    .clear-btn { display: none !important; }
+}
