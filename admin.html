@@ -32,17 +32,12 @@
         </div>
     </header>
 
-    <div class="controls-bar">
-        <div class="week-nav-container">
-            <button id="prevWeekBtn" class="nav-btn">← Föregående</button>
-            <span id="currentWeekDisplay">Vecka ...</span>
-            <button id="nextWeekBtn" class="nav-btn">Nästa →</button>
+    <div class="controls-bar" style="margin-top: 20px;">
+        <div class="datepicker-container" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px;">
+            <label for="adminDatePicker" style="font-weight: bold; color: #444;">Välj datum för planering:</label>
+            <input type="date" id="adminDatePicker" class="sidebar-input" style="max-width: 250px; font-size: 1.1rem; text-align: center; border: 1px solid #ccc; padding: 8px; border-radius: 4px;">
         </div>
-
-        <div class="nav-days-container">
-            <div class="nav-days" id="weekNav"></div>
-        </div>
-        <div id="currentDateDisplay"></div>
+        <div id="currentDateDisplay" style="text-align: center; font-size: 1.4rem; font-weight: 800; color: #007bff; margin-bottom: 20px;"></div>
     </div>
 
     <div class="admin-layout">
