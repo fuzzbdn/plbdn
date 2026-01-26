@@ -41,7 +41,7 @@ async function fetchData(type) {
 }
 
 async function saveData(type, data) {
-    // Uppdatera lokalt minne direkt
+    // Uppdatera lokalt minne direkt för snabbhet
     if(type === 'schedule' || type === 'schedule_draft' || type === 'schedule_published') {
         globalScheduleData = data;
     }
@@ -496,7 +496,7 @@ async function initAdmin() {
     setupSidebarAddUser();
     document.getElementById('exportBtn').onclick = generateImage;
 
-// --- UTSKRIFT (MED SKALNING) ---
+    // --- UTSKRIFT (MED SKALNING & INNEHÅLLSKOPIERING) ---
     const printBtn = document.getElementById('printBtn');
     if (printBtn) {
         printBtn.onclick = () => {
@@ -506,6 +506,7 @@ async function initAdmin() {
 
             if (!printContainer) return alert("Saknar print-container!");
 
+            // Fyll utskriftscontainern med rätt innehåll
             printContainer.innerHTML = `
                 <div style="text-align: center; margin-bottom: 10px;">
                     <h1 style="margin:0; font-size: 24px;">Bemanningsschema</h1>
@@ -520,9 +521,11 @@ async function initAdmin() {
 
             window.print();
             
+            // Töm efteråt
             setTimeout(() => { printContainer.innerHTML = ''; }, 1000);
         };
     }
+}
 
 // Rendera admin-rutnätet
 function renderAdminGrid() {
@@ -733,4 +736,3 @@ function generateImage() {
         btn.innerText = "📷 Spara som bild";
     });
 }
-
