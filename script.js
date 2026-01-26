@@ -27,12 +27,12 @@ let globalScheduleData = {}, globalUserList = [];
 let editingStationIndex = null;
 let editingShiftIndex = null;
 let editingAdminId = null;
+let dragSrcStationEl = null; // FÖR ATT DRA I LISTAN
 
 /* =========================================
    2. TOAST NOTIFICATIONS (POPUP)
    ========================================= */
 function showToast(message, type = 'success') {
-    // Skapa container om den inte finns
     let container = document.getElementById('toast-container');
     if (!container) {
         container = document.createElement('div');
@@ -40,11 +40,9 @@ function showToast(message, type = 'success') {
         document.body.appendChild(container);
     }
 
-    // Skapa toast-elementet
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     
-    // Ikoner baserat på typ
     let icon = '✅';
     if(type === 'error') icon = '❌';
     if(type === 'info') icon = 'ℹ️';
@@ -52,15 +50,10 @@ function showToast(message, type = 'success') {
     toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
     container.appendChild(toast);
 
-    // Animera in
     setTimeout(() => { toast.classList.add('show'); }, 10);
-
-    // Ta bort efter 3 sekunder
     setTimeout(() => {
         toast.classList.remove('show');
-        setTimeout(() => {
-            if(container.contains(toast)) container.removeChild(toast);
-        }, 300);
+        setTimeout(() => { if(container.contains(toast)) container.removeChild(toast); }, 300);
     }, 3000);
 }
 
@@ -188,7 +181,7 @@ function initReset() {
 }
 
 /* =========================================
-   6. INSTÄLLNINGAR
+   6. INSTÄLLNINGAR - MED DRAG N DROP
    ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
@@ -217,37 +210,64 @@ async function initSettings(currentSettings) {
     const stBtn = document.getElementById('addStationBtn');
     const stCancel = document.getElementById('cancelStationEditBtn');
 
+    // HANTERA DRAG OCH SLÄPP FÖR LISTAN
+    window.handleStationDragStart = (e) => {
+        dragSrcStationEl = e.target.closest('.draggable-station');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', dragSrcStationEl.innerHTML);
+        dragSrcStationEl.classList.add('dragging');
+    };
+
+    window.handleStationDragOver = (e) => {
+        if (e.preventDefault) e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    };
+
+    window.handleStationDrop = async (e) => {
+        if (e.stopPropagation) e.stopPropagation();
+        const targetEl = e.target.closest('.draggable-station');
+        
+        if (dragSrcStationEl && targetEl && dragSrcStationEl !== targetEl) {
+            const oldIndex = parseInt(dragSrcStationEl.dataset.index);
+            const newIndex = parseInt(targetEl.dataset.index);
+            
+            // Flytta i arrayen
+            const movedItem = globalStations.splice(oldIndex, 1)[0];
+            globalStations.splice(newIndex, 0, movedItem);
+            
+            await saveData('config_stations', globalStations);
+            renderStations(); // Rita om
+        }
+        return false;
+    };
+
     const renderStations = () => {
         const cont = document.getElementById('stationListContainer');
         if(!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
         
+        // Här genererar vi HTML med Drag-handlers istället för pilar
         cont.innerHTML = globalStations.map((st, i) => {
-            const upBtn = i>0 ? `<button class="list-btn" onclick="moveStation(${i},-1)">⬆️</button>` : `<span style="width:28px;display:inline-block;"></span>`;
-            const downBtn = i<globalStations.length-1 ? `<button class="list-btn" onclick="moveStation(${i},1)">⬇️</button>` : `<span style="width:28px;display:inline-block;"></span>`;
+            const dragAttr = `draggable="true" ondragstart="handleStationDragStart(event)" ondragover="handleStationDragOver(event)" ondrop="handleStationDrop(event)" data-index="${i}"`;
             
             if(st.isSpacer) return `
-                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; background:#f9f9f9; color:#888; align-items:center;">
-                    <div>${upBtn} ${downBtn} <i>--- Mellanrum ---</i></div>
+                <div class="draggable-station" ${dragAttr} style="background:#f9f9f9; color:#888;">
+                    <div style="display:flex; align-items:center;">
+                        <span class="drag-handle" title="Dra för att flytta">☰</span>
+                        <i>--- Mellanrum ---</i>
+                    </div>
                     <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
                 </div>`;
             return `
-                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee; align-items:center;">
+                <div class="draggable-station" ${dragAttr}>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        ${upBtn} ${downBtn}
+                        <span class="drag-handle" title="Dra för att flytta">☰</span>
                         <div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc;"></div>
                         <strong>${st.name}</strong>
                     </div>
                     <div><button class="list-btn" onclick="startEditStation(${i})">✏️</button><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div>
                 </div>`;
         }).join('');
-    };
-
-    window.moveStation = async (index, dir) => {
-        const newIdx = index + dir;
-        if(newIdx < 0 || newIdx >= globalStations.length) return;
-        [globalStations[index], globalStations[newIdx]] = [globalStations[newIdx], globalStations[index]];
-        await saveData('config_stations', globalStations);
-        renderStations();
     };
 
     window.startEditStation = (i) => {
