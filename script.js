@@ -22,6 +22,7 @@ const days = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "S�
 let globalStations = [], globalShifts = [];
 let selectedWeek = 0, selectedYear = 0, currentAdminDayIndex = 0;
 let globalScheduleData = {}, globalUserList = [];
+let globalCustomThemes = []; 
 
 // Variabler för redigering
 let editingStationIndex = null;
@@ -58,7 +59,7 @@ function showToast(message, type = 'success') {
 }
 
 /* =========================================
-   3. API & SPARANDE
+   3. API & SPARANDE & TEMA-HANTERING
    ========================================= */
 async function fetchData(type) {
     try {
@@ -75,6 +76,7 @@ async function saveData(type, data) {
     if(type.startsWith('schedule')) globalScheduleData = data;
     if(type === 'config_stations') globalStations = data;
     if(type === 'config_shifts') globalShifts = data;
+    if(type === 'custom_themes') globalCustomThemes = data;
 
     const token = sessionStorage.getItem('jwtToken');
     if (!token) { 
@@ -96,27 +98,57 @@ async function saveData(type, data) {
     }
 }
 
-function applyTheme(themeName) {
-    if (document.body.id === 'page-admin' || document.body.id === 'page-settings') return;
+// --- DYNAMISK TEMA-HANTERARE ---
+async function applyTheme(themeId) {
+    const isAdmin = (document.body.id === 'page-admin' || document.body.id === 'page-settings');
+    
+    // 1. Ta bort gammal dynamisk CSS
+    const oldStyle = document.getElementById('dynamic-theme-style');
+    if(oldStyle) oldStyle.remove();
+
+    // 2. Ta bort standardklasser (rensade nu men bra att ha kvar logiken)
     document.body.classList.remove('theme-dark','theme-jul','theme-pask','theme-matrix');
-    if (themeName && themeName !== 'light') document.body.classList.add(`theme-${themeName}`);
+
+    if (!themeId || themeId === 'light') return;
+
+    // 3. Hämta teman om listan är tom
+    if (globalCustomThemes.length === 0) {
+        globalCustomThemes = await fetchData('custom_themes') || [];
+    }
+
+    // 4. Leta efter temat i databasen
+    const customTheme = globalCustomThemes.find(t => t.id === themeId);
+
+    if (customTheme) {
+        if (!isAdmin || document.body.id === 'page-login') {
+            const style = document.createElement('style');
+            style.id = 'dynamic-theme-style';
+            style.textContent = customTheme.css;
+            document.head.appendChild(style);
+        }
+    }
 }
 
 /* =========================================
-   4. INIT
+   4. INIT & AUTH
    ========================================= */
 document.addEventListener('DOMContentLoaded', async () => {
     const pageId = document.body.id;
     if (pageId === 'page-login') { initLogin(); return; }
     if (pageId === 'page-reset') { initReset(); return; }
 
-    const [users, settings, dbStations, dbShifts] = await Promise.all([
-        fetchData('users'), fetchData('settings'), fetchData('config_stations'), fetchData('config_shifts')
+    const [users, settings, dbStations, dbShifts, themes] = await Promise.all([
+        fetchData('users'), 
+        fetchData('settings'), 
+        fetchData('config_stations'), 
+        fetchData('config_shifts'),
+        fetchData('custom_themes')
     ]);
 
     globalUserList = Array.isArray(users) ? users : [];
     globalStations = (Array.isArray(dbStations) && dbStations.length > 0) ? dbStations : DEFAULT_STATIONS;
     globalShifts = (Array.isArray(dbShifts) && dbShifts.length > 0) ? dbShifts : DEFAULT_SHIFTS;
+    globalCustomThemes = Array.isArray(themes) ? themes : [];
 
     if (settings?.theme) applyTheme(settings.theme);
 
@@ -130,10 +162,16 @@ function checkAuth() {
     return true;
 }
 
-/* =========================================
-   5. LOGIN & AUTH
-   ========================================= */
 function initLogin() {
+    fetchData('settings').then(s => { 
+        if(s?.theme) {
+            fetchData('custom_themes').then(t => {
+                globalCustomThemes = t || [];
+                applyTheme(s.theme);
+            });
+        }
+    });
+
     const loginBtn = document.getElementById('loginBtn');
     const userIn = document.getElementById('usernameInput');
     const passIn = document.getElementById('passwordInput');
@@ -150,7 +188,6 @@ function initLogin() {
     };
 
     if(loginBtn) loginBtn.onclick = doLogin;
-    
     const handleEnter = (e) => { if(e.key==='Enter') doLogin(); };
     if(userIn) userIn.onkeydown = handleEnter;
     if(passIn) passIn.onkeydown = handleEnter;
@@ -182,18 +219,88 @@ function initReset() {
 }
 
 /* =========================================
-   6. INSTÄLLNINGAR
+   5. INSTÄLLNINGAR & TEMA-EDITOR
    ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
 
     const themeSelect = document.getElementById('themeSelect');
-    if(currentSettings?.theme) themeSelect.value = currentSettings.theme;
     
+    // --- TEMA-EDITOR VARIABLER ---
+    const themeNameIn = document.getElementById('customThemeName');
+    const themeCssIn = document.getElementById('customThemeCSS');
+    const themeIdIn = document.getElementById('customThemeId');
+    const editSelect = document.getElementById('editThemeSelect');
+
+    // Funktion för att ladda dropdowns
+    function populateThemeDropdowns() {
+        const current = themeSelect.value || (currentSettings?.theme || 'light');
+        // Rensad lista: Bara Ljus + Custom
+        themeSelect.innerHTML = `<option value="light">Ljus (Standard)</option>` + 
+                                globalCustomThemes.map(t => `<option value="${t.id}">✨ ${t.name}</option>`).join('');
+        themeSelect.value = current;
+
+        if(editSelect) {
+            editSelect.innerHTML = '<option value="">-- Välj tema att redigera --</option>' + 
+                globalCustomThemes.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        }
+    }
+    populateThemeDropdowns();
+
     document.getElementById('saveThemeBtn').onclick = async () => {
         await saveData('settings', { theme: themeSelect.value });
-        showToast("Tema sparat!", "success");
+        showToast("Tema aktiverat!", "success");
     };
+
+    if(editSelect) {
+        editSelect.onchange = () => {
+            const t = globalCustomThemes.find(x => x.id === editSelect.value);
+            if (t) {
+                themeNameIn.value = t.name;
+                themeCssIn.value = t.css;
+                themeIdIn.value = t.id;
+            }
+        };
+
+        document.getElementById('clearThemeEditorBtn').onclick = () => {
+            themeIdIn.value = ""; themeNameIn.value = ""; themeCssIn.value = ""; editSelect.value = "";
+        };
+
+        document.getElementById('saveCustomThemeBtn').onclick = async () => {
+            if(!themeNameIn.value || !themeCssIn.value) return showToast("Fyll i namn och CSS", "error");
+
+            const id = themeIdIn.value || 'theme_' + Date.now();
+            const newTheme = { id: id, name: themeNameIn.value, css: themeCssIn.value };
+
+            const index = globalCustomThemes.findIndex(t => t.id === id);
+            if(index >= 0) globalCustomThemes[index] = newTheme;
+            else globalCustomThemes.push(newTheme);
+
+            await saveData('custom_themes', globalCustomThemes);
+            showToast("Tema sparat!", "success");
+            
+            document.getElementById('clearThemeEditorBtn').click();
+            populateThemeDropdowns();
+        };
+
+        document.getElementById('deleteThemeBtn').onclick = async () => {
+            const id = editSelect.value;
+            if(!id) return;
+            if(confirm("Radera detta tema permanent?")) {
+                globalCustomThemes = globalCustomThemes.filter(t => t.id !== id);
+                await saveData('custom_themes', globalCustomThemes);
+                
+                if(themeSelect.value === id) {
+                    themeSelect.value = 'light';
+                    await saveData('settings', { theme: 'light' });
+                }
+                
+                showToast("Tema raderat", "info");
+                document.getElementById('clearThemeEditorBtn').click();
+                populateThemeDropdowns();
+            }
+        };
+    }
 
     const msgIn = document.getElementById('displayMessageInput');
     const msgCheck = document.getElementById('showMessageCheckbox');
@@ -205,7 +312,14 @@ async function initSettings(currentSettings) {
         showToast("Meddelande uppdaterat!", "success");
     };
 
-    // --- STATIONER ---
+    initStationsSettings();
+    initShiftsSettings();
+    initAdminSettings();
+    
+    document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
+}
+
+function initStationsSettings() {
     const stName = document.getElementById('newStationName');
     const stColor = document.getElementById('newStationColor');
     const stBtn = document.getElementById('addStationBtn');
@@ -217,24 +331,15 @@ async function initSettings(currentSettings) {
         e.dataTransfer.setData('text/html', dragSrcStationEl.innerHTML);
         dragSrcStationEl.classList.add('dragging');
     };
-
-    window.handleStationDragOver = (e) => {
-        if (e.preventDefault) e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        return false;
-    };
-
+    window.handleStationDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; };
     window.handleStationDrop = async (e) => {
-        if (e.stopPropagation) e.stopPropagation();
+        e.stopPropagation();
         const targetEl = e.target.closest('.draggable-station');
-        
         if (dragSrcStationEl && targetEl && dragSrcStationEl !== targetEl) {
             const oldIndex = parseInt(dragSrcStationEl.dataset.index);
             const newIndex = parseInt(targetEl.dataset.index);
-            
             const movedItem = globalStations.splice(oldIndex, 1)[0];
             globalStations.splice(newIndex, 0, movedItem);
-            
             await saveData('config_stations', globalStations);
             renderStations(); 
         }
@@ -244,170 +349,67 @@ async function initSettings(currentSettings) {
     const renderStations = () => {
         const cont = document.getElementById('stationListContainer');
         if(!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
-        
         cont.innerHTML = globalStations.map((st, i) => {
             const dragAttr = `draggable="true" ondragstart="handleStationDragStart(event)" ondragover="handleStationDragOver(event)" ondrop="handleStationDrop(event)" data-index="${i}"`;
-            
-            if(st.isSpacer) return `
-                <div class="draggable-station" ${dragAttr} style="background:#f9f9f9; color:#888;">
-                    <div style="display:flex; align-items:center;">
-                        <span class="drag-handle" title="Dra för att flytta">☰</span>
-                        <i>--- Mellanrum ---</i>
-                    </div>
-                    <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
-                </div>`;
-            return `
-                <div class="draggable-station" ${dragAttr}>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span class="drag-handle" title="Dra för att flytta">☰</span>
-                        <div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc;"></div>
-                        <strong>${st.name}</strong>
-                    </div>
-                    <div><button class="list-btn" onclick="startEditStation(${i})">✏️</button><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div>
-                </div>`;
+            if(st.isSpacer) return `<div class="draggable-station" ${dragAttr} style="background:#f9f9f9; color:#888;"><div style="display:flex; align-items:center;"><span class="drag-handle">☰</span><i>--- Mellanrum ---</i></div><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div>`;
+            return `<div class="draggable-station" ${dragAttr}><div style="display:flex; align-items:center; gap:10px;"><span class="drag-handle">☰</span><div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc;"></div><strong>${st.name}</strong></div><div><button class="list-btn" onclick="startEditStation(${i})">✏️</button><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div></div>`;
         }).join('');
     };
 
     window.startEditStation = (i) => {
-        editingStationIndex = i;
-        stName.value = globalStations[i].name;
-        stColor.value = globalStations[i].color;
-        stBtn.innerText = "💾";
-        stBtn.style.background = "#2196F3";
-        stCancel.style.display = "block";
+        editingStationIndex = i; stName.value = globalStations[i].name; stColor.value = globalStations[i].color;
+        stBtn.innerText = "💾"; stBtn.style.background = "#2196F3"; stCancel.style.display = "block";
     };
-
     const resetSt = () => { editingStationIndex = null; stName.value = ""; stBtn.innerText = "+"; stBtn.style.background = ""; stCancel.style.display = "none"; };
     stCancel.onclick = resetSt;
 
     stBtn.onclick = async () => {
         if(!stName.value) return showToast("Ange namn", "info");
         const item = { name: stName.value, color: stColor.value };
-        if(editingStationIndex !== null) globalStations[editingStationIndex] = item;
-        else globalStations.push(item);
-        
+        if(editingStationIndex !== null) globalStations[editingStationIndex] = item; else globalStations.push(item);
         await saveData('config_stations', globalStations);
-        showToast(editingStationIndex !== null ? "Plats uppdaterad" : "Plats tillagd", "success");
-        resetSt(); renderStations();
+        showToast("Sparat", "success"); resetSt(); renderStations();
     };
-
-    document.getElementById('addSpacerBtn').onclick = async () => {
-        globalStations.push({ isSpacer: true });
-        await saveData('config_stations', globalStations);
-        renderStations();
-    };
-
-    window.deleteStation = async (i) => { 
-        if(confirm("Ta bort?")) { 
-            globalStations.splice(i, 1); 
-            await saveData('config_stations', globalStations); 
-            showToast("Plats borttagen", "info");
-            renderStations(); 
-        }
-    };
+    document.getElementById('addSpacerBtn').onclick = async () => { globalStations.push({ isSpacer: true }); await saveData('config_stations', globalStations); renderStations(); };
+    window.deleteStation = async (i) => { if(confirm("Ta bort?")) { globalStations.splice(i, 1); await saveData('config_stations', globalStations); renderStations(); }};
     renderStations();
-
-    // --- PASS ---
-    const shLabel = document.getElementById('newShiftLabel');
-    const shTime = document.getElementById('newShiftTime');
-    const shBtn = document.getElementById('addShiftBtn');
-    const shCancel = document.getElementById('cancelShiftEditBtn');
-
-    const renderShifts = () => {
-        if(!Array.isArray(globalShifts)) globalShifts = DEFAULT_SHIFTS;
-        document.getElementById('shiftListContainer').innerHTML = globalShifts.map((sh, i) => `
-            <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee;">
-                <div><strong>${sh.label}</strong> <span style="color:#666;">(${sh.time})</span></div>
-                <div><button class="list-btn" onclick="startEditShift(${i})">✏️</button><button class="list-btn" onclick="deleteShift(${i})">🗑️</button></div>
-            </div>`).join('');
-    };
-
-    window.startEditShift = (i) => {
-        editingShiftIndex = i; shLabel.value = globalShifts[i].label; shTime.value = globalShifts[i].time;
-        shBtn.innerText = "Spara"; shBtn.style.background = "#2196F3"; shCancel.style.display = "block";
-    };
-
-    const resetSh = () => { editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = ""; shCancel.style.display = "none"; };
-    shCancel.onclick = resetSh;
-
-    shBtn.onclick = async () => {
-        if(!shLabel.value || !shTime.value) return showToast("Fyll i allt", "info");
-        const item = { label: shLabel.value, time: shTime.value };
-        if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item; else globalShifts.push(item);
-        
-        await saveData('config_shifts', globalShifts);
-        showToast(editingShiftIndex !== null ? "Pass uppdaterat" : "Pass tillagt", "success");
-        resetSh(); renderShifts();
-    };
-
-    window.deleteShift = async (i) => { 
-        if(confirm("Ta bort?")) { 
-            globalShifts.splice(i, 1); 
-            await saveData('config_shifts', globalShifts); 
-            showToast("Pass borttaget", "info");
-            renderShifts(); 
-        }
-    };
-    renderShifts();
-
-    // --- ADMINS ---
-    const admBtn = document.getElementById('addAdminBtn');
-    const admCancel = document.getElementById('cancelAdminEditBtn');
-    const admUser = document.getElementById('newAdminUser');
-    const admPass = document.getElementById('newAdminPass');
-    const admFirst = document.getElementById('newAdminFirstName');
-    const admLast = document.getElementById('newAdminLastName');
-    const admEmail = document.getElementById('newAdminEmail');
-
-    const renderAdmins = async () => {
-        let admins = await fetchData('admins');
-        if(!Array.isArray(admins)) admins = [];
-        document.getElementById('adminListContainer').innerHTML = admins.map(a => `
-            <div style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                <span>${a.first_name||''} ${a.last_name||''} (${a.username})</span>
-                <div>
-                    <button class="list-btn" onclick='startEditAdmin(${JSON.stringify(a).replace(/'/g,"&#39;")})'>✏️</button>
-                    <button class="list-btn" onclick="deleteAdmin('${a.username}')">🗑️</button>
-                </div>
-            </div>`).join('');
-    };
-
-    window.startEditAdmin = (u) => {
-        editingAdminId = u.id; admUser.value = u.username; admFirst.value = u.first_name||""; admLast.value = u.last_name||""; admEmail.value = u.email||"";
-        admPass.placeholder = "Nytt lösen (valfritt)"; admPass.value = "";
-        admBtn.innerText = "💾"; admBtn.style.background = "#2196F3"; admCancel.style.display = "block";
-    };
-
-    const resetAdm = () => { editingAdminId = null; admUser.value = ""; admPass.value = ""; admFirst.value = ""; admLast.value = ""; admEmail.value = ""; admPass.placeholder = "Lösenord"; admBtn.innerText = "+"; admBtn.style.background = ""; admCancel.style.display = "none"; };
-    admCancel.onclick = resetAdm;
-
-    admBtn.onclick = async () => {
-        const u = admUser.value, p = admPass.value;
-        if(!u) return showToast("Användarnamn krävs", "error");
-        const action = editingAdminId ? 'edit_admin' : 'add_admin';
-        if(action === 'add_admin' && !p) return showToast("Lösenord krävs", "error");
-        
-        await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, 
-            body: JSON.stringify({action, username:u, password:p, firstName:admFirst.value, lastName:admLast.value, email:admEmail.value, id:editingAdminId}) 
-        });
-        showToast(editingAdminId ? "Admin uppdaterad" : "Admin tillagd", "success");
-        resetAdm(); renderAdmins();
-    };
-
-    window.deleteAdmin = async(u) => { 
-        if(confirm("Ta bort admin?")) {
-            await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) }); 
-            showToast("Admin borttagen", "info");
-            renderAdmins(); 
-        }
-    };
-    renderAdmins();
-
-    document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
 }
 
+function initShiftsSettings() {
+    const shLabel = document.getElementById('newShiftLabel'), shTime = document.getElementById('newShiftTime');
+    const shBtn = document.getElementById('addShiftBtn'), shCancel = document.getElementById('cancelShiftEditBtn');
+
+    const renderShifts = () => {
+        const cont = document.getElementById('shiftListContainer');
+        if(!Array.isArray(globalShifts)) globalShifts = DEFAULT_SHIFTS;
+        cont.innerHTML = globalShifts.map((sh, i) => `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee;"><div><strong>${sh.label}</strong> <span style="color:#666;">(${sh.time})</span></div><div><button class="list-btn" onclick="startEditShift(${i})">✏️</button><button class="list-btn" onclick="deleteShift(${i})">🗑️</button></div></div>`).join('');
+    };
+    window.startEditShift = (i) => { editingShiftIndex = i; shLabel.value = globalShifts[i].label; shTime.value = globalShifts[i].time; shBtn.innerText = "Spara"; shBtn.style.background = "#2196F3"; shCancel.style.display = "block"; };
+    const resetSh = () => { editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = ""; shCancel.style.display = "none"; };
+    shCancel.onclick = resetSh;
+    shBtn.onclick = async () => { if(!shLabel.value) return; const item = { label: shLabel.value, time: shTime.value }; if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item; else globalShifts.push(item); await saveData('config_shifts', globalShifts); showToast("Sparat", "success"); resetSh(); renderShifts(); };
+    window.deleteShift = async (i) => { if(confirm("Ta bort?")) { globalShifts.splice(i, 1); await saveData('config_shifts', globalShifts); renderShifts(); }};
+    renderShifts();
+}
+
+function initAdminSettings() {
+    const renderAdmins = async () => {
+        let admins = await fetchData('admins');
+        document.getElementById('adminListContainer').innerHTML = (admins||[]).map(a => `<div style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;"><span>${a.username}</span><button class="list-btn" onclick="deleteAdmin('${a.username}')">🗑️</button></div>`).join('');
+    };
+    document.getElementById('addAdminBtn').onclick = async () => {
+        const u = document.getElementById('newAdminUser').value, p = document.getElementById('newAdminPass').value;
+        if(!u || !p) return showToast("Fyll i allt", "error");
+        await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'add_admin', username:u, password:p}) });
+        showToast("Admin tillagd", "success"); document.getElementById('newAdminUser').value=""; document.getElementById('newAdminPass').value=""; renderAdmins();
+    };
+    window.deleteAdmin = async(u) => { if(confirm("Ta bort admin?")) { await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) }); renderAdmins(); }};
+    renderAdmins();
+}
+
+
 /* =========================================
-   7. ADMIN PLANERING
+   6. ADMIN PLANERING
    ========================================= */
 async function initAdmin() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
@@ -440,14 +442,11 @@ async function initAdmin() {
     updateGrid(picker.value);
 
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
-    
     document.getElementById('exportBtn').onclick = generateImage;
-    
     document.getElementById('printBtn').onclick = () => {
         const pc = document.getElementById('print-container') || document.createElement('div');
         pc.id = 'print-container';
         if(!document.body.contains(pc)) document.body.appendChild(pc);
-        
         pc.innerHTML = getScheduleHtmlForPrint();
         window.print();
         setTimeout(() => pc.innerHTML='', 1000);
@@ -455,12 +454,9 @@ async function initAdmin() {
     setupSidebarAddUser();
 }
 
-// -------------------------------------------------------------
-// NY: renderAdminGrid med korrekt event-hantering
-// -------------------------------------------------------------
 function renderAdminGrid() {
     const cont = document.getElementById('scheduleContainer');
-    renderRoster(); // Uppdatera sidofältet också
+    renderRoster(); // Uppdatera sidolistan
     if(!cont) return;
 
     const dayName = days[currentAdminDayIndex];
@@ -472,24 +468,18 @@ function renderAdminGrid() {
     let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${s.time}</div>`).join('')}</div>`;
 
     globalStations.forEach(st => {
-        if(st.isSpacer) { 
-            html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#f5f5f5;"></div>`; 
-            return; 
-        }
+        if(st.isSpacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#f5f5f5;"></div>`; return; }
         
         html += `<div class="station-row"><div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
-        
         globalShifts.forEach(sh => {
             const key = `${prefix}${st.name}-${sh.time}`;
             const val = globalScheduleData[key] || "";
             
-            // OBS: Här skickar vi med 'event' till manualAdd för att kunna positionera menyn
             html += `
             <div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event,'${key}')">
                 <span class="shift-text" contenteditable="true" onblur="saveShift('${key}', this.innerText)">${val}</span>
-                
                 <div class="shift-controls">
-                    <button class="add-user-btn" onclick="manualAdd(event, '${key}')" title="Lägg till person">+</button>
+                    <button class="add-user-btn" onclick="manualAdd(event, '${key}')" title="Lägg till">+</button>
                     ${val ? `<button class="clear-btn" onclick="saveShift('${key}', '')" title="Rensa">&times;</button>`:''}
                 </div>
             </div>`;
@@ -499,18 +489,12 @@ function renderAdminGrid() {
     cont.innerHTML = html;
 }
 
-// -------------------------------------------------------------
-// NY FUNKTIONALITET: Flytande Context Menu (Ingen popup-ruta)
-// -------------------------------------------------------------
 window.manualAdd = (e, key) => {
-    // Stoppa eventet så det inte bubblar upp och stänger menyn direkt
     e.stopPropagation();
 
-    // 1. Ta bort eventuella gamla menyer
     const existing = document.getElementById('quick-dropdown');
     if (existing) existing.remove();
 
-    // 2. Hitta ledig personal
     const day = days[currentAdminDayIndex];
     const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
     const busyUsers = new Set();
@@ -524,17 +508,13 @@ window.manualAdd = (e, key) => {
     const availableUsers = globalUserList.filter(u => !busyUsers.has(u));
     availableUsers.sort();
 
-    // 3. Skapa HTML för menyn
     const menu = document.createElement('div');
     menu.id = 'quick-dropdown';
     menu.className = 'dropdown-menu';
-    
-    // Positionera menyn vid muspekaren
     menu.style.left = `${e.pageX}px`;
-    menu.style.top = `${e.pageY + 10}px`; 
+    menu.style.top = `${e.pageY + 10}px`;
 
     let html = '';
-
     if (availableUsers.length > 0) {
         html += availableUsers.map(u => 
             `<div class="dropdown-item" onclick="selectUser('${key}', '${u}')">${u}</div>`
@@ -542,39 +522,31 @@ window.manualAdd = (e, key) => {
     } else {
         html += `<div class="dropdown-item disabled">Ingen ledig</div>`;
     }
-
-    // Lägg till manuellt val
+    
     html += `<div class="dropdown-item manual" onclick="selectUserManual('${key}')">+ Skriv in eget namn...</div>`;
     
     menu.innerHTML = html;
     document.body.appendChild(menu);
 
-    // 4. Klick utanför stänger menyn
     document.addEventListener('click', function closeMenu(evt) {
-        if (!menu.contains(evt.target)) {
-            menu.remove();
-        }
+        if (!menu.contains(evt.target)) menu.remove();
     }, { once: true });
 };
 
-// När man väljer en person från listan
 window.selectUser = async (key, name) => {
     const currentVal = globalScheduleData[key] || "";
     const newVal = currentVal ? currentVal + " / " + name : name;
     
-    // Ta bort menyn direkt
     const menu = document.getElementById('quick-dropdown');
     if(menu) menu.remove();
 
     await saveShift(key, newVal);
 };
 
-// Manuell inmatning (fallback)
 window.selectUserManual = async (key) => {
     const menu = document.getElementById('quick-dropdown');
     if(menu) menu.remove();
 
-    // Vi använder en kort timeout så menyn hinner försvinna visuellt först
     setTimeout(async () => {
         const name = prompt("Ange namn:");
         if (name) {
@@ -585,24 +557,12 @@ window.selectUserManual = async (key) => {
     }, 50);
 };
 
-function isLight(color) {
-    if(!color) return true;
-    const h = color.replace('#','');
-    const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
-    return ((r*299 + g*587 + b*114)/1000) >= 128;
-}
-
-// -------------------------------------------------------------
-// NY: renderRoster (Sorterar "assigned" längst ner istället för att dölja)
-// -------------------------------------------------------------
 function renderRoster() {
     const list = document.getElementById('draggableUserList');
     if(!list) return;
 
     const day = days[currentAdminDayIndex];
     const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
-    
-    // Hitta vilka som jobbar
     const work = new Set();
     Object.keys(globalScheduleData).forEach(k => { 
         if(k.startsWith(prefix) && globalScheduleData[k]) {
@@ -610,18 +570,16 @@ function renderRoster() {
         }
     });
 
-    // Sortera: Lediga först, upptagna sist
     const sortedUsers = [...globalUserList].sort((a, b) => {
         const aBusy = work.has(a);
         const bBusy = work.has(b);
-        if (aBusy === bBusy) return a.localeCompare(b); // Alfabetisk om status lika
-        return aBusy ? 1 : -1; // Busy hamnar sist
+        if (aBusy === bBusy) return a.localeCompare(b);
+        return aBusy ? 1 : -1; 
     });
 
     list.innerHTML = sortedUsers.map(u => {
         const isAssigned = work.has(u);
         const assignedClass = isAssigned ? 'assigned' : '';
-        
         return `
         <div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('text','${u}')">
             ${u} 
@@ -632,9 +590,10 @@ function renderRoster() {
 
 async function saveShift(k, v) { globalScheduleData[k] = v.trim(); await saveData('schedule_draft', globalScheduleData); renderAdminGrid(); }
 async function handleDrop(e, k) { e.preventDefault(); const n = e.dataTransfer.getData("text"); let c = globalScheduleData[k]||""; if(!c.includes(n)) await saveShift(k, c?c+" / "+n:n); }
+function isLight(color) { if(!color) return true; const h = color.replace('#',''); const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16); return ((r*299 + g*587 + b*114)/1000) >= 128; }
 
 /* =========================================
-   8. DISPLAY
+   7. DISPLAY
    ========================================= */
 let lastSnap="";
 function initDisplay() {
@@ -642,13 +601,16 @@ function initDisplay() {
     const refresh = async () => {
         let pub = await fetchData('schedule_published');
         if(!pub || !Object.keys(pub).length) pub = await fetchData('schedule');
-        const [sets, msg] = await Promise.all([fetchData('settings'), fetchData('message')]);
+        const [sets, msg, themes] = await Promise.all([fetchData('settings'), fetchData('message'), fetchData('custom_themes')]);
+        
+        globalCustomThemes = themes || [];
         
         const snap = JSON.stringify({s:pub, t:sets?.theme, m:msg});
         if(snap === lastSnap) return; lastSnap=snap;
         globalScheduleData = pub || {};
 
         if(sets?.theme) applyTheme(sets.theme);
+        
         const mq = document.getElementById('marqueeContainer');
         if(mq) { mq.style.display=(msg?.show&&msg?.text)?'block':'none'; if(msg?.text) document.getElementById('marqueeText').innerText=msg.text; }
 
@@ -676,7 +638,7 @@ function initDisplay() {
 }
 
 /* =========================================
-   9. EXPORT & PRINT
+   8. EXPORT & PRINT & HJÄLPFUNKTIONER
    ========================================= */
 function getScheduleHtmlForPrint() {
     const dateText = document.getElementById('currentDateDisplay').innerText;
