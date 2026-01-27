@@ -27,7 +27,7 @@ let globalScheduleData = {}, globalUserList = [];
 let editingStationIndex = null;
 let editingShiftIndex = null;
 let editingAdminId = null;
-let dragSrcStationEl = null; // Variabel för att hålla reda på vad som dras
+let dragSrcStationEl = null;
 
 /* =========================================
    2. TOAST NOTIFICATIONS (POPUP)
@@ -131,7 +131,7 @@ function checkAuth() {
 }
 
 /* =========================================
-   5. LOGIN
+   5. LOGIN & AUTH
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -167,6 +167,7 @@ function initLogin() {
         setTimeout(() => window.location.reload(), 2000);
     };
 }
+
 function initReset() {
     const t = new URLSearchParams(window.location.search).get('token');
     if(!t) return;
@@ -181,7 +182,7 @@ function initReset() {
 }
 
 /* =========================================
-   6. INSTÄLLNINGAR - MED DRAG N DROP
+   6. INSTÄLLNINGAR
    ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
@@ -204,13 +205,12 @@ async function initSettings(currentSettings) {
         showToast("Meddelande uppdaterat!", "success");
     };
 
-    // --- STATIONER (HÄR ÄR ÄNDRINGEN FÖR DRAG N DROP) ---
+    // --- STATIONER ---
     const stName = document.getElementById('newStationName');
     const stColor = document.getElementById('newStationColor');
     const stBtn = document.getElementById('addStationBtn');
     const stCancel = document.getElementById('cancelStationEditBtn');
 
-    // Drag-handlers
     window.handleStationDragStart = (e) => {
         dragSrcStationEl = e.target.closest('.draggable-station');
         e.dataTransfer.effectAllowed = 'move';
@@ -232,7 +232,6 @@ async function initSettings(currentSettings) {
             const oldIndex = parseInt(dragSrcStationEl.dataset.index);
             const newIndex = parseInt(targetEl.dataset.index);
             
-            // Flytta i arrayen
             const movedItem = globalStations.splice(oldIndex, 1)[0];
             globalStations.splice(newIndex, 0, movedItem);
             
@@ -246,7 +245,6 @@ async function initSettings(currentSettings) {
         const cont = document.getElementById('stationListContainer');
         if(!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
         
-        // Ritar ut draggable-divar istället för knappar
         cont.innerHTML = globalStations.map((st, i) => {
             const dragAttr = `draggable="true" ondragstart="handleStationDragStart(event)" ondragover="handleStationDragOver(event)" ondrop="handleStationDrop(event)" data-index="${i}"`;
             
@@ -309,7 +307,7 @@ async function initSettings(currentSettings) {
     };
     renderStations();
 
-    // PASS
+    // --- PASS ---
     const shLabel = document.getElementById('newShiftLabel');
     const shTime = document.getElementById('newShiftTime');
     const shBtn = document.getElementById('addShiftBtn');
@@ -352,7 +350,7 @@ async function initSettings(currentSettings) {
     };
     renderShifts();
 
-    // ADMINS
+    // --- ADMINS ---
     const admBtn = document.getElementById('addAdminBtn');
     const admCancel = document.getElementById('cancelAdminEditBtn');
     const admUser = document.getElementById('newAdminUser');
@@ -457,9 +455,12 @@ async function initAdmin() {
     setupSidebarAddUser();
 }
 
+// -------------------------------------------------------------
+// NY: renderAdminGrid med plus-knapp och manualAdd
+// -------------------------------------------------------------
 function renderAdminGrid() {
     const cont = document.getElementById('scheduleContainer');
-    renderRoster();
+    renderRoster(); // Uppdatera listan samtidigt så statusarna stämmer
     if(!cont) return;
 
     const dayName = days[currentAdminDayIndex];
@@ -471,20 +472,42 @@ function renderAdminGrid() {
     let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${s.time}</div>`).join('')}</div>`;
 
     globalStations.forEach(st => {
-        if(st.isSpacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#f5f5f5;"></div>`; return; }
+        if(st.isSpacer) { 
+            html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#f5f5f5;"></div>`; 
+            return; 
+        }
         
         html += `<div class="station-row"><div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
+        
         globalShifts.forEach(sh => {
             const key = `${prefix}${st.name}-${sh.time}`;
             const val = globalScheduleData[key] || "";
-            html += `<div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event,'${key}')">
+            
+            // Vi har lagt till .shift-controls som innehåller både + och x
+            html += `
+            <div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event,'${key}')">
                 <span class="shift-text" contenteditable="true" onblur="saveShift('${key}', this.innerText)">${val}</span>
-                ${val ? `<button class="clear-btn" onclick="saveShift('${key}', '')">&times;</button>`:''}</div>`;
+                
+                <div class="shift-controls">
+                    <button class="add-user-btn" onclick="manualAdd('${key}')" title="Lägg till person">+</button>
+                    ${val ? `<button class="clear-btn" onclick="saveShift('${key}', '')" title="Rensa">&times;</button>`:''}
+                </div>
+            </div>`;
         });
         html += `</div>`;
     });
     cont.innerHTML = html;
 }
+
+// NY FUNKTION: För att lägga till manuellt via plus-knappen
+window.manualAdd = async (key) => {
+    const name = prompt("Ange namn att lägga till:");
+    if (name) {
+        const currentVal = globalScheduleData[key] || "";
+        const newVal = currentVal ? currentVal + " / " + name : name;
+        await saveShift(key, newVal);
+    }
+};
 
 function isLight(color) {
     if(!color) return true;
@@ -493,15 +516,42 @@ function isLight(color) {
     return ((r*299 + g*587 + b*114)/1000) >= 128;
 }
 
+// -------------------------------------------------------------
+// NY: renderRoster med sortering istället för filtrering
+// -------------------------------------------------------------
 function renderRoster() {
     const list = document.getElementById('draggableUserList');
     if(!list) return;
+
     const day = days[currentAdminDayIndex];
     const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+    
+    // Hitta vilka som jobbar
     const work = new Set();
-    Object.keys(globalScheduleData).forEach(k => { if(k.startsWith(prefix) && globalScheduleData[k]) globalScheduleData[k].split('/').forEach(n=>work.add(n.trim())); });
-    list.innerHTML = globalUserList.filter(u=>!work.has(u)).map(u => 
-        `<div class="draggable-item" draggable="true" ondragstart="event.dataTransfer.setData('text','${u}')">${u} <button class="remove-user-btn" onclick="removeUser('${u}')">&times;</button></div>`).join('');
+    Object.keys(globalScheduleData).forEach(k => { 
+        if(k.startsWith(prefix) && globalScheduleData[k]) {
+            globalScheduleData[k].split('/').forEach(n => work.add(n.trim()));
+        }
+    });
+
+    // Sortera: Lediga först, upptagna sist. 
+    const sortedUsers = [...globalUserList].sort((a, b) => {
+        const aBusy = work.has(a);
+        const bBusy = work.has(b);
+        if (aBusy === bBusy) return a.localeCompare(b); // Alfabetisk om status lika
+        return aBusy ? 1 : -1; // Busy hamnar sist
+    });
+
+    list.innerHTML = sortedUsers.map(u => {
+        const isAssigned = work.has(u);
+        const assignedClass = isAssigned ? 'assigned' : '';
+        
+        return `
+        <div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('text','${u}')">
+            ${u} 
+            <button class="remove-user-btn" onclick="removeUser('${u}')">&times;</button>
+        </div>`;
+    }).join('');
 }
 
 async function saveShift(k, v) { globalScheduleData[k] = v.trim(); await saveData('schedule_draft', globalScheduleData); renderAdminGrid(); }
@@ -631,7 +681,3 @@ async function removeUser(u) {
         renderRoster();
     } 
 }
-
-
-
-
