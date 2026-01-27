@@ -499,16 +499,101 @@ function renderAdminGrid() {
     cont.innerHTML = html;
 }
 
-// NY FUNKTION: För att lägga till manuellt via plus-knappen
-window.manualAdd = async (key) => {
-    const name = prompt("Ange namn att lägga till:");
-    if (name) {
-        const currentVal = globalScheduleData[key] || "";
-        const newVal = currentVal ? currentVal + " / " + name : name;
-        await saveShift(key, newVal);
-    }
-};
+// Ersätt din gamla window.manualAdd med denna:
 
+window.manualAdd = (key) => {
+    // 1. Ta reda på vilka som är upptagna den aktuella dagen
+    const day = days[currentAdminDayIndex];
+    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+    const busyUsers = new Set();
+    
+    Object.keys(globalScheduleData).forEach(k => { 
+        if(k.startsWith(prefix) && globalScheduleData[k]) {
+            globalScheduleData[k].split('/').forEach(n => busyUsers.add(n.trim()));
+        }
+    });
+
+    // 2. Filtrera fram ledig personal
+    const availableUsers = globalUserList.filter(u => !busyUsers.has(u));
+    
+    // Sortera listan i bokstavsordning
+    availableUsers.sort();
+
+    // 3. Skapa HTML för Modal (Popup)
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    
+    // Bygg alternativen till dropdown-menyn
+    let optionsHtml = '<option value="">-- Välj personal --</option>';
+    
+    if (availableUsers.length > 0) {
+        optionsHtml += availableUsers.map(u => `<option value="${u}">${u}</option>`).join('');
+    } else {
+        optionsHtml += `<option disabled>Alla är upptagna!</option>`;
+    }
+
+    // Lägg till alternativet att skriva in manuellt om namnet saknas i listan
+    optionsHtml += `<option disabled>──────────</option>`;
+    optionsHtml += `<option value="MANUAL_INPUT">+ Skriv in eget namn...</option>`;
+
+    modal.innerHTML = `
+        <div class="modal-box">
+            <h3>Lägg till på pass</h3>
+            <p style="font-size:0.9rem; opacity:0.8; margin-bottom:5px;">Välj tillgänglig personal:</p>
+            <select id="modalUserSelect" class="modal-select">
+                ${optionsHtml}
+            </select>
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" id="modalCancelBtn">Avbryt</button>
+                <button class="modal-btn confirm" id="modalConfirmBtn">Lägg till</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const select = document.getElementById('modalUserSelect');
+    const btnConfirm = document.getElementById('modalConfirmBtn');
+    const btnCancel = document.getElementById('modalCancelBtn');
+
+    // Funktion för att stänga modalen
+    const closeModal = () => document.body.removeChild(modal);
+
+    // Fokusera på listan direkt
+    select.focus();
+
+    // Hantera "Avbryt"
+    btnCancel.onclick = closeModal;
+
+    // Hantera "Lägg till"
+    btnConfirm.onclick = async () => {
+        let selectedName = select.value;
+
+        if (!selectedName) {
+            showToast("Välj ett namn i listan", "info");
+            return;
+        }
+
+        // Specialfall: Om man väljer "Skriv in eget namn..."
+        if (selectedName === 'MANUAL_INPUT') {
+            const manualName = prompt("Ange namn manuellt:");
+            if (!manualName) return; // Ångrade sig
+            selectedName = manualName.trim();
+        }
+
+        // Spara till schemat
+        const currentVal = globalScheduleData[key] || "";
+        const newVal = currentVal ? currentVal + " / " + selectedName : selectedName;
+        
+        await saveShift(key, newVal);
+        closeModal();
+    };
+
+    // Stäng om man klickar utanför boxen
+    modal.onclick = (e) => {
+        if (e.target === modal) closeModal();
+    };
+};
 function isLight(color) {
     if(!color) return true;
     const h = color.replace('#','');
@@ -681,3 +766,4 @@ async function removeUser(u) {
         renderRoster();
     } 
 }
+
