@@ -29,6 +29,9 @@ let editingShiftIndex = null;
 let editingAdminId = null;
 let dragSrcStationEl = null;
 
+/* =========================================
+   2. HJÄLPFUNKTIONER (Toast, API)
+   ========================================= */
 function showToast(message, type = 'success') {
     let container = document.getElementById('toast-container');
     if (!container) {
@@ -81,6 +84,13 @@ async function saveData(type, data) {
     } catch (e) { return false; }
 }
 
+function isLight(color) { 
+    if(!color) return true;
+    const h = color.replace('#','');
+    const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
+    return ((r*299 + g*587 + b*114)/1000) >= 128;
+}
+
 // DYNAMISK TEMA-HANTERARE
 async function applyTheme(themeId) {
     const isAdmin = (document.body.id === 'page-admin' || document.body.id === 'page-settings');
@@ -104,6 +114,9 @@ async function applyTheme(themeId) {
     }
 }
 
+/* =========================================
+   3. INIT & AUTH
+   ========================================= */
 document.addEventListener('DOMContentLoaded', async () => {
     const pageId = document.body.id;
     if (pageId === 'page-login') { initLogin(); return; }
@@ -134,8 +147,7 @@ function checkAuth() {
     return true;
 }
 
-// ... (Login & Reset functions omitted for brevity - same as before) ...
-function initLogin() { /* Behåll din befintliga kod här */
+function initLogin() {
     fetchData('settings').then(s => { 
         if(s?.theme) {
             fetchData('custom_themes').then(t => {
@@ -171,7 +183,8 @@ function initLogin() { /* Behåll din befintliga kod här */
         showToast("Om e-posten finns har en länk skickats.", "success"); setTimeout(() => window.location.reload(), 2000);
     };
 }
-function initReset() { /* Behåll din befintliga kod här */ 
+
+function initReset() {
     const t = new URLSearchParams(window.location.search).get('token');
     if(!t) return;
     document.getElementById('resetSubmitBtn').onclick = async () => {
@@ -183,8 +196,9 @@ function initReset() { /* Behåll din befintliga kod här */
     };
 }
 
-// ... (Settings, Admin, etc - same structure, just updating render functions) ...
-
+/* =========================================
+   4. SETTINGS
+   ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     const themeSelect = document.getElementById('themeSelect');
@@ -237,11 +251,10 @@ async function initSettings(currentSettings) {
             }
         };
     }
-    // ... Resten av Settings (Stations, Shifts, Admins) är samma, men se till att renderStations använder CSS-variabler om du vill ha preview där ...
+    
     initStationsSettings(); initShiftsSettings(); initAdminSettings();
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
-    // Setup message
     const msgIn = document.getElementById('displayMessageInput');
     const msgCheck = document.getElementById('showMessageCheckbox');
     const msg = await fetchData('message');
@@ -251,7 +264,8 @@ async function initSettings(currentSettings) {
         showToast("Meddelande uppdaterat!", "success");
     };
 }
-function initStationsSettings() { /* Klippt för korthet, samma som innan */ 
+
+function initStationsSettings() {
     const stName = document.getElementById('newStationName');
     const stColor = document.getElementById('newStationColor');
     const stBtn = document.getElementById('addStationBtn');
@@ -306,7 +320,8 @@ function initStationsSettings() { /* Klippt för korthet, samma som innan */
     window.deleteStation = async (i) => { if(confirm("Ta bort?")) { globalStations.splice(i, 1); await saveData('config_stations', globalStations); renderStations(); }};
     renderStations();
 }
-function initShiftsSettings() { /* Klippt */ 
+
+function initShiftsSettings() {
     const shLabel = document.getElementById('newShiftLabel'), shTime = document.getElementById('newShiftTime');
     const shBtn = document.getElementById('addShiftBtn'), shCancel = document.getElementById('cancelShiftEditBtn');
 
@@ -322,7 +337,8 @@ function initShiftsSettings() { /* Klippt */
     window.deleteShift = async (i) => { if(confirm("Ta bort?")) { globalShifts.splice(i, 1); await saveData('config_shifts', globalShifts); renderShifts(); }};
     renderShifts();
 }
-function initAdminSettings() { /* Klippt */ 
+
+function initAdminSettings() {
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
         document.getElementById('adminListContainer').innerHTML = (admins||[]).map(a => `<div style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;"><span>${a.username}</span><button class="list-btn" onclick="deleteAdmin('${a.username}')">🗑️</button></div>`).join('');
@@ -337,6 +353,9 @@ function initAdminSettings() { /* Klippt */
     renderAdmins();
 }
 
+/* =========================================
+   5. ADMIN PLANERING
+   ========================================= */
 async function initAdmin() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     let draft = await fetchData('schedule_draft');
@@ -362,21 +381,22 @@ async function initAdmin() {
     }
     updateGrid(picker.value);
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
+    
+    // EXPORTKNAPPAR
     document.getElementById('exportBtn').onclick = generateImage;
     document.getElementById('printBtn').onclick = () => {
         const pc = document.getElementById('print-container') || document.createElement('div');
         pc.id = 'print-container';
         if(!document.body.contains(pc)) document.body.appendChild(pc);
+        
         pc.innerHTML = getScheduleHtmlForPrint();
         window.print();
         setTimeout(() => pc.innerHTML='', 1000);
     };
+    
     setupSidebarAddUser();
 }
 
-// =========================================================================
-//  VIKTIGT: HÄR SÄTTER VI VARIABLER ISTÄLLET FÖR FÄRG
-// =========================================================================
 function renderAdminGrid() {
     const cont = document.getElementById('scheduleContainer');
     renderRoster();
@@ -393,9 +413,9 @@ function renderAdminGrid() {
     globalStations.forEach(st => {
         if(st.isSpacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#f5f5f5;"></div>`; return; }
         
-        // HÄR: --station-color istället för background-color
+        // Admin-vyn använder direkta färger för tydlighet
         const contrast = isLight(st.color) ? '#000' : '#fff';
-        const styles = `background-color:${st.color}; color:${contrast}; --station-color:${st.color};`; // För admin vill vi fortfarande ha färgerna synliga direkt
+        const styles = `background-color:${st.color}; color:${contrast}; --station-color:${st.color};`; 
         
         html += `<div class="station-row"><div class="station-label" style="${styles}">${st.name}</div>`;
         globalShifts.forEach(sh => {
@@ -415,18 +435,83 @@ function renderAdminGrid() {
     cont.innerHTML = html;
 }
 
-// ... (manualAdd, selectUser, selectUserManual, renderRoster, saveShift, handleDrop are same as before) ...
-window.manualAdd = (e, key) => { e.stopPropagation(); const existing = document.getElementById('quick-dropdown'); if (existing) existing.remove(); const day = days[currentAdminDayIndex]; const prefix = `y${selectedYear}w${selectedWeek}-${day}-`; const busyUsers = new Set(); Object.keys(globalScheduleData).forEach(k => { if(k.startsWith(prefix) && globalScheduleData[k]) { globalScheduleData[k].split('/').forEach(n => busyUsers.add(n.trim())); }}); const availableUsers = globalUserList.filter(u => !busyUsers.has(u)); availableUsers.sort(); const menu = document.createElement('div'); menu.id = 'quick-dropdown'; menu.className = 'dropdown-menu'; menu.style.left = `${e.pageX}px`; menu.style.top = `${e.pageY + 10}px`; let html = ''; if (availableUsers.length > 0) { html += availableUsers.map(u => `<div class="dropdown-item" onclick="selectUser('${key}', '${u}')">${u}</div>`).join(''); } else { html += `<div class="dropdown-item disabled">Ingen ledig</div>`; } html += `<div class="dropdown-item manual" onclick="selectUserManual('${key}')">+ Skriv in eget namn...</div>`; menu.innerHTML = html; document.body.appendChild(menu); document.addEventListener('click', function closeMenu(evt) { if (!menu.contains(evt.target)) menu.remove(); }, { once: true }); };
-window.selectUser = async (key, name) => { const currentVal = globalScheduleData[key] || ""; const newVal = currentVal ? currentVal + " / " + name : name; const menu = document.getElementById('quick-dropdown'); if(menu) menu.remove(); await saveShift(key, newVal); };
-window.selectUserManual = async (key) => { const menu = document.getElementById('quick-dropdown'); if(menu) menu.remove(); setTimeout(async () => { const name = prompt("Ange namn:"); if (name) { const currentVal = globalScheduleData[key] || ""; const newVal = currentVal ? currentVal + " / " + name : name; await saveShift(key, newVal); } }, 50); };
-function renderRoster() { const list = document.getElementById('draggableUserList'); if(!list) return; const day = days[currentAdminDayIndex]; const prefix = `y${selectedYear}w${selectedWeek}-${day}-`; const work = new Set(); Object.keys(globalScheduleData).forEach(k => { if(k.startsWith(prefix) && globalScheduleData[k]) { globalScheduleData[k].split('/').forEach(n => work.add(n.trim())); }}); const sortedUsers = [...globalUserList].sort((a, b) => { const aBusy = work.has(a); const bBusy = work.has(b); if (aBusy === bBusy) return a.localeCompare(b); return aBusy ? 1 : -1; }); list.innerHTML = sortedUsers.map(u => { const isAssigned = work.has(u); const assignedClass = isAssigned ? 'assigned' : ''; return `<div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('text','${u}')">${u} <button class="remove-user-btn" onclick="removeUser('${u}')">&times;</button></div>`; }).join(''); }
+window.manualAdd = (e, key) => {
+    e.stopPropagation();
+    const existing = document.getElementById('quick-dropdown');
+    if (existing) existing.remove();
+
+    const day = days[currentAdminDayIndex];
+    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+    const busyUsers = new Set();
+    Object.keys(globalScheduleData).forEach(k => { if(k.startsWith(prefix) && globalScheduleData[k]) { globalScheduleData[k].split('/').forEach(n => busyUsers.add(n.trim())); }});
+    const availableUsers = globalUserList.filter(u => !busyUsers.has(u));
+    availableUsers.sort();
+
+    const menu = document.createElement('div');
+    menu.id = 'quick-dropdown';
+    menu.className = 'dropdown-menu';
+    menu.style.left = `${e.pageX}px`;
+    menu.style.top = `${e.pageY + 10}px`;
+
+    let html = '';
+    if (availableUsers.length > 0) {
+        html += availableUsers.map(u => `<div class="dropdown-item" onclick="selectUser('${key}', '${u}')">${u}</div>`).join('');
+    } else {
+        html += `<div class="dropdown-item disabled">Ingen ledig</div>`;
+    }
+    html += `<div class="dropdown-item manual" onclick="selectUserManual('${key}')">+ Skriv in eget namn...</div>`;
+    menu.innerHTML = html;
+    document.body.appendChild(menu);
+    document.addEventListener('click', function closeMenu(evt) { if (!menu.contains(evt.target)) menu.remove(); }, { once: true });
+};
+
+window.selectUser = async (key, name) => {
+    const currentVal = globalScheduleData[key] || "";
+    const newVal = currentVal ? currentVal + " / " + name : name;
+    const menu = document.getElementById('quick-dropdown');
+    if(menu) menu.remove();
+    await saveShift(key, newVal);
+};
+
+window.selectUserManual = async (key) => {
+    const menu = document.getElementById('quick-dropdown');
+    if(menu) menu.remove();
+    setTimeout(async () => {
+        const name = prompt("Ange namn:");
+        if (name) {
+            const currentVal = globalScheduleData[key] || "";
+            const newVal = currentVal ? currentVal + " / " + name : name;
+            await saveShift(key, newVal);
+        }
+    }, 50);
+};
+
+function renderRoster() {
+    const list = document.getElementById('draggableUserList');
+    if(!list) return;
+    const day = days[currentAdminDayIndex];
+    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+    const work = new Set();
+    Object.keys(globalScheduleData).forEach(k => { if(k.startsWith(prefix) && globalScheduleData[k]) { globalScheduleData[k].split('/').forEach(n => work.add(n.trim())); }});
+    const sortedUsers = [...globalUserList].sort((a, b) => {
+        const aBusy = work.has(a);
+        const bBusy = work.has(b);
+        if (aBusy === bBusy) return a.localeCompare(b);
+        return aBusy ? 1 : -1; 
+    });
+    list.innerHTML = sortedUsers.map(u => {
+        const isAssigned = work.has(u);
+        const assignedClass = isAssigned ? 'assigned' : '';
+        return `<div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('text','${u}')">${u} <button class="remove-user-btn" onclick="removeUser('${u}')">&times;</button></div>`;
+    }).join('');
+}
+
 async function saveShift(k, v) { globalScheduleData[k] = v.trim(); await saveData('schedule_draft', globalScheduleData); renderAdminGrid(); }
 async function handleDrop(e, k) { e.preventDefault(); const n = e.dataTransfer.getData("text"); let c = globalScheduleData[k]||""; if(!c.includes(n)) await saveShift(k, c?c+" / "+n:n); }
-function isLight(color) { if(!color) return true; const h = color.replace('#',''); const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16); return ((r*299 + g*587 + b*114)/1000) >= 128; }
 
-// =========================================================================
-//  DISPLAY-FUNKTIONEN - HÄR LIGGER NYCKELN TILL FLEXIBILITETEN
-// =========================================================================
+/* =========================================
+   6. DISPLAY
+   ========================================= */
 let lastSnap="";
 function initDisplay() {
     setInterval(()=>document.getElementById('clock').innerText=new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}),1000);
@@ -436,13 +521,11 @@ function initDisplay() {
         const [sets, msg, themes] = await Promise.all([fetchData('settings'), fetchData('message'), fetchData('custom_themes')]);
         
         globalCustomThemes = themes || [];
-        
         const snap = JSON.stringify({s:pub, t:sets?.theme, m:msg});
         if(snap === lastSnap) return; lastSnap=snap;
         globalScheduleData = pub || {};
 
         if(sets?.theme) applyTheme(sets.theme);
-        
         const mq = document.getElementById('marqueeContainer');
         if(mq) { mq.style.display=(msg?.show&&msg?.text)?'block':'none'; if(msg?.text) document.getElementById('marqueeText').innerText=msg.text; }
 
@@ -456,13 +539,8 @@ function initDisplay() {
         let html = `<div class="time-header-row"><div></div>${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}</div>`;
         globalStations.forEach(st => {
             if(st.isSpacer) { html += `<div class="display-row" style="grid-column:1/-1; height:4vh;"></div>`; return; }
-            
-            // HÄR: VIKTIGASTE ÄNDRINGEN
-            // Vi sätter --station-color (variabel) samt --contrast-color (svart/vit)
-            // Vi sätter ingen fast background-color! CSS i databasen får bestämma!
             const contrast = isLight(st.color) ? '#000' : '#fff';
             const vars = `style="--station-color:${st.color}; --contrast-color:${contrast};"`;
-
             html += `<div class="display-row"><div class="station-label" ${vars}>${st.name}</div>`;
             globalShifts.forEach(sh => {
                 const key = `y${iso.year}w${iso.week}-${today}-${st.name}-${sh.time}`;
@@ -476,56 +554,112 @@ function initDisplay() {
     refresh(); setInterval(refresh, 15000);
 }
 
-// ... (Export/Print functions same as before) ...
-function getScheduleHtmlForPrint() { /* Klippt */ return "Kopiera gammal kod hit"; } 
-function generateImage() { /* Klippt */ const btn=document.getElementById('exportBtn'); /*...kod...*/ }
+/* =========================================
+   7. EXPORT & PRINT & ÖVRIGT
+   ========================================= */
+function getScheduleHtmlForPrint() {
+    const dateText = document.getElementById('currentDateDisplay').innerText;
+    const day = days[currentAdminDayIndex];
+    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+    const shifts = (Array.isArray(globalShifts)&&globalShifts.length)?globalShifts:DEFAULT_SHIFTS;
+    const stations = (Array.isArray(globalStations)&&globalStations.length)?globalStations:DEFAULT_STATIONS;
+
+    let html = `<div style="font-family:sans-serif; padding:20px;"><div style="text-align:center; margin-bottom:20px;"><h1 style="font-size:24px; margin:0;">Bemanningsschema - ${dateText}</h1></div>
+    <div style="display:grid; grid-template-columns:150px repeat(${shifts.length},1fr); gap:10px; text-align:center; font-weight:bold; margin-bottom:10px;">
+    <div></div>${shifts.map(s=>`<div style="border:1px solid #000; padding:5px; background:#ddd;">${s.label}<br><span style="font-size:0.8em; font-weight:normal;">${s.time}</span></div>`).join('')}</div>`;
+
+    stations.forEach(st => {
+        if(st.isSpacer) { html += `<div style="grid-column:1/-1; height:30px;"></div>`; return; }
+        const bg = st.color, fg = isLight(bg)?'#000':'#fff';
+        html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length},1fr); gap:10px; margin-bottom:10px;">
+            <div style="background:${bg}; color:${fg}; font-weight:bold; padding:10px; display:flex; align-items:center; justify-content:center; border:1px solid #000;">${st.name}</div>`;
+        shifts.forEach(sh => {
+            const val = globalScheduleData[`${prefix}${st.name}-${sh.time}`] || "";
+            html += `<div style="display:flex; align-items:center; justify-content:center; text-align:center; min-height:50px; padding:5px; font-weight:bold; border:1px solid #000; background:#fff;">${val}</div>`;
+        });
+        html += `</div>`;
+    });
+    return html + `</div>`;
+}
+
+function generateImage() {
+    const btn=document.getElementById('exportBtn'), txt=btn.innerText; 
+    btn.innerText="Genererar...";
+    const div=document.createElement('div'); 
+    div.style.cssText="position:absolute; top:-9999px; left:0; width:1400px; background:#fff;";
+    div.innerHTML=getScheduleHtmlForPrint(); 
+    document.body.appendChild(div);
+
+    if(typeof html2canvas==='undefined') {
+        showToast("Ladda om sidan först!", "error");
+        btn.innerText = txt;
+        return;
+    }
+
+    html2canvas(div,{scale:2}).then(c=>{
+        const a=document.createElement('a'); 
+        a.download=`Schema-${days[currentAdminDayIndex]}.jpg`; 
+        a.href=c.toDataURL('image/jpeg',0.9); 
+        a.click();
+        document.body.removeChild(div); 
+        btn.innerText=txt;
+    }).catch(e => {
+        console.error(e);
+        showToast("Fel vid bildgenerering", "error");
+        btn.innerText=txt;
+        document.body.removeChild(div);
+    });
+}
+
 function getISOWeek(d) { const date=new Date(d.getTime()); date.setHours(0,0,0,0); date.setDate(date.getDate()+3-(date.getDay()+6)%7); const w1=new Date(date.getFullYear(),0,4); return {week:1+Math.round(((date.getTime()-w1.getTime())/86400000-3+(w1.getDay()+6)%7)/7), year:date.getFullYear()}; }
-function setupSidebarAddUser() { /* Klippt */ const btn=document.getElementById('sidebarAddBtn'); /*...kod...*/ }
-async function removeUser(u) { if(confirm('Ta bort '+u+'?')){ globalUserList=globalUserList.filter(user=>user!==u); await saveData('users',globalUserList); renderRoster(); } }
+
+function setupSidebarAddUser() {
+    const btn=document.getElementById('sidebarAddBtn'), inp=document.getElementById('sidebarNewName');
+    if(btn&&inp) { 
+        btn.onclick=async()=>{
+            if(inp.value){
+                globalUserList.push(inp.value);
+                globalUserList.sort();
+                await saveData('users',globalUserList);
+                showToast("Personal tillagd", "success");
+                inp.value='';
+                renderRoster();
+            }
+        }; 
+        inp.onkeydown=e=>{if(e.key==='Enter')btn.click();} 
+    }
+}
+
+async function removeUser(u) { 
+    if(confirm('Ta bort '+u+'?')){
+        globalUserList=globalUserList.filter(user=>user!==u);
+        await saveData('users',globalUserList);
+        showToast("Personal borttagen", "info");
+        renderRoster();
+    } 
+}
 
 /* =========================================
    VÄDER-WIDGET (BODEN)
    ========================================= */
 async function initWeatherBoden() {
-    // 1. Skapa väder-rutan om den inte finns
     let wDiv = document.getElementById('weatherWidget');
     if (!wDiv) {
         wDiv = document.createElement('div');
         wDiv.id = 'weatherWidget';
-        
-        // Lägg den bredvid klockan i top-bar
         const clock = document.getElementById('clock');
-        if (clock && clock.parentNode) {
-            clock.parentNode.insertBefore(wDiv, clock); // Lägg in FÖRE klockan
-        }
+        if (clock && clock.parentNode) clock.parentNode.insertBefore(wDiv, clock);
     }
-
-    // 2. Funktion för att hämta data
     const fetchWeather = async () => {
         try {
-            // Koordinater för Boden: Lat 65.82, Long 21.69
             const url = 'https://api.open-meteo.com/v1/forecast?latitude=65.82&longitude=21.69&current_weather=true';
             const res = await fetch(url);
             const data = await res.json();
-            
             const temp = Math.round(data.current_weather.temperature);
-            const wind = data.current_weather.windspeed;
-            
-            // Visa texten (T.ex. "BODEN: -12°C")
             wDiv.innerHTML = `BODEN: ${temp}°C`; 
-            
-        } catch (e) {
-            console.error("Kunde inte hämta väder", e);
-        }
+        } catch (e) { console.error("Ingen väderdata", e); }
     };
-
-    // 3. Kör direkt och sedan var 15:e minut
     fetchWeather();
     setInterval(fetchWeather, 900000); 
 }
-
-// 4. Starta vädret automatiskt om vi är på display-sidan
-if (document.body.id === 'page-display') {
-    // Vänta lite så elementen hinner laddas
-    setTimeout(initWeatherBoden, 1000);
-}
+if (document.body.id === 'page-display') setTimeout(initWeatherBoden, 1000);
