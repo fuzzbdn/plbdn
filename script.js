@@ -1,6 +1,6 @@
 /* =========================================
    1. KONFIGURATION & GLOBALA VARIABLER
-   ======================================== */
+   ========================================= */
 const DEFAULT_STATIONS = [
     { name: "Björkliden", color: "#ffb74d" },
     { name: "Kiruna",     color: "#fff176" },
@@ -631,4 +631,5 @@ async function removeUser(u) {
         renderRoster();
     } 
 }
+
 
