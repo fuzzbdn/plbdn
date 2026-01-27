@@ -1,5 +1,5 @@
 /* =========================================
-   DISPLAY.CSS - KOMPLETT MED ALLA TEMAN
+   DISPLAY.CSS - STANDARD (LJUST)
    ========================================= */
 
 /* -----------------------------------------
@@ -24,140 +24,7 @@
 }
 
 /* -----------------------------------------
-   2. TEMA-DEFINITIONER
------------------------------------------ */
-
-/* --- Mörkt tema (Dark Mode) --- */
-body.theme-dark {
-    --bg-color: #121212;
-    --text-color: #e0e0e0;
-    --header-bg: #1e1e1e;
-    --header-text: #ffffff;
-    --card-bg: #2d2d2d;
-    --card-text: #ffffff;
-    --sub-text: #aaaaaa;
-    --shadow: 0 4px 20px rgba(0,0,0,0.5);
-    --clock-bg: #333333;
-    --empty-border: #444444;
-    --empty-bg: rgba(255,255,255,0.05);
-}
-
-/* --- NORRSKEN TEMA (Ersätter Jultema) --- */
-body.theme-jul {
-    /* En mörk gradient som påminner om natthimlen i norr */
-    background: linear-gradient(135deg, #0b1026 0%, #1b2744 60%, #00332a 100%);
-    color: #e0f7fa; /* Isig ljusblå textfärg */
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-}
-
-/* Rubriker får en lysande norrskens-effekt */
-body.theme-jul h1 {
-    color: #50fa7b !important; /* Neon-aurora-grön */
-    text-shadow: 0 0 15px #50fa7b, 0 0 30px #008cff; /* Glöd i grönt och blått */
-    letter-spacing: 1px;
-}
-
-/* Klocka och veckonavigering */
-body.theme-jul .week-controls,
-body.theme-jul .clock-container,
-body.theme-jul #currentDate {
-     color: #8be9fd !important; /* Ljus cyan/isblå */
-     text-shadow: 0 0 5px rgba(139, 233, 253, 0.5);
-}
-
-/* Själva schematabellen - gör den halvgenomskinlig */
-body.theme-jul .schedule-grid {
-    background: rgba(13, 17, 34, 0.85) !important; /* Mörk, transparent bakgrund */
-    border: 1px solid #50fa7b; /* Tunn grön ram */
-    box-shadow: 0 0 25px rgba(80, 250, 123, 0.2); /* Subtil grön omgivande glöd */
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-/* Rubrikerna i tabellen (Tid, Förmiddag etc.) */
-body.theme-jul .grid-header-cell {
-    background-color: rgba(80, 250, 123, 0.15) !important;
-    color: #50fa7b;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-bottom: 2px solid rgba(80, 250, 123, 0.3);
-}
-
-/* Stationskolumnen längst till vänster */
-body.theme-jul .grid-station-cell {
-    background-color: rgba(0, 0, 0, 0.4) !important;
-    border-right: 2px solid rgba(189, 147, 249, 0.5) !important; /* En gnutta lila */
-    color: #fff;
-}
-
-/* Rutorna där namnen står */
-body.theme-jul .schedule-slot {
-    border: 1px solid rgba(139, 233, 253, 0.2); /* Mycket diskreta kanter */
-    background: rgba(139, 233, 253, 0.05); /* Knappt synlig fyllning */
-    transition: all 0.3s ease;
-}
-
-/* När man hovrar över en ruta */
-body.theme-jul .schedule-slot:hover {
-     background: rgba(80, 250, 123, 0.1); /* Lyser upp lite grönt */
-     border-color: #50fa7b;
-}
-
-/* Namnen på personerna */
-body.theme-jul .schedule-entry {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff !important;
-    box-shadow: inset 0 0 10px rgba(80, 250, 123, 0.1);
-}
-
-/* Gör att de små färgade strecken för varje station lyser i mörkret */
-body.theme-jul .station-label {
-    box-shadow: 0 0 8px currentColor;
-    font-weight: 600;
-}
-
-/* --- Påsktema (Ljusa pastellfärger) --- */
-body.theme-pask {
-    --bg-color: #fffbea;           /* Ljus pastellgul bakgrund */
-    --text-color: #5a4a42;         /* Mjuk brun text */
-    --header-bg: #e3f2fd;          /* Ljus pastellblå header */
-    --header-text: #1565c0;        /* Mörkare blå rubrik */
-    --card-bg: #ffffff;            /* Vita kort */
-    --card-text: #333333;
-    --sub-text: #8d6e63;           /* Ljusbrun underrubrik */
-    --shadow: 0 4px 15px rgba(100, 181, 246, 0.2); /* Mjuk blå skugga */
-    --clock-bg: #f3e5f5;           /* Ljus pastellrosa klocka */
-    --empty-border: #ffe0b2;       /* Ljus orange kant */
-    --empty-bg: rgba(255, 255, 255, 0.6);
-}
-/* Notera: Påsktemat behåller originalfärgerna på stationerna då de redan är "påsiga" */
-
-
-/* --- Matrix-tema (Cyberpunk neon) --- */
-body.theme-matrix {
-    --bg-color: #000000;           /* Helt svart bakgrund */
-    --text-color: #00ff41;         /* Klassisk Matrix-grön text */
-    --header-bg: #0d0d0d;          /* Nästan svart header */
-    --header-text: #00ff41;
-    --card-bg: #0a0a0a;            /* Mycket mörka kort */
-    --card-text: #00ff41;
-    --sub-text: #008f11;           /* Mörkare grön för underrubriker */
-    --shadow: 0 0 15px rgba(0, 255, 65, 0.3); /* Grön "glöd" istället för skugga */
-    --clock-bg: #001a05;
-    --empty-border: #003300;
-    --empty-bg: rgba(0, 50, 0, 0.2);
-    --font-stack: 'JetBrains Mono', monospace; /* Byt till hacker-typsnitt! */
-}
-/* VIKTIGT FÖR MATRIX: Skriv över alla stationsfärger till neon-grön */
-body.theme-matrix .station-label,
-body.theme-matrix .shift-card {
-    border-color: #00ff41 !important; /* Tvinga matris-grön överallt */
-}
-
-
-/* -----------------------------------------
-   3. GRUNDLAYOUT
+   2. GRUNDLAYOUT
 ----------------------------------------- */
 body.display-view {
     background-color: var(--bg-color);
@@ -166,10 +33,9 @@ body.display-view {
     padding: 2vh 3vw;
     height: 100vh;
     overflow: hidden;
-    font-family: var(--font-stack); /* Använder nu variabel för font */
+    font-family: var(--font-stack);
     display: flex;
     flex-direction: column;
-    /* Mjuk övergång för ALLA egenskaper som ändras vid temabyte */
     transition: all 0.5s ease; 
 }
 
@@ -181,7 +47,7 @@ body.display-view {
 }
 
 /* -----------------------------------------
-   4. HEADER (TOP BAR)
+   3. HEADER (TOP BAR)
 ----------------------------------------- */
 .top-bar {
     background: var(--header-bg);
@@ -216,7 +82,7 @@ body.display-view {
 }
 
 /* -----------------------------------------
-   5. GRID-CONTAINER
+   4. GRID-CONTAINER
 ----------------------------------------- */
 #mainContainer {
     flex-grow: 1;
@@ -255,7 +121,7 @@ body.display-view {
 }
 
 /* -----------------------------------------
-   6. KORT OCH ETIKETTER
+   5. KORT OCH ETIKETTER
 ----------------------------------------- */
 .station-label {
     background-color: var(--header-bg);
@@ -286,7 +152,7 @@ body.display-view {
     text-align: center;
     height: 100%;
     transition: all 0.5s ease;
-    border-bottom: 4px solid; /* Förbereder för färg */
+    border-bottom: 4px solid; 
 }
 
 /* Tomma rutor */
@@ -298,9 +164,7 @@ body.display-view {
 }
 
 /* -----------------------------------------
-   7. FÄRG-ACCENTER (STANDARD)
-   Dessa används för Ljust, Mörkt och Påsktema.
-   Jul och Matrix skriver över dessa högre upp i filen.
+   6. FÄRG-ACCENTER (STATIONER)
 ----------------------------------------- */
 
 /* Björkliden - Orange/Guld */
@@ -335,4 +199,3 @@ body.display-view {
 /* PL - Mörkblå */
 .color-pl .station-label { border-left-color: #0d47a1; }
 .color-pl .shift-card { border-bottom-color: #0d47a1; }
-
