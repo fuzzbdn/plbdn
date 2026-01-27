@@ -456,11 +456,11 @@ async function initAdmin() {
 }
 
 // -------------------------------------------------------------
-// NY: renderAdminGrid med plus-knapp och manualAdd
+// NY: renderAdminGrid med korrekt event-hantering
 // -------------------------------------------------------------
 function renderAdminGrid() {
     const cont = document.getElementById('scheduleContainer');
-    renderRoster(); // Uppdatera listan samtidigt så statusarna stämmer
+    renderRoster(); // Uppdatera sidofältet också
     if(!cont) return;
 
     const dayName = days[currentAdminDayIndex];
@@ -483,13 +483,13 @@ function renderAdminGrid() {
             const key = `${prefix}${st.name}-${sh.time}`;
             const val = globalScheduleData[key] || "";
             
-            // Vi har lagt till .shift-controls som innehåller både + och x
+            // OBS: Här skickar vi med 'event' till manualAdd för att kunna positionera menyn
             html += `
             <div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event,'${key}')">
                 <span class="shift-text" contenteditable="true" onblur="saveShift('${key}', this.innerText)">${val}</span>
                 
                 <div class="shift-controls">
-                    <button class="add-user-btn" onclick="manualAdd('${key}')" title="Lägg till person">+</button>
+                    <button class="add-user-btn" onclick="manualAdd(event, '${key}')" title="Lägg till person">+</button>
                     ${val ? `<button class="clear-btn" onclick="saveShift('${key}', '')" title="Rensa">&times;</button>`:''}
                 </div>
             </div>`;
@@ -499,10 +499,18 @@ function renderAdminGrid() {
     cont.innerHTML = html;
 }
 
-// Ersätt din gamla window.manualAdd med denna:
+// -------------------------------------------------------------
+// NY FUNKTIONALITET: Flytande Context Menu (Ingen popup-ruta)
+// -------------------------------------------------------------
+window.manualAdd = (e, key) => {
+    // Stoppa eventet så det inte bubblar upp och stänger menyn direkt
+    e.stopPropagation();
 
-window.manualAdd = (key) => {
-    // 1. Ta reda på vilka som är upptagna den aktuella dagen
+    // 1. Ta bort eventuella gamla menyer
+    const existing = document.getElementById('quick-dropdown');
+    if (existing) existing.remove();
+
+    // 2. Hitta ledig personal
     const day = days[currentAdminDayIndex];
     const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
     const busyUsers = new Set();
@@ -513,87 +521,70 @@ window.manualAdd = (key) => {
         }
     });
 
-    // 2. Filtrera fram ledig personal
     const availableUsers = globalUserList.filter(u => !busyUsers.has(u));
-    
-    // Sortera listan i bokstavsordning
     availableUsers.sort();
 
-    // 3. Skapa HTML för Modal (Popup)
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
+    // 3. Skapa HTML för menyn
+    const menu = document.createElement('div');
+    menu.id = 'quick-dropdown';
+    menu.className = 'dropdown-menu';
     
-    // Bygg alternativen till dropdown-menyn
-    let optionsHtml = '<option value="">-- Välj personal --</option>';
-    
+    // Positionera menyn vid muspekaren
+    menu.style.left = `${e.pageX}px`;
+    menu.style.top = `${e.pageY + 10}px`; 
+
+    let html = '';
+
     if (availableUsers.length > 0) {
-        optionsHtml += availableUsers.map(u => `<option value="${u}">${u}</option>`).join('');
+        html += availableUsers.map(u => 
+            `<div class="dropdown-item" onclick="selectUser('${key}', '${u}')">${u}</div>`
+        ).join('');
     } else {
-        optionsHtml += `<option disabled>Alla är upptagna!</option>`;
+        html += `<div class="dropdown-item disabled">Ingen ledig</div>`;
     }
 
-    // Lägg till alternativet att skriva in manuellt om namnet saknas i listan
-    optionsHtml += `<option disabled>──────────</option>`;
-    optionsHtml += `<option value="MANUAL_INPUT">+ Skriv in eget namn...</option>`;
+    // Lägg till manuellt val
+    html += `<div class="dropdown-item manual" onclick="selectUserManual('${key}')">+ Skriv in eget namn...</div>`;
+    
+    menu.innerHTML = html;
+    document.body.appendChild(menu);
 
-    modal.innerHTML = `
-        <div class="modal-box">
-            <h3>Lägg till på pass</h3>
-            <p style="font-size:0.9rem; opacity:0.8; margin-bottom:5px;">Välj tillgänglig personal:</p>
-            <select id="modalUserSelect" class="modal-select">
-                ${optionsHtml}
-            </select>
-            <div class="modal-buttons">
-                <button class="modal-btn cancel" id="modalCancelBtn">Avbryt</button>
-                <button class="modal-btn confirm" id="modalConfirmBtn">Lägg till</button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    const select = document.getElementById('modalUserSelect');
-    const btnConfirm = document.getElementById('modalConfirmBtn');
-    const btnCancel = document.getElementById('modalCancelBtn');
-
-    // Funktion för att stänga modalen
-    const closeModal = () => document.body.removeChild(modal);
-
-    // Fokusera på listan direkt
-    select.focus();
-
-    // Hantera "Avbryt"
-    btnCancel.onclick = closeModal;
-
-    // Hantera "Lägg till"
-    btnConfirm.onclick = async () => {
-        let selectedName = select.value;
-
-        if (!selectedName) {
-            showToast("Välj ett namn i listan", "info");
-            return;
+    // 4. Klick utanför stänger menyn
+    document.addEventListener('click', function closeMenu(evt) {
+        if (!menu.contains(evt.target)) {
+            menu.remove();
         }
-
-        // Specialfall: Om man väljer "Skriv in eget namn..."
-        if (selectedName === 'MANUAL_INPUT') {
-            const manualName = prompt("Ange namn manuellt:");
-            if (!manualName) return; // Ångrade sig
-            selectedName = manualName.trim();
-        }
-
-        // Spara till schemat
-        const currentVal = globalScheduleData[key] || "";
-        const newVal = currentVal ? currentVal + " / " + selectedName : selectedName;
-        
-        await saveShift(key, newVal);
-        closeModal();
-    };
-
-    // Stäng om man klickar utanför boxen
-    modal.onclick = (e) => {
-        if (e.target === modal) closeModal();
-    };
+    }, { once: true });
 };
+
+// När man väljer en person från listan
+window.selectUser = async (key, name) => {
+    const currentVal = globalScheduleData[key] || "";
+    const newVal = currentVal ? currentVal + " / " + name : name;
+    
+    // Ta bort menyn direkt
+    const menu = document.getElementById('quick-dropdown');
+    if(menu) menu.remove();
+
+    await saveShift(key, newVal);
+};
+
+// Manuell inmatning (fallback)
+window.selectUserManual = async (key) => {
+    const menu = document.getElementById('quick-dropdown');
+    if(menu) menu.remove();
+
+    // Vi använder en kort timeout så menyn hinner försvinna visuellt först
+    setTimeout(async () => {
+        const name = prompt("Ange namn:");
+        if (name) {
+            const currentVal = globalScheduleData[key] || "";
+            const newVal = currentVal ? currentVal + " / " + name : name;
+            await saveShift(key, newVal);
+        }
+    }, 50);
+};
+
 function isLight(color) {
     if(!color) return true;
     const h = color.replace('#','');
@@ -602,7 +593,7 @@ function isLight(color) {
 }
 
 // -------------------------------------------------------------
-// NY: renderRoster med sortering istället för filtrering
+// NY: renderRoster (Sorterar "assigned" längst ner istället för att dölja)
 // -------------------------------------------------------------
 function renderRoster() {
     const list = document.getElementById('draggableUserList');
@@ -619,7 +610,7 @@ function renderRoster() {
         }
     });
 
-    // Sortera: Lediga först, upptagna sist. 
+    // Sortera: Lediga först, upptagna sist
     const sortedUsers = [...globalUserList].sort((a, b) => {
         const aBusy = work.has(a);
         const bBusy = work.has(b);
@@ -766,4 +757,3 @@ async function removeUser(u) {
         renderRoster();
     } 
 }
-
