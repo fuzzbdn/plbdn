@@ -482,3 +482,50 @@ function generateImage() { /* Klippt */ const btn=document.getElementById('expor
 function getISOWeek(d) { const date=new Date(d.getTime()); date.setHours(0,0,0,0); date.setDate(date.getDate()+3-(date.getDay()+6)%7); const w1=new Date(date.getFullYear(),0,4); return {week:1+Math.round(((date.getTime()-w1.getTime())/86400000-3+(w1.getDay()+6)%7)/7), year:date.getFullYear()}; }
 function setupSidebarAddUser() { /* Klippt */ const btn=document.getElementById('sidebarAddBtn'); /*...kod...*/ }
 async function removeUser(u) { if(confirm('Ta bort '+u+'?')){ globalUserList=globalUserList.filter(user=>user!==u); await saveData('users',globalUserList); renderRoster(); } }
+
+/* =========================================
+   VÄDER-WIDGET (BODEN)
+   ========================================= */
+async function initWeatherBoden() {
+    // 1. Skapa väder-rutan om den inte finns
+    let wDiv = document.getElementById('weatherWidget');
+    if (!wDiv) {
+        wDiv = document.createElement('div');
+        wDiv.id = 'weatherWidget';
+        
+        // Lägg den bredvid klockan i top-bar
+        const clock = document.getElementById('clock');
+        if (clock && clock.parentNode) {
+            clock.parentNode.insertBefore(wDiv, clock); // Lägg in FÖRE klockan
+        }
+    }
+
+    // 2. Funktion för att hämta data
+    const fetchWeather = async () => {
+        try {
+            // Koordinater för Boden: Lat 65.82, Long 21.69
+            const url = 'https://api.open-meteo.com/v1/forecast?latitude=65.82&longitude=21.69&current_weather=true';
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            const temp = Math.round(data.current_weather.temperature);
+            const wind = data.current_weather.windspeed;
+            
+            // Visa texten (T.ex. "BODEN: -12°C")
+            wDiv.innerHTML = `BODEN: ${temp}°C`; 
+            
+        } catch (e) {
+            console.error("Kunde inte hämta väder", e);
+        }
+    };
+
+    // 3. Kör direkt och sedan var 15:e minut
+    fetchWeather();
+    setInterval(fetchWeather, 900000); 
+}
+
+// 4. Starta vädret automatiskt om vi är på display-sidan
+if (document.body.id === 'page-display') {
+    // Vänta lite så elementen hinner laddas
+    setTimeout(initWeatherBoden, 1000);
+}
