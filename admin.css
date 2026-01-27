@@ -418,3 +418,45 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     
     .clear-btn { display: none !important; }
 }
+/* --- Fix för roster (gråmarkerad personal) --- */
+.draggable-item.assigned {
+    background-color: #f5f5f5;
+    color: #aaa;
+    border-color: #eee;
+    order: 1; /* Flyttar dem visuellt nedåt om vi använder flex-column */
+}
+.draggable-item.assigned:hover {
+    transform: none;
+    box-shadow: none;
+    cursor: default;
+}
+
+/* --- Fix för knappar i schemat (+ och x) --- */
+.shift-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px; /* Lite mellanrum mellan + och x */
+}
+
+.add-user-btn {
+    background: none;
+    border: none;
+    color: #4CAF50; /* Grön färg för plusset */
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+}
+
+.add-user-btn:hover {
+    background-color: rgba(76, 175, 80, 0.1);
+    border-radius: 4px;
+}
+
+/* Justera clear-btn så den passar bredvid */
+.clear-btn {
+    font-size: 1.2rem; /* Samma storlek som plusset */
+    padding: 0 4px;
+    line-height: 1;
+}
