@@ -173,6 +173,20 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
+
+/* --- NY STIL: Gråmarkerad personal (Assigned) --- */
+.draggable-item.assigned {
+    background-color: #f5f5f5; /* Grå bakgrund */
+    color: #aaa;              /* Ljusgrå text */
+    border-color: #eee;
+    font-style: italic;
+}
+.draggable-item.assigned:hover {
+    transform: none;
+    box-shadow: none;
+    background-color: #f0f0f0;
+}
+
 .remove-user-btn {
     background: none;
     border: none;
@@ -244,6 +258,7 @@ body {
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     transition: background 0.2s;
     color: var(--text-color);
+    position: relative; /* För att hantera absolut positionering vid behov */
 }
 .shift-block.drag-over {
     background-color: #e3f2fd !important;
@@ -261,17 +276,42 @@ body {
     word-break: break-word;
 }
 
+/* --- NY STIL: Kontroller i rutan (+ och x) --- */
+.shift-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.add-user-btn {
+    background: none;
+    border: none;
+    color: #4CAF50; /* Grön färg */
+    font-size: 1.4rem;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 5px;
+    border-radius: 4px;
+}
+.add-user-btn:hover { background-color: rgba(76, 175, 80, 0.1); }
+
 .clear-btn {
     background: none;
     border: none;
     color: #e53935;
-    font-size: 20px;
+    font-size: 1.4rem;
     font-weight: bold;
     cursor: pointer;
+    line-height: 1;
+    padding: 0 5px;
+    border-radius: 4px;
 }
+.clear-btn:hover { background-color: rgba(229, 57, 53, 0.1); }
+
 
 /* =========================================
-   4. SETTINGS & LIST DRAG-DROP (NY KOD HÄR)
+   4. SETTINGS & LIST DRAG-DROP
    ========================================= */
 .settings-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
 .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
@@ -315,7 +355,6 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     background: var(--input-bg); 
 }
 
-/* STIL FÖR DRAG OCH SLÄPP I LISTAN */
 .draggable-station {
     display: flex; 
     justify-content: space-between; 
@@ -348,7 +387,7 @@ select, input[type="text"], input[type="password"], input[type="email"] {
 .export-button:hover { background: #555; }
 
 /* =========================================
-   5. TOAST NOTIFICATIONS (FIXAD CONTAINER)
+   5. TOAST NOTIFICATIONS
    ========================================= */
 #toast-container {
     position: fixed;
@@ -358,7 +397,7 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    pointer-events: none; /* Låter dig klicka "genom" tom yta */
+    pointer-events: none;
 }
 
 .toast {
@@ -377,20 +416,67 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     gap: 10px;
     font-family: 'Inter', sans-serif;
     font-size: 0.95rem;
-    pointer-events: auto; /* Gör själva toasten synlig/klickbar */
+    pointer-events: auto;
 }
 
-.toast.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
+.toast.show { opacity: 1; transform: translateY(0); }
 .toast.success { background-color: #4CAF50; border-left: 5px solid #2E7D32; }
 .toast.error   { background-color: #f44336; border-left: 5px solid #c62828; }
 .toast.info    { background-color: #2196F3; border-left: 5px solid #1565C0; }
 
 /* =========================================
-   6. PRINT
+   6. FLYTANDE DROPDOWN (NYTT FÖR CONTEXT MENU)
+   ========================================= */
+.dropdown-menu {
+    position: absolute;
+    background-color: #fff;
+    min-width: 200px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    z-index: 10000;
+    overflow: hidden;
+    animation: fadeIn 0.1s ease-out;
+}
+
+.dropdown-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #333;
+    border-bottom: 1px solid #f5f5f5;
+    background: #fff;
+}
+
+.dropdown-item:last-child { border-bottom: none; }
+
+.dropdown-item:hover {
+    background-color: #e3f2fd; /* Ljusblå hover */
+    color: #000;
+}
+
+.dropdown-item.manual {
+    font-style: italic;
+    color: #0277bd;
+    font-weight: 600;
+    border-top: 2px solid #eee;
+    background: #fdfdfd;
+}
+
+.dropdown-item.disabled {
+    color: #999;
+    cursor: default;
+    background: #f9f9f9;
+}
+.dropdown-item.disabled:hover { background: #f9f9f9; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================
+   7. PRINT
    ========================================= */
 @media print {
     @page { size: A4 landscape; margin: 10mm; }

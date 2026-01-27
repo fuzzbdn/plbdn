@@ -27,7 +27,7 @@ let globalScheduleData = {}, globalUserList = [];
 let editingStationIndex = null;
 let editingShiftIndex = null;
 let editingAdminId = null;
-let dragSrcStationEl = null; // Variabel för att hålla reda på vad som dras
+let dragSrcStationEl = null;
 
 /* =========================================
    2. TOAST NOTIFICATIONS (POPUP)
@@ -131,7 +131,7 @@ function checkAuth() {
 }
 
 /* =========================================
-   5. LOGIN
+   5. LOGIN & AUTH
    ========================================= */
 function initLogin() {
     const loginBtn = document.getElementById('loginBtn');
@@ -167,6 +167,7 @@ function initLogin() {
         setTimeout(() => window.location.reload(), 2000);
     };
 }
+
 function initReset() {
     const t = new URLSearchParams(window.location.search).get('token');
     if(!t) return;
@@ -181,7 +182,7 @@ function initReset() {
 }
 
 /* =========================================
-   6. INSTÄLLNINGAR - MED DRAG N DROP
+   6. INSTÄLLNINGAR
    ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
@@ -204,13 +205,12 @@ async function initSettings(currentSettings) {
         showToast("Meddelande uppdaterat!", "success");
     };
 
-    // --- STATIONER (HÄR ÄR ÄNDRINGEN FÖR DRAG N DROP) ---
+    // --- STATIONER ---
     const stName = document.getElementById('newStationName');
     const stColor = document.getElementById('newStationColor');
     const stBtn = document.getElementById('addStationBtn');
     const stCancel = document.getElementById('cancelStationEditBtn');
 
-    // Drag-handlers
     window.handleStationDragStart = (e) => {
         dragSrcStationEl = e.target.closest('.draggable-station');
         e.dataTransfer.effectAllowed = 'move';
@@ -232,7 +232,6 @@ async function initSettings(currentSettings) {
             const oldIndex = parseInt(dragSrcStationEl.dataset.index);
             const newIndex = parseInt(targetEl.dataset.index);
             
-            // Flytta i arrayen
             const movedItem = globalStations.splice(oldIndex, 1)[0];
             globalStations.splice(newIndex, 0, movedItem);
             
@@ -246,7 +245,6 @@ async function initSettings(currentSettings) {
         const cont = document.getElementById('stationListContainer');
         if(!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
         
-        // Ritar ut draggable-divar istället för knappar
         cont.innerHTML = globalStations.map((st, i) => {
             const dragAttr = `draggable="true" ondragstart="handleStationDragStart(event)" ondragover="handleStationDragOver(event)" ondrop="handleStationDrop(event)" data-index="${i}"`;
             
@@ -309,7 +307,7 @@ async function initSettings(currentSettings) {
     };
     renderStations();
 
-    // PASS
+    // --- PASS ---
     const shLabel = document.getElementById('newShiftLabel');
     const shTime = document.getElementById('newShiftTime');
     const shBtn = document.getElementById('addShiftBtn');
@@ -352,7 +350,7 @@ async function initSettings(currentSettings) {
     };
     renderShifts();
 
-    // ADMINS
+    // --- ADMINS ---
     const admBtn = document.getElementById('addAdminBtn');
     const admCancel = document.getElementById('cancelAdminEditBtn');
     const admUser = document.getElementById('newAdminUser');
@@ -457,9 +455,12 @@ async function initAdmin() {
     setupSidebarAddUser();
 }
 
+// -------------------------------------------------------------
+// NY: renderAdminGrid med korrekt event-hantering
+// -------------------------------------------------------------
 function renderAdminGrid() {
     const cont = document.getElementById('scheduleContainer');
-    renderRoster();
+    renderRoster(); // Uppdatera sidofältet också
     if(!cont) return;
 
     const dayName = days[currentAdminDayIndex];
@@ -471,20 +472,118 @@ function renderAdminGrid() {
     let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${s.time}</div>`).join('')}</div>`;
 
     globalStations.forEach(st => {
-        if(st.isSpacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#f5f5f5;"></div>`; return; }
+        if(st.isSpacer) { 
+            html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#f5f5f5;"></div>`; 
+            return; 
+        }
         
         html += `<div class="station-row"><div class="station-label" style="background-color:${st.color}; color:${isLight(st.color)?'#000':'#fff'}">${st.name}</div>`;
+        
         globalShifts.forEach(sh => {
             const key = `${prefix}${st.name}-${sh.time}`;
             const val = globalScheduleData[key] || "";
-            html += `<div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event,'${key}')">
+            
+            // OBS: Här skickar vi med 'event' till manualAdd för att kunna positionera menyn
+            html += `
+            <div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event,'${key}')">
                 <span class="shift-text" contenteditable="true" onblur="saveShift('${key}', this.innerText)">${val}</span>
-                ${val ? `<button class="clear-btn" onclick="saveShift('${key}', '')">&times;</button>`:''}</div>`;
+                
+                <div class="shift-controls">
+                    <button class="add-user-btn" onclick="manualAdd(event, '${key}')" title="Lägg till person">+</button>
+                    ${val ? `<button class="clear-btn" onclick="saveShift('${key}', '')" title="Rensa">&times;</button>`:''}
+                </div>
+            </div>`;
         });
         html += `</div>`;
     });
     cont.innerHTML = html;
 }
+
+// -------------------------------------------------------------
+// NY FUNKTIONALITET: Flytande Context Menu (Ingen popup-ruta)
+// -------------------------------------------------------------
+window.manualAdd = (e, key) => {
+    // Stoppa eventet så det inte bubblar upp och stänger menyn direkt
+    e.stopPropagation();
+
+    // 1. Ta bort eventuella gamla menyer
+    const existing = document.getElementById('quick-dropdown');
+    if (existing) existing.remove();
+
+    // 2. Hitta ledig personal
+    const day = days[currentAdminDayIndex];
+    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+    const busyUsers = new Set();
+    
+    Object.keys(globalScheduleData).forEach(k => { 
+        if(k.startsWith(prefix) && globalScheduleData[k]) {
+            globalScheduleData[k].split('/').forEach(n => busyUsers.add(n.trim()));
+        }
+    });
+
+    const availableUsers = globalUserList.filter(u => !busyUsers.has(u));
+    availableUsers.sort();
+
+    // 3. Skapa HTML för menyn
+    const menu = document.createElement('div');
+    menu.id = 'quick-dropdown';
+    menu.className = 'dropdown-menu';
+    
+    // Positionera menyn vid muspekaren
+    menu.style.left = `${e.pageX}px`;
+    menu.style.top = `${e.pageY + 10}px`; 
+
+    let html = '';
+
+    if (availableUsers.length > 0) {
+        html += availableUsers.map(u => 
+            `<div class="dropdown-item" onclick="selectUser('${key}', '${u}')">${u}</div>`
+        ).join('');
+    } else {
+        html += `<div class="dropdown-item disabled">Ingen ledig</div>`;
+    }
+
+    // Lägg till manuellt val
+    html += `<div class="dropdown-item manual" onclick="selectUserManual('${key}')">+ Skriv in eget namn...</div>`;
+    
+    menu.innerHTML = html;
+    document.body.appendChild(menu);
+
+    // 4. Klick utanför stänger menyn
+    document.addEventListener('click', function closeMenu(evt) {
+        if (!menu.contains(evt.target)) {
+            menu.remove();
+        }
+    }, { once: true });
+};
+
+// När man väljer en person från listan
+window.selectUser = async (key, name) => {
+    const currentVal = globalScheduleData[key] || "";
+    const newVal = currentVal ? currentVal + " / " + name : name;
+    
+    // Ta bort menyn direkt
+    const menu = document.getElementById('quick-dropdown');
+    if(menu) menu.remove();
+
+    await saveShift(key, newVal);
+};
+
+// Manuell inmatning (fallback)
+window.selectUserManual = async (key) => {
+    const menu = document.getElementById('quick-dropdown');
+    if(menu) menu.remove();
+
+    // Vi använder en kort timeout så menyn hinner försvinna visuellt först
+    setTimeout(async () => {
+        const name = prompt("Ange namn:");
+        if (name) {
+            const currentVal = globalScheduleData[key] || "";
+            const newVal = currentVal ? currentVal + " / " + name : name;
+            await saveShift(key, newVal);
+        }
+    }, 50);
+};
 
 function isLight(color) {
     if(!color) return true;
@@ -493,15 +592,42 @@ function isLight(color) {
     return ((r*299 + g*587 + b*114)/1000) >= 128;
 }
 
+// -------------------------------------------------------------
+// NY: renderRoster (Sorterar "assigned" längst ner istället för att dölja)
+// -------------------------------------------------------------
 function renderRoster() {
     const list = document.getElementById('draggableUserList');
     if(!list) return;
+
     const day = days[currentAdminDayIndex];
     const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+    
+    // Hitta vilka som jobbar
     const work = new Set();
-    Object.keys(globalScheduleData).forEach(k => { if(k.startsWith(prefix) && globalScheduleData[k]) globalScheduleData[k].split('/').forEach(n=>work.add(n.trim())); });
-    list.innerHTML = globalUserList.filter(u=>!work.has(u)).map(u => 
-        `<div class="draggable-item" draggable="true" ondragstart="event.dataTransfer.setData('text','${u}')">${u} <button class="remove-user-btn" onclick="removeUser('${u}')">&times;</button></div>`).join('');
+    Object.keys(globalScheduleData).forEach(k => { 
+        if(k.startsWith(prefix) && globalScheduleData[k]) {
+            globalScheduleData[k].split('/').forEach(n => work.add(n.trim()));
+        }
+    });
+
+    // Sortera: Lediga först, upptagna sist
+    const sortedUsers = [...globalUserList].sort((a, b) => {
+        const aBusy = work.has(a);
+        const bBusy = work.has(b);
+        if (aBusy === bBusy) return a.localeCompare(b); // Alfabetisk om status lika
+        return aBusy ? 1 : -1; // Busy hamnar sist
+    });
+
+    list.innerHTML = sortedUsers.map(u => {
+        const isAssigned = work.has(u);
+        const assignedClass = isAssigned ? 'assigned' : '';
+        
+        return `
+        <div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('text','${u}')">
+            ${u} 
+            <button class="remove-user-btn" onclick="removeUser('${u}')">&times;</button>
+        </div>`;
+    }).join('');
 }
 
 async function saveShift(k, v) { globalScheduleData[k] = v.trim(); await saveData('schedule_draft', globalScheduleData); renderAdminGrid(); }
@@ -631,7 +757,3 @@ async function removeUser(u) {
         renderRoster();
     } 
 }
-
-
-
-
