@@ -1,31 +1,23 @@
 /* =========================================
-   DISPLAY.CSS - KORRIGERAD FÖR ALLA TEMAN
+   DISPLAY.CSS - KORRIGERAD
    ========================================= */
-
-/* -----------------------------------------
-   1. GRUNDINSTÄLLNINGAR & FONT
------------------------------------------ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
 
-/* Standard CSS-variabler (Ljust tema) */
 :root {
-    --bg-color: #f0f2f5;           /* Ljusgrå bakgrund */
-    --text-color: #1a1a1a;         /* Mörkgrå text */
-    --header-bg: #ffffff;          /* Vit header/label */
-    --header-text: #2c3e50;        /* Mörkblå/grå rubrik */
-    --card-bg: #ffffff;            /* Vita kort */
-    --card-text: #2c3e50;          /* Text på korten */
-    --sub-text: #6c757d;           /* Grå text för kolumnrubriker */
-    --shadow: 0 4px 20px rgba(0,0,0,0.05); /* Mjuk skugga */
-    --clock-bg: #f8f9fa;           /* Bakgrund för klockan */
-    --empty-border: #e0e0e0;       /* Ram runt tomma rutor */
-    --empty-bg: rgba(255,255,255,0.4); /* Genomskinlighet tomma rutor */
-    --font-stack: 'Inter', sans-serif; /* Standard typsnitt */
+    --bg-color: #f0f2f5;
+    --text-color: #1a1a1a;
+    --header-bg: #ffffff;
+    --header-text: #2c3e50;
+    --card-bg: #ffffff;
+    --card-text: #2c3e50;
+    --sub-text: #6c757d;
+    --shadow: 0 4px 20px rgba(0,0,0,0.05);
+    --clock-bg: #f8f9fa;
+    --empty-border: #e0e0e0;
+    --empty-bg: rgba(255,255,255,0.4);
+    --font-stack: 'Inter', sans-serif;
 }
 
-/* -----------------------------------------
-   2. GRUNDLAYOUT
------------------------------------------ */
 body.display-view {
     background-color: var(--bg-color);
     color: var(--text-color);
@@ -36,112 +28,55 @@ body.display-view {
     font-family: var(--font-stack);
     display: flex;
     flex-direction: column;
-    transition: all 0.5s ease; 
 }
 
-.display-wrapper {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
+.display-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; }
 
-/* -----------------------------------------
-   3. HEADER (TOP BAR)
------------------------------------------ */
+/* HEADER */
 .top-bar {
     background: var(--header-bg);
     padding: 1.5vh 2vw;
     border-radius: 16px;
     box-shadow: var(--shadow);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    margin-bottom: 2vh;
-    transition: all 0.5s ease;
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%; margin-bottom: 2vh;
+    box-sizing: border-box;
 }
 
-#mainTitle {
-    font-size: 3.5vh;
-    font-weight: 800;
-    color: var(--header-text);
-    margin: 0;
-    letter-spacing: -0.5px;
-}
+#mainTitle { font-size: 3.5vh; font-weight: 800; color: var(--header-text); margin: 0; }
+#clock { font-size: 4.5vh; font-weight: 900; color: var(--header-text); background: var(--clock-bg); padding: 0.2vh 1.5vw; border-radius: 8px; }
 
-#clock {
-    font-size: 4.5vh;
-    font-weight: 900;
-    color: var(--header-text);
-    background: var(--clock-bg);
-    padding: 0.2vh 1.5vw;
-    border-radius: 8px;
-    white-space: nowrap;
-    transition: all 0.5s ease;
-}
+/* GRID */
+#mainContainer { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
 
-/* -----------------------------------------
-   4. GRID-CONTAINER
------------------------------------------ */
-#mainContainer {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-evenly;
-    padding: 0;
-}
-
-/* Rubrikraden (Tiderna) */
-.time-header-row {
+/* Rader (Layout sätts nu dynamiskt via JS) */
+.time-header-row, .display-row {
     display: grid;
-    grid-template-columns: 220px 1fr 1fr 1fr;
     gap: 1.5vw;
-    margin-bottom: 1vh;
     padding: 0 10px;
+    align-items: stretch;
 }
+
+.display-row { margin-bottom: 1.2vh; min-height: 8vh; }
+.time-header-row { margin-bottom: 1vh; }
 
 .time-header {
-    font-size: 2.2vh;
-    font-weight: 700;
-    color: var(--sub-text);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-align: center;
+    font-size: 2.2vh; font-weight: 700; color: var(--sub-text);
+    text-transform: uppercase; letter-spacing: 1px; text-align: center;
 }
 
-/* Rader (Stationerna) */
-.display-row {
-    display: grid;
-    grid-template-columns: 220px 1fr 1fr 1fr;
-    gap: 1.5vw;
-    align-items: stretch;
-    margin-bottom: 1.2vh;
-    min-height: 8vh;
-}
-
-/* -----------------------------------------
-   5. KORT OCH ETIKETTER
------------------------------------------ */
+/* KORT */
 .station-label {
-    /* HÄR ÄR FIXEN: Använd stationens färg som bakgrund som standard */
-    background-color: var(--station-color, var(--header-bg));
-    color: var(--contrast-color, var(--card-text));
+    /* Här hämtas färgen från JS */
+    background-color: var(--station-color, #fff); 
+    color: var(--contrast-color, #000);
     
-    font-size: 2.8vh;
-    font-weight: bold;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    padding-left: 1.5vw;
-    box-shadow: var(--shadow);
+    font-size: 2.8vh; font-weight: bold; border-radius: 12px;
+    display: flex; align-items: center; justify-content: flex-start;
+    padding-left: 1.5vw; box-shadow: var(--shadow); height: 100%;
     
-    /* Behåll denna för teman som vill använda border-left (om några gamla finns kvar) */
-    border-left: 10px solid var(--station-color); 
-    
-    height: 100%;
-    transition: all 0.5s ease;
+    /* Liten färgad kant för extra tydlighet */
+    border-left: 8px solid rgba(0,0,0,0.1); 
 }
 
 .shift-card {
@@ -151,21 +86,15 @@ body.display-view {
     font-size: 3vh;
     font-weight: 700;
     box-shadow: var(--shadow);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    height: 100%;
-    transition: all 0.5s ease;
-    
-    /* Låt teman styra border-bottom om de vill */
-    border-bottom: 4px solid transparent; 
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; height: 100%;
+    border-bottom: 4px solid var(--station-color, transparent); /* Matchar stationens färg */
 }
 
-/* Tomma rutor */
 .shift-card.empty {
     background-color: var(--empty-bg) !important;
     border: 2px dashed var(--empty-border) !important;
     box-shadow: none !important;
     color: transparent;
+    border-bottom: none;
 }
