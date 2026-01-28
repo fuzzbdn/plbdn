@@ -740,23 +740,18 @@ async function initWeatherBoden() {
 if (document.body.id === 'page-display') setTimeout(initWeatherBoden, 1000);
 
 
-// ===========================================
-// GLOBAL FUNKTION FÖR FLIKAR (SETTINGS)
-// ===========================================
+/* --- FLIK-HANTERARE FÖR SETTINGS --- */
 window.openTab = function(tabId) {
     // 1. Dölj alla flikar
     const allPanes = document.querySelectorAll('.tab-pane');
     allPanes.forEach(pane => {
         pane.classList.remove('active');
-        // Lägg till display:none inline för säkerhets skull om CSS fallerar
-        pane.style.display = 'none';
+        pane.style.display = 'none'; // Tvinga dölj med inline-style om CSS strular
     });
 
     // 2. Avmarkera alla knappar
     const allBtns = document.querySelectorAll('.tab-btn');
-    allBtns.forEach(btn => {
-        btn.classList.remove('active');
-    });
+    allBtns.forEach(btn => btn.classList.remove('active'));
 
     // 3. Visa vald flik
     const targetPane = document.getElementById(tabId);
@@ -764,11 +759,10 @@ window.openTab = function(tabId) {
         targetPane.classList.add('active');
         targetPane.style.display = 'block';
     } else {
-        console.error("Hittade inte fliken med ID:", tabId);
+        console.error("Fliken hittades inte:", tabId);
     }
 
-    // 4. Markera knappen som aktiv
-    // Vi kollar vilken knapp som triggade eventet
+    // 4. Markera knappen
     if (event && event.currentTarget) {
         event.currentTarget.classList.add('active');
     }
