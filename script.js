@@ -384,7 +384,7 @@ function initAdminSettings() {
         admLast.value = ""; 
         admEmail.value = ""; 
         admPass.placeholder = "Lösenord"; 
-        admBtn.innerText = "+"; 
+        admBtn.innerText = "Spara / Skapa konto"; 
         admBtn.style.background = ""; 
         admCancel.style.display = "none"; 
     };
@@ -467,7 +467,7 @@ async function initAdmin() {
 }
 
 // ------------------------------------------------------------------
-// RENDER ADMIN GRID (Här tog vi bort grå bakgrund på spacer)
+// RENDER ADMIN GRID
 // ------------------------------------------------------------------
 function renderAdminGrid() {
     const cont = document.getElementById('scheduleContainer');
@@ -484,7 +484,6 @@ function renderAdminGrid() {
 
     globalStations.forEach(st => {
         if(st.isSpacer) { 
-            // HÄR ÄR ÄNDRINGEN: Tog bort 'background:#f5f5f5'
             html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; 
             return; 
         }
@@ -740,26 +739,28 @@ async function initWeatherBoden() {
 if (document.body.id === 'page-display') setTimeout(initWeatherBoden, 1000);
 
 
-/* --- FLIK-HANTERARE FÖR SETTINGS --- */
+/* =========================================
+   NY FUNKTION: HANTERA TABBAR
+   ========================================= */
 window.openTab = function(tabId) {
     // 1. Dölj alla flikar
     const allPanes = document.querySelectorAll('.tab-pane');
     allPanes.forEach(pane => {
         pane.classList.remove('active');
-        pane.style.display = 'none'; // Tvinga dölj med inline-style om CSS strular
+        pane.style.display = 'none';
     });
 
     // 2. Avmarkera alla knappar
     const allBtns = document.querySelectorAll('.tab-btn');
-    allBtns.forEach(btn => btn.classList.remove('active'));
+    allBtns.forEach(btn => {
+        btn.classList.remove('active');
+    });
 
     // 3. Visa vald flik
     const targetPane = document.getElementById(tabId);
     if (targetPane) {
         targetPane.classList.add('active');
         targetPane.style.display = 'block';
-    } else {
-        console.error("Fliken hittades inte:", tabId);
     }
 
     // 4. Markera knappen
@@ -767,4 +768,3 @@ window.openTab = function(tabId) {
         event.currentTarget.classList.add('active');
     }
 };
-
