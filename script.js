@@ -201,6 +201,20 @@ function initReset() {
    ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
+    
+    // --- HÄMTA SCHEMA FÖR EXPORT ---
+    const [draft, published, old] = await Promise.all([
+        fetchData('schedule_draft'),
+        fetchData('schedule_published'),
+        fetchData('schedule')
+    ]);
+    let dataToUse = draft;
+    if (!dataToUse || Object.keys(dataToUse).length === 0) {
+        dataToUse = published && Object.keys(published).length > 0 ? published : old;
+    }
+    globalScheduleData = dataToUse || {};
+    // --------------------------------
+
     const themeSelect = document.getElementById('themeSelect');
     const themeNameIn = document.getElementById('customThemeName');
     const themeCssIn = document.getElementById('customThemeCSS');
@@ -252,7 +266,11 @@ async function initSettings(currentSettings) {
         };
     }
     
-    initStationsSettings(); initShiftsSettings(); initAdminSettings();
+    initStationsSettings(); 
+    initShiftsSettings(); 
+    initAdminSettings();
+    initExportTab(); // Initiera export/utskrift
+
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
     const msgIn = document.getElementById('displayMessageInput');
@@ -295,16 +313,41 @@ function initStationsSettings() {
     const renderStations = () => {
         const cont = document.getElementById('stationListContainer');
         if(!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
+        
         cont.innerHTML = globalStations.map((st, i) => {
             const dragAttr = `draggable="true" ondragstart="handleStationDragStart(event)" ondragover="handleStationDragOver(event)" ondrop="handleStationDrop(event)" data-index="${i}"`;
-            if(st.isSpacer) return `<div class="draggable-station" ${dragAttr} style="background:#f9f9f9; color:#888;"><div style="display:flex; align-items:center;"><span class="drag-handle">☰</span><i>--- Mellanrum ---</i></div><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div>`;
-            return `<div class="draggable-station" ${dragAttr}><div style="display:flex; align-items:center; gap:10px;"><span class="drag-handle">☰</span><div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc;"></div><strong>${st.name}</strong></div><div><button class="list-btn" onclick="startEditStation(${i})">✏️</button><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div></div>`;
+            
+            if(st.isSpacer) {
+                return `
+                <div class="draggable-station" ${dragAttr} style="background:#f9f9f9; color:#888;">
+                    <div class="list-info-left">
+                        <span class="drag-handle">☰</span>
+                        <i>--- Mellanrum ---</i>
+                    </div>
+                    <div class="list-actions-right">
+                        <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
+                    </div>
+                </div>`;
+            }
+
+            return `
+            <div class="draggable-station" ${dragAttr}>
+                <div class="list-info-left">
+                    <span class="drag-handle">☰</span>
+                    <div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc; flex-shrink:0;"></div>
+                    <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${st.name}</strong>
+                </div>
+                <div class="list-actions-right">
+                    <button class="list-btn" onclick="startEditStation(${i})">✏️</button>
+                    <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
+                </div>
+            </div>`;
         }).join('');
     };
 
     window.startEditStation = (i) => {
         editingStationIndex = i; stName.value = globalStations[i].name; stColor.value = globalStations[i].color;
-        stBtn.innerText = "💾"; stBtn.style.background = "#2196F3"; stCancel.style.display = "block";
+        stBtn.innerText = "💾"; stBtn.style.background = "#2196F3"; stCancel.style.display = "inline-flex";
     };
     const resetSt = () => { editingStationIndex = null; stName.value = ""; stBtn.innerText = "+"; stBtn.style.background = ""; stCancel.style.display = "none"; };
     stCancel.onclick = resetSt;
@@ -328,19 +371,59 @@ function initShiftsSettings() {
     const renderShifts = () => {
         const cont = document.getElementById('shiftListContainer');
         if(!Array.isArray(globalShifts)) globalShifts = DEFAULT_SHIFTS;
-        cont.innerHTML = globalShifts.map((sh, i) => `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee;"><div><strong>${sh.label}</strong> <span style="color:#666;">(${sh.time})</span></div><div><button class="list-btn" onclick="startEditShift(${i})">✏️</button><button class="list-btn" onclick="deleteShift(${i})">🗑️</button></div></div>`).join('');
+        cont.innerHTML = globalShifts.map((sh, i) => `
+        <div class="shift-list-item">
+            <div class="list-info-left">
+                <strong>${sh.label}</strong> 
+                <span style="color:#666; margin-left:5px;">(${sh.time})</span>
+            </div>
+            <div class="list-actions-right">
+                <button class="list-btn" onclick="startEditShift(${i})">✏️</button>
+                <button class="list-btn" onclick="deleteShift(${i})">🗑️</button>
+            </div>
+        </div>`).join('');
     };
-    window.startEditShift = (i) => { editingShiftIndex = i; shLabel.value = globalShifts[i].label; shTime.value = globalShifts[i].time; shBtn.innerText = "Spara"; shBtn.style.background = "#2196F3"; shCancel.style.display = "block"; };
-    const resetSh = () => { editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = ""; shCancel.style.display = "none"; };
+    
+    window.startEditShift = (i) => { 
+        editingShiftIndex = i; 
+        shLabel.value = globalShifts[i].label; 
+        shTime.value = globalShifts[i].time; 
+        shBtn.innerText = "Spara"; 
+        shBtn.style.background = "#2196F3"; 
+        shCancel.style.display = "inline-flex"; 
+    };
+    
+    const resetSh = () => { 
+        editingShiftIndex = null; 
+        shLabel.value = ""; 
+        shTime.value = ""; 
+        shBtn.innerText = "Lägg till Pass"; 
+        shBtn.style.background = ""; 
+        shCancel.style.display = "none"; 
+    };
+    
     shCancel.onclick = resetSh;
-    shBtn.onclick = async () => { if(!shLabel.value) return; const item = { label: shLabel.value, time: shTime.value }; if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item; else globalShifts.push(item); await saveData('config_shifts', globalShifts); showToast("Sparat", "success"); resetSh(); renderShifts(); };
-    window.deleteShift = async (i) => { if(confirm("Ta bort?")) { globalShifts.splice(i, 1); await saveData('config_shifts', globalShifts); renderShifts(); }};
+    shBtn.onclick = async () => { 
+        if(!shLabel.value) return; 
+        const item = { label: shLabel.value, time: shTime.value }; 
+        if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item; 
+        else globalShifts.push(item); 
+        await saveData('config_shifts', globalShifts); 
+        showToast("Sparat", "success"); 
+        resetSh(); 
+        renderShifts(); 
+    };
+    
+    window.deleteShift = async (i) => { 
+        if(confirm("Ta bort?")) { 
+            globalShifts.splice(i, 1); 
+            await saveData('config_shifts', globalShifts); 
+            renderShifts(); 
+        }
+    };
     renderShifts();
 }
 
-// ----------------------------------------------------------------------------------
-// ADMIN-HANTERING
-// ----------------------------------------------------------------------------------
 function initAdminSettings() {
     const admBtn = document.getElementById('addAdminBtn');
     const admCancel = document.getElementById('cancelAdminEditBtn');
@@ -353,10 +436,16 @@ function initAdminSettings() {
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
         if(!Array.isArray(admins)) admins = [];
+        
         document.getElementById('adminListContainer').innerHTML = admins.map(a => `
-            <div style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                <span>${a.first_name||''} ${a.last_name||''} (${a.username})</span>
-                <div>
+            <div class="admin-list-item">
+                <div class="list-info-left">
+                    <strong>${a.username}</strong>
+                    <span style="color:#666; margin-left:5px; font-size:0.9em;">
+                        (${a.first_name||''} ${a.last_name||''})
+                    </span>
+                </div>
+                <div class="list-actions-right">
                     <button class="list-btn" onclick='startEditAdmin(${JSON.stringify(a).replace(/'/g,"&#39;")})'>✏️</button>
                     <button class="list-btn" onclick="deleteAdmin('${a.username}')">🗑️</button>
                 </div>
@@ -371,9 +460,9 @@ function initAdminSettings() {
         admEmail.value = u.email||"";
         admPass.placeholder = "Nytt lösen (valfritt)"; 
         admPass.value = "";
-        admBtn.innerText = "💾"; 
+        admBtn.innerText = "Spara"; 
         admBtn.style.background = "#2196F3"; 
-        admCancel.style.display = "block";
+        admCancel.style.display = "inline-flex";
     };
 
     const resetAdm = () => { 
@@ -384,7 +473,7 @@ function initAdminSettings() {
         admLast.value = ""; 
         admEmail.value = ""; 
         admPass.placeholder = "Lösenord"; 
-        admBtn.innerText = "+"; 
+        admBtn.innerText = "Spara / Skapa konto"; 
         admBtn.style.background = ""; 
         admCancel.style.display = "none"; 
     };
@@ -423,6 +512,151 @@ function initAdminSettings() {
 }
 
 /* =========================================
+   UTSKRIFTS & EXPORT-FUNKTIONER (SETTINGS)
+   ========================================= */
+function initExportTab() {
+    const startIn = document.getElementById('printStartDate');
+    const endIn = document.getElementById('printEndDate');
+    const today = new Date().toISOString().split('T')[0];
+    if(startIn) startIn.value = today;
+    if(endIn) endIn.value = today;
+
+    const btnToday = document.getElementById('btnSetToday');
+    if(btnToday) btnToday.onclick = () => { startIn.value = today; endIn.value = today; };
+
+    const btnWeek = document.getElementById('btnSetWeek');
+    if(btnWeek) btnWeek.onclick = () => {
+        const d = new Date();
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+        d.setDate(diff); 
+        startIn.value = d.toISOString().split('T')[0];
+        d.setDate(d.getDate() + 6); 
+        endIn.value = d.toISOString().split('T')[0];
+    };
+
+    const btnNextWeek = document.getElementById('btnSetNextWeek');
+    if(btnNextWeek) btnNextWeek.onclick = () => {
+        const d = new Date();
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        d.setDate(diff + 7);
+        startIn.value = d.toISOString().split('T')[0];
+        d.setDate(d.getDate() + 6);
+        endIn.value = d.toISOString().split('T')[0];
+    };
+
+    // --- SKRIV UT ---
+    const doPrint = document.getElementById('doPrintBtn');
+    if(doPrint) doPrint.onclick = () => {
+        const sDate = new Date(startIn.value);
+        const eDate = new Date(endIn.value);
+        if (sDate > eDate) return showToast("Startdatum måste vara före slutdatum", "error");
+
+        const printContainer = document.getElementById('print-container') || document.createElement('div');
+        printContainer.id = 'print-container';
+        if(!document.body.contains(printContainer)) document.body.appendChild(printContainer);
+        
+        let htmlContent = "";
+        let loopDate = new Date(sDate);
+
+        while (loopDate <= eDate) {
+            htmlContent += generateSingleDayPrintHtml(new Date(loopDate));
+            loopDate.setDate(loopDate.getDate() + 1);
+        }
+
+        printContainer.innerHTML = htmlContent;
+        window.print();
+        setTimeout(() => printContainer.innerHTML = '', 1000);
+    };
+
+    // --- SPARA SOM BILDER ---
+    const doImage = document.getElementById('doImageBtn');
+    if(doImage) doImage.onclick = async () => {
+        const sDate = new Date(startIn.value);
+        const eDate = new Date(endIn.value);
+        if (sDate > eDate) return showToast("Startdatum måste vara före slutdatum", "error");
+
+        if(typeof html2canvas === 'undefined') {
+            return showToast("html2canvas saknas. Ladda om sidan.", "error");
+        }
+
+        const originalBtnText = doImage.innerText;
+        doImage.innerText = "Genererar...";
+        
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.top = '-9999px';
+        tempContainer.style.left = '0';
+        tempContainer.style.width = '1200px'; 
+        tempContainer.style.backgroundColor = '#ffffff';
+        document.body.appendChild(tempContainer);
+
+        let loopDate = new Date(sDate);
+        let count = 0;
+
+        while (loopDate <= eDate) {
+            tempContainer.innerHTML = generateSingleDayPrintHtml(new Date(loopDate), true);
+            
+            await new Promise(r => setTimeout(r, 100));
+
+            try {
+                const canvas = await html2canvas(tempContainer, { scale: 2 });
+                const link = document.createElement('a');
+                const dateStr = loopDate.toLocaleDateString('sv-SE');
+                link.download = `Schema-${dateStr}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.9);
+                link.click();
+                count++;
+                await new Promise(r => setTimeout(r, 500));
+            } catch (err) {
+                console.error(err);
+                showToast("Fel vid bildgenerering: " + err, "error");
+            }
+            loopDate.setDate(loopDate.getDate() + 1);
+        }
+
+        document.body.removeChild(tempContainer);
+        doImage.innerText = originalBtnText;
+        showToast(`Klar! ${count} bild(er) nedladdade.`, "success");
+    };
+}
+
+function generateSingleDayPrintHtml(dateObj, forImage = false) {
+    const iso = getISOWeek(dateObj);
+    const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1; 
+    const dayName = days[dayIndex];
+    const dateStr = dateObj.toLocaleDateString('sv-SE');
+    const prefix = `y${iso.year}w${iso.week}-${dayName}-`;
+
+    const shifts = (Array.isArray(globalShifts) && globalShifts.length) ? globalShifts : DEFAULT_SHIFTS;
+    const stations = (Array.isArray(globalStations) && globalStations.length) ? globalStations : DEFAULT_STATIONS;
+
+    const style = forImage ? 'padding:20px; font-family:sans-serif; background:#fff;' : 'page-break-after: always; padding: 20px; font-family: sans-serif;';
+    
+    let html = `<div class="print-page" style="${style}">`;
+    html += `<div style="text-align:center; margin-bottom:20px;"><h2 style="margin:0;">${dayName} ${dateStr}</h2><span style="font-size:0.9em; color:#666;">Vecka ${iso.week}, ${iso.year}</span></div>`;
+    html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length}, 1fr); gap:0; border:1px solid #000; border-bottom:none;"><div style="background:#ddd; border-right:1px solid #000; padding:5px;"></div>${shifts.map(s => `<div style="background:#ddd; border-right:1px solid #000; padding:5px; text-align:center; font-weight:bold;">${s.time}<br><span style="font-size:0.8em; font-weight:normal;">${s.label}</span></div>`).join('')}</div>`;
+    html += `<div style="border:1px solid #000; border-top:none;">`;
+    
+    stations.forEach(st => {
+        if (st.isSpacer) { html += `<div style="height:15px; background:#f0f0f0; border-top:1px solid #000;"></div>`; return; }
+        const bg = st.color;
+        const fg = isLight(bg) ? '#000' : '#fff';
+        html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length}, 1fr); border-top:1px solid #000;"><div style="background:${bg}; color:${fg}; padding:10px; font-weight:bold; border-right:1px solid #000; display:flex; align-items:center;">${st.name}</div>`;
+        shifts.forEach((sh, index) => {
+            const key = `${prefix}${st.name}-${sh.time}`;
+            const val = globalScheduleData[key] || "";
+            const borderRight = index === shifts.length - 1 ? '' : 'border-right:1px solid #000;';
+            html += `<div style="padding:5px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:bold; font-size:0.9rem; ${borderRight}">${val}</div>`;
+        });
+        html += `</div>`;
+    });
+    html += `</div></div>`;
+    return html;
+}
+
+/* =========================================
    5. ADMIN PLANERING
    ========================================= */
 async function initAdmin() {
@@ -451,24 +685,9 @@ async function initAdmin() {
     updateGrid(picker.value);
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
-    // EXPORTKNAPPAR
-    document.getElementById('exportBtn').onclick = generateImage;
-    document.getElementById('printBtn').onclick = () => {
-        const pc = document.getElementById('print-container') || document.createElement('div');
-        pc.id = 'print-container';
-        if(!document.body.contains(pc)) document.body.appendChild(pc);
-        
-        pc.innerHTML = getScheduleHtmlForPrint();
-        window.print();
-        setTimeout(() => pc.innerHTML='', 1000);
-    };
-    
     setupSidebarAddUser();
 }
 
-// ------------------------------------------------------------------
-// RENDER ADMIN GRID (Här tog vi bort grå bakgrund på spacer)
-// ------------------------------------------------------------------
 function renderAdminGrid() {
     const cont = document.getElementById('scheduleContainer');
     renderRoster();
@@ -484,7 +703,6 @@ function renderAdminGrid() {
 
     globalStations.forEach(st => {
         if(st.isSpacer) { 
-            // HÄR ÄR ÄNDRINGEN: Tog bort 'background:#f5f5f5'
             html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; 
             return; 
         }
@@ -584,108 +802,6 @@ function renderRoster() {
 async function saveShift(k, v) { globalScheduleData[k] = v.trim(); await saveData('schedule_draft', globalScheduleData); renderAdminGrid(); }
 async function handleDrop(e, k) { e.preventDefault(); const n = e.dataTransfer.getData("text"); let c = globalScheduleData[k]||""; if(!c.includes(n)) await saveShift(k, c?c+" / "+n:n); }
 
-/* =========================================
-   6. DISPLAY
-   ========================================= */
-let lastSnap="";
-function initDisplay() {
-    setInterval(()=>document.getElementById('clock').innerText=new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}),1000);
-    const refresh = async () => {
-        let pub = await fetchData('schedule_published');
-        if(!pub || !Object.keys(pub).length) pub = await fetchData('schedule');
-        const [sets, msg, themes] = await Promise.all([fetchData('settings'), fetchData('message'), fetchData('custom_themes')]);
-        
-        globalCustomThemes = themes || [];
-        const snap = JSON.stringify({s:pub, t:sets?.theme, m:msg});
-        if(snap === lastSnap) return; lastSnap=snap;
-        globalScheduleData = pub || {};
-
-        if(sets?.theme) applyTheme(sets.theme);
-        const mq = document.getElementById('marqueeContainer');
-        if(mq) { mq.style.display=(msg?.show&&msg?.text)?'block':'none'; if(msg?.text) document.getElementById('marqueeText').innerText=msg.text; }
-
-        const now = new Date(), iso = getISOWeek(now), today = days[now.getDay()===0?6:now.getDay()-1];
-        document.getElementById('mainTitle').innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
-        
-        const cont = document.getElementById('mainContainer');
-        if(!Array.isArray(globalShifts) || !globalShifts.length) globalShifts = DEFAULT_SHIFTS;
-        if(!Array.isArray(globalStations) || !globalStations.length) globalStations = DEFAULT_STATIONS;
-
-        let html = `<div class="time-header-row"><div></div>${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}</div>`;
-        globalStations.forEach(st => {
-            if(st.isSpacer) { html += `<div class="display-row" style="grid-column:1/-1; height:4vh;"></div>`; return; }
-            const contrast = isLight(st.color) ? '#000' : '#fff';
-            const vars = `style="--station-color:${st.color}; --contrast-color:${contrast};"`;
-            html += `<div class="display-row"><div class="station-label" ${vars}>${st.name}</div>`;
-            globalShifts.forEach(sh => {
-                const key = `y${iso.year}w${iso.week}-${today}-${st.name}-${sh.time}`;
-                const val = globalScheduleData[key] || "";
-                html += `<div class="shift-card ${val?'':'empty'}">${val}</div>`;
-            });
-            html += `</div>`;
-        });
-        cont.innerHTML = html;
-    };
-    refresh(); setInterval(refresh, 15000);
-}
-
-/* =========================================
-   7. EXPORT & PRINT & ÖVRIGT
-   ========================================= */
-function getScheduleHtmlForPrint() {
-    const dateText = document.getElementById('currentDateDisplay').innerText;
-    const day = days[currentAdminDayIndex];
-    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
-    const shifts = (Array.isArray(globalShifts)&&globalShifts.length)?globalShifts:DEFAULT_SHIFTS;
-    const stations = (Array.isArray(globalStations)&&globalStations.length)?globalStations:DEFAULT_STATIONS;
-
-    let html = `<div style="font-family:sans-serif; padding:20px;"><div style="text-align:center; margin-bottom:20px;"><h1 style="font-size:24px; margin:0;">Bemanningsschema - ${dateText}</h1></div>
-    <div style="display:grid; grid-template-columns:150px repeat(${shifts.length},1fr); gap:10px; text-align:center; font-weight:bold; margin-bottom:10px;">
-    <div></div>${shifts.map(s=>`<div style="border:1px solid #000; padding:5px; background:#ddd;">${s.label}<br><span style="font-size:0.8em; font-weight:normal;">${s.time}</span></div>`).join('')}</div>`;
-
-    stations.forEach(st => {
-        if(st.isSpacer) { html += `<div style="grid-column:1/-1; height:30px;"></div>`; return; }
-        const bg = st.color, fg = isLight(bg)?'#000':'#fff';
-        html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length},1fr); gap:10px; margin-bottom:10px;">
-            <div style="background:${bg}; color:${fg}; font-weight:bold; padding:10px; display:flex; align-items:center; justify-content:center; border:1px solid #000;">${st.name}</div>`;
-        shifts.forEach(sh => {
-            const val = globalScheduleData[`${prefix}${st.name}-${sh.time}`] || "";
-            html += `<div style="display:flex; align-items:center; justify-content:center; text-align:center; min-height:50px; padding:5px; font-weight:bold; border:1px solid #000; background:#fff;">${val}</div>`;
-        });
-        html += `</div>`;
-    });
-    return html + `</div>`;
-}
-
-function generateImage() {
-    const btn=document.getElementById('exportBtn'), txt=btn.innerText; 
-    btn.innerText="Genererar...";
-    const div=document.createElement('div'); 
-    div.style.cssText="position:absolute; top:-9999px; left:0; width:1400px; background:#fff;";
-    div.innerHTML=getScheduleHtmlForPrint(); 
-    document.body.appendChild(div);
-
-    if(typeof html2canvas==='undefined') {
-        showToast("Ladda om sidan först!", "error");
-        btn.innerText = txt;
-        return;
-    }
-
-    html2canvas(div,{scale:2}).then(c=>{
-        const a=document.createElement('a'); 
-        a.download=`Schema-${days[currentAdminDayIndex]}.jpg`; 
-        a.href=c.toDataURL('image/jpeg',0.9); 
-        a.click();
-        document.body.removeChild(div); 
-        btn.innerText=txt;
-    }).catch(e => {
-        console.error(e);
-        showToast("Fel vid bildgenerering", "error");
-        btn.innerText=txt;
-        document.body.removeChild(div);
-    });
-}
-
 function getISOWeek(d) { const date=new Date(d.getTime()); date.setHours(0,0,0,0); date.setDate(date.getDate()+3-(date.getDay()+6)%7); const w1=new Date(date.getFullYear(),0,4); return {week:1+Math.round(((date.getTime()-w1.getTime())/86400000-3+(w1.getDay()+6)%7)/7), year:date.getFullYear()}; }
 
 function setupSidebarAddUser() {
@@ -738,3 +854,27 @@ async function initWeatherBoden() {
     setInterval(fetchWeather, 900000); 
 }
 if (document.body.id === 'page-display') setTimeout(initWeatherBoden, 1000);
+
+
+/* =========================================
+   FLIK-HANTERARE
+   ========================================= */
+window.openTab = function(tabId) {
+    const allPanes = document.querySelectorAll('.tab-pane');
+    allPanes.forEach(pane => {
+        pane.classList.remove('active');
+        pane.style.display = 'none';
+    });
+    const allBtns = document.querySelectorAll('.tab-btn');
+    allBtns.forEach(btn => {
+        btn.classList.remove('active');
+    });
+    const targetPane = document.getElementById(tabId);
+    if (targetPane) {
+        targetPane.classList.add('active');
+        targetPane.style.display = 'block';
+    }
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+};

@@ -10,7 +10,8 @@
     <link rel="stylesheet" href="base.css">
     <link rel="stylesheet" href="admin.css">
     
-<script src="script.js?v=2" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="script.js?v=7" defer></script>
 </head>
 <body id="page-settings">
 
@@ -28,125 +29,201 @@
     </header>
 
     <div class="settings-container">
-        <div class="settings-grid">
+        <div class="settings-layout">
             
-            <div class="setting-card">
-                <h3>🎨 Utseende & Tema</h3>
-                <div class="form-group">
-                    <label>Välj färgtema:</label>
-                    <select id="themeSelect">
-                        <option value="light">Ljus (Standard)</option>
-                        </select>
-                </div>
-                <button id="saveThemeBtn" class="save-btn">Spara Tema</button>
-            </div>
+            <aside class="settings-sidebar">
+                <button class="tab-btn active" onclick="openTab('tab-general')">📢 Allmänt & Meddelanden</button>
+                <button class="tab-btn" onclick="openTab('tab-export')">🖨️ Utskrift & Export</button>
+                <button class="tab-btn" onclick="openTab('tab-stations')">🚉 Platser / Stationer</button>
+                <button class="tab-btn" onclick="openTab('tab-shifts')">⏰ Arbetspass</button>
+                <button class="tab-btn" onclick="openTab('tab-theme')">🎨 Utseende & Tema</button>
+                <button class="tab-btn" onclick="openTab('tab-admins')">🔐 Administratörer</button>
+                <button class="tab-btn tab-btn-manual" onclick="openTab('tab-manual')">📖 Manual</button>
+            </aside>
 
-            
-
-            <div class="setting-card">
-                <h3>📢 Meddelande</h3>
-                <div class="form-group">
-                    <label>Rullande text:</label>
-                    <input type="text" id="displayMessageInput" placeholder="Text...">
-                </div>
-                <div class="form-group" style="flex-direction:row; align-items:center; gap:10px;">
-                    <input type="checkbox" id="showMessageCheckbox" style="width:auto; margin:0;">
-                    <label for="showMessageCheckbox" style="margin:0; cursor:pointer;">Visa meddelande</label>
-                </div>
-                <button id="saveMessageBtn" class="save-btn">Uppdatera</button>
-            </div>
-
-            <div class="setting-card">
-                <h3>📍 Hantera Platser</h3>
-                <div class="form-group">
-                    <div class="flex-row" style="display:flex; gap:8px;">
-                        <input type="text" id="newStationName" placeholder="Namn" class="flexible-input" style="flex:1; min-width:0;">
-                        <input type="color" id="newStationColor" value="#cccccc" style="width:40px; height:38px; padding:0; border:none; cursor:pointer; flex-shrink:0;">
-                        <button id="addStationBtn" class="save-btn" style="width:auto; padding:0 15px; flex-shrink:0;">+</button>
-                        <button id="cancelStationEditBtn" class="cancel-edit-btn" style="flex-shrink:0;">❌</button>
-                    </div>
-                    <button id="addSpacerBtn" class="save-btn" style="background-color: #7f8c8d; margin-top:5px;">➕ Lägg till Mellanrum</button>
-                </div>
+            <main class="settings-content">
                 
-                <div style="margin-top:10px;">
-                    <h4 style="font-size:0.9rem; margin-bottom:5px; opacity:0.7;">Ordning (Dra och släpp ☰):</h4>
-                    <div id="stationListContainer" class="list-container">Laddar...</div>
+                <div id="tab-general" class="tab-pane active">
+                    <div class="setting-card">
+                        <h3>📢 Meddelande (Display)</h3>
+                        <div class="form-group">
+                            <label>Rullande text:</label>
+                            <input type="text" id="displayMessageInput" placeholder="Text...">
+                        </div>
+                        <div class="form-group" style="flex-direction:row; align-items:center; gap:10px;">
+                            <input type="checkbox" id="showMessageCheckbox" style="width:auto; margin:0;">
+                            <label for="showMessageCheckbox" style="margin:0; cursor:pointer;">Visa meddelande på skärmen</label>
+                        </div>
+                        <button id="saveMessageBtn" class="save-btn">Uppdatera Meddelande</button>
+                    </div>
                 </div>
-            </div>
 
-            <div class="setting-card">
-                <h3>⏰ Hantera Pass</h3>
-                <div class="form-group">
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <input type="text" id="newShiftLabel" placeholder="Etikett (t.ex. Förmiddag)">
-                        <input type="text" id="newShiftTime" placeholder="Tid (t.ex. 06:30 - 14:00)">
-                        <div style="display:flex; gap:5px;">
-                            <button id="addShiftBtn" class="save-btn">Lägg till Pass</button>
-                            <button id="cancelShiftEditBtn" class="cancel-edit-btn">❌</button>
+                <div id="tab-export" class="tab-pane">
+                    <div class="setting-card">
+                        <h3>🖨️ Skriv ut eller Spara Bild</h3>
+                        
+                        <div class="form-group">
+                            <label>Välj intervall:</label>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                <div>
+                                    <span style="font-size:0.85em; color:#666;">Från datum:</span>
+                                    <input type="date" id="printStartDate">
+                                </div>
+                                <div>
+                                    <span style="font-size:0.85em; color:#666;">Till datum:</span>
+                                    <input type="date" id="printEndDate">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:10px; margin-bottom:20px;">
+                            <button id="btnSetToday" class="list-btn" style="border:1px solid #ccc; border-radius:4px; padding:0 15px; width:auto; font-size:0.9rem;">Idag</button>
+                            <button id="btnSetWeek" class="list-btn" style="border:1px solid #ccc; border-radius:4px; padding:0 15px; width:auto; font-size:0.9rem;">Hela denna vecka</button>
+                            <button id="btnSetNextWeek" class="list-btn" style="border:1px solid #ccc; border-radius:4px; padding:0 15px; width:auto; font-size:0.9rem;">Nästa vecka</button>
+                        </div>
+
+                        <div class="info-box" style="margin-bottom:20px;">
+                            <strong>Tips:</strong> 
+                            <ul>
+                                <li><strong>Skriv ut:</strong> Skapar en utskrift där varje dag får en egen sida.</li>
+                                <li><strong>Spara bild:</strong> Laddar ner en separat bildfil (.jpg) för varje vald dag.</li>
+                            </ul>
+                        </div>
+
+                        <div style="display:flex; gap:15px;">
+                            <button id="doPrintBtn" class="save-btn" style="background-color:#455a64; flex:1;">🖨️ Skriv ut</button>
+                            <button id="doImageBtn" class="save-btn" style="background-color:#0277bd; flex:1;">📷 Spara som bild(er)</button>
                         </div>
                     </div>
                 </div>
-                <div style="margin-top:10px;">
-                    <h4 style="font-size:0.9rem; margin-bottom:5px; opacity:0.7;">Nuvarande pass:</h4>
-                    <div id="shiftListContainer" class="list-container">Laddar...</div>
-                </div>
-            </div>
 
-            <div class="setting-card" style="grid-column: 1 / -1;">
-                <h3>👤 Hantera Administratörer</h3>
-                <div class="form-group" style="background:var(--bg-color); padding:15px; border-radius:6px; border:1px solid var(--border-color);">
-                    <label style="margin-bottom:10px; display:block;">Hantera admin:</label>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-                        <input type="text" id="newAdminFirstName" placeholder="Förnamn">
-                        <input type="text" id="newAdminLastName" placeholder="Efternamn">
-                    </div>
-                    <input type="email" id="newAdminEmail" placeholder="E-post" style="width:100%; margin-bottom:10px; box-sizing:border-box;">
-                    <div style="display:flex; gap:10px;">
-                        <input type="text" id="newAdminUser" placeholder="Användarnamn" style="flex:1;">
-                        <input type="text" id="newAdminPass" placeholder="Lösenord" style="flex:1;">
-                        <button id="addAdminBtn" class="save-btn" style="width:60px;">+</button>
-                        <button id="cancelAdminEditBtn" class="cancel-edit-btn" style="display:none;">❌</button>
-                    </div>
-                </div>
-                <div style="margin-top:20px;">
-                    <h4 style="margin:0 0 10px 0; font-size:0.9rem; opacity:0.7;">Befintliga administratörer:</h4>
-                    <div id="adminListContainer" class="list-container">Laddar...</div>
-                </div>
-            </div>
-<div class="setting-card" style="grid-column: 1 / -1;">
-                <h3>🎨 Tema-editor (CSS)</h3>
-                
-                <div class="form-group">
-                    <label>Redigera befintligt tema:</label>
-                    <div style="display:flex; gap:10px;">
-                        <select id="editThemeSelect" style="flex:1;">
-                            <option value="">-- Välj tema att redigera --</option>
-                        </select>
-                        <button id="deleteThemeBtn" class="save-btn" style="background:#e53935; width:auto;">Radera</button>
+                <div id="tab-stations" class="tab-pane">
+                    <div class="setting-card">
+                        <h3>📍 Hantera Platser</h3>
+                        <div class="form-group">
+                            <div class="flex-row" style="display:flex; gap:8px;">
+                                <input type="text" id="newStationName" placeholder="Namn på station..." style="flex:1;">
+                                <input type="color" id="newStationColor" value="#cccccc" style="width:50px; height:42px; padding:0; border:none; cursor:pointer;">
+                                <button id="addStationBtn" class="save-btn" style="width:auto; padding:0 20px;">Lägg till</button>
+                                <button id="cancelStationEditBtn" class="cancel-edit-btn" style="display:none;">Avbryt</button>
+                            </div>
+                            <button id="addSpacerBtn" class="save-btn" style="background-color: #7f8c8d; margin-top:10px;">➕ Lägg till "Mellanrum"</button>
+                        </div>
+                        <div style="margin-top:20px;">
+                            <h4 style="font-size:0.9rem; margin-bottom:10px; opacity:0.7;">Nuvarande ordning:</h4>
+                            <div id="stationListContainer" class="list-container">Laddar...</div>
+                        </div>
                     </div>
                 </div>
 
-                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
-
-                <div class="form-group">
-                    <label>Temanamn:</label>
-                    <input type="text" id="customThemeName" placeholder="T.ex. 'Tactical Ops'">
-                    <input type="hidden" id="customThemeId"> 
+                <div id="tab-shifts" class="tab-pane">
+                    <div class="setting-card">
+                        <h3>⏰ Hantera Arbetspass</h3>
+                        <div class="form-group">
+                            <div style="display:flex; flex-direction:column; gap:10px;">
+                                <input type="text" id="newShiftLabel" placeholder="Namn (t.ex. Förmiddag)">
+                                <input type="text" id="newShiftTime" placeholder="Tid (t.ex. 06:30 - 14:00)">
+                                <div style="display:flex; gap:10px;">
+                                    <button id="addShiftBtn" class="save-btn">Lägg till Pass</button>
+                                    <button id="cancelShiftEditBtn" class="cancel-edit-btn" style="display:none;">Avbryt</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top:20px;">
+                            <h4 style="font-size:0.9rem; margin-bottom:10px; opacity:0.7;">Aktiva pass:</h4>
+                            <div id="shiftListContainer" class="list-container">Laddar...</div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>CSS-kod:</label>
-                    <textarea id="customThemeCSS" rows="12" style="width:100%; padding:10px; background:#1e1e1e; color:#a9b7c6; font-family:'JetBrains Mono', monospace; border-radius:4px; border:1px solid #444; font-size:0.9rem;" placeholder="/* Skriv din CSS här */"></textarea>
-                    <p style="font-size:0.8rem; color:#666; margin-top:5px;">
-                        <strong>Tips:</strong> Använd selektorer som <code>body</code>, <code>.station-card</code>, <code>.shift-block</code> etc.
-                    </p>
+                <div id="tab-theme" class="tab-pane">
+                    <div class="setting-card">
+                        <h3>🎨 Välj Tema</h3>
+                        <div class="form-group">
+                            <label>Aktivt tema:</label>
+                            <select id="themeSelect">
+                                <option value="light">Ljus (Standard)</option>
+                            </select>
+                        </div>
+                        <button id="saveThemeBtn" class="save-btn">Aktivera Tema</button>
+                    </div>
+                    <div class="setting-card">
+                        <h3>🛠️ Skapa eget tema (CSS)</h3>
+                        <div class="form-group">
+                            <label>Redigera befintligt:</label>
+                            <div style="display:flex; gap:10px;">
+                                <select id="editThemeSelect" style="flex:1;">
+                                    <option value="">-- Välj tema --</option>
+                                </select>
+                                <button id="deleteThemeBtn" class="save-btn" style="background:#e53935; width:auto;">🗑️</button>
+                            </div>
+                        </div>
+                        <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+                        <div class="form-group">
+                            <input type="text" id="customThemeName" placeholder="Temanamn">
+                            <input type="hidden" id="customThemeId"> 
+                        </div>
+                        <div class="form-group">
+                            <textarea id="customThemeCSS" rows="10" style="width:100%; font-family:monospace; background:#222; color:#0f0; padding:10px;" placeholder="/* CSS kod här */"></textarea>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button id="saveCustomThemeBtn" class="save-btn">💾 Spara</button>
+                            <button id="clearThemeEditorBtn" class="save-btn" style="background:#999;">Rensa</button>
+                        </div>
+                    </div>
                 </div>
 
-                <div style="display:flex; gap:10px;">
-                    <button id="saveCustomThemeBtn" class="save-btn">💾 Spara Tema</button>
-                    <button id="clearThemeEditorBtn" class="save-btn" style="background:#7f8c8d;">Rensa / Nytt</button>
+                <div id="tab-admins" class="tab-pane">
+                    <div class="setting-card">
+                        <h3>👤 Administratörer</h3>
+                        <div class="form-group" style="background:var(--bg-color); padding:15px; border-radius:6px; border:1px solid var(--border-color);">
+                            <label style="margin-bottom:10px; display:block;">Hantera admin:</label>
+                            
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                                <input type="text" id="newAdminFirstName" placeholder="Förnamn">
+                                <input type="text" id="newAdminLastName" placeholder="Efternamn">
+                            </div>
+                            
+                            <input type="email" id="newAdminEmail" placeholder="E-post" style="width:100%; margin-bottom:10px;">
+                            
+                            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                                <input type="text" id="newAdminUser" placeholder="Användarnamn" style="flex:1;">
+                                <input type="password" id="newAdminPass" placeholder="Lösenord" style="flex:1;">
+                            </div>
+
+                            <div style="display:flex; gap:10px;">
+                                <button id="addAdminBtn" class="save-btn">Spara / Skapa konto</button>
+                                <button id="cancelAdminEditBtn" class="cancel-edit-btn" style="display:none;">Avbryt</button>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top:20px;">
+                            <h4 style="font-size:0.9rem; margin-bottom:10px; opacity:0.7;">Befintliga administratörer:</h4>
+                            <div id="adminListContainer" class="list-container">Laddar...</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+
+                <div id="tab-manual" class="tab-pane">
+                    <div class="setting-card manual-content">
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--btn-primary); padding-bottom:15px; margin-bottom:20px;">
+                            <h2 style="margin:0; color:var(--btn-primary);">Användarmanual STRUL</h2>
+                            <button onclick="window.print()" class="export-button">🖨️ Skriv ut</button>
+                        </div>
+
+                        <div id="intro">
+                            <h2>1. Introduktion</h2>
+                            <p>Välkommen till <strong>STRUL</strong>. Systemet ersätter manuella papperslistor.</p>
+                        </div>
+                        <div id="login"><h2>2. Inloggning</h2><p>Använd ditt konto för att logga in.</p></div>
+                        <div id="planning"><h2>3. Planering</h2><p>Dra och släpp namn för att bemanna.</p></div>
+                        <div id="display"><h2>4. Display</h2><p>Visas på väggen och uppdateras automatiskt.</p></div>
+                        <div id="settings"><h2>5. Inställningar</h2><p>Här kan du nu exportera schemat som PDF (Skriv ut) eller Bilder.</p></div>
+                        <div id="troubleshoot"><h2>6. Felsökning</h2><p>Kontakta admin vid problem.</p></div>
+                    </div>
+                </div>
+
+            </main>
         </div>
     </div>
 
@@ -154,4 +231,3 @@
 
 </body>
 </html>
-
