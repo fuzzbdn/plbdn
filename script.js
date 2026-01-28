@@ -338,18 +338,87 @@ function initShiftsSettings() {
     renderShifts();
 }
 
+// ----------------------------------------------------------------------------------
+// FIXAD ADMIN-HANTERING (Redigera + Fält)
+// ----------------------------------------------------------------------------------
 function initAdminSettings() {
+    const admBtn = document.getElementById('addAdminBtn');
+    const admCancel = document.getElementById('cancelAdminEditBtn');
+    const admUser = document.getElementById('newAdminUser');
+    const admPass = document.getElementById('newAdminPass');
+    const admFirst = document.getElementById('newAdminFirstName');
+    const admLast = document.getElementById('newAdminLastName');
+    const admEmail = document.getElementById('newAdminEmail');
+
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
-        document.getElementById('adminListContainer').innerHTML = (admins||[]).map(a => `<div style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;"><span>${a.username}</span><button class="list-btn" onclick="deleteAdmin('${a.username}')">🗑️</button></div>`).join('');
+        if(!Array.isArray(admins)) admins = [];
+        document.getElementById('adminListContainer').innerHTML = admins.map(a => `
+            <div style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <span>${a.first_name||''} ${a.last_name||''} (${a.username})</span>
+                <div>
+                    <button class="list-btn" onclick='startEditAdmin(${JSON.stringify(a).replace(/'/g,"&#39;")})'>✏️</button>
+                    <button class="list-btn" onclick="deleteAdmin('${a.username}')">🗑️</button>
+                </div>
+            </div>`).join('');
     };
-    document.getElementById('addAdminBtn').onclick = async () => {
-        const u = document.getElementById('newAdminUser').value, p = document.getElementById('newAdminPass').value;
-        if(!u || !p) return showToast("Fyll i allt", "error");
-        await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'add_admin', username:u, password:p}) });
-        showToast("Admin tillagd", "success"); document.getElementById('newAdminUser').value=""; document.getElementById('newAdminPass').value=""; renderAdmins();
+
+    window.startEditAdmin = (u) => {
+        editingAdminId = u.id; 
+        admUser.value = u.username; 
+        admFirst.value = u.first_name||""; 
+        admLast.value = u.last_name||""; 
+        admEmail.value = u.email||"";
+        admPass.placeholder = "Nytt lösen (valfritt)"; 
+        admPass.value = "";
+        admBtn.innerText = "💾"; 
+        admBtn.style.background = "#2196F3"; 
+        admCancel.style.display = "block";
     };
-    window.deleteAdmin = async(u) => { if(confirm("Ta bort admin?")) { await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) }); renderAdmins(); }};
+
+    const resetAdm = () => { 
+        editingAdminId = null; 
+        admUser.value = ""; 
+        admPass.value = ""; 
+        admFirst.value = ""; 
+        admLast.value = ""; 
+        admEmail.value = ""; 
+        admPass.placeholder = "Lösenord"; 
+        admBtn.innerText = "+"; 
+        admBtn.style.background = ""; 
+        admCancel.style.display = "none"; 
+    };
+    admCancel.onclick = resetAdm;
+
+    admBtn.onclick = async () => {
+        const u = admUser.value, p = admPass.value;
+        if(!u) return showToast("Användarnamn krävs", "error");
+        
+        const action = editingAdminId ? 'edit_admin' : 'add_admin';
+        if(action === 'add_admin' && !p) return showToast("Lösenord krävs", "error");
+        
+        await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, 
+            body: JSON.stringify({
+                action, 
+                username:u, 
+                password:p, 
+                firstName:admFirst.value, 
+                lastName:admLast.value, 
+                email:admEmail.value, 
+                id:editingAdminId
+            }) 
+        });
+        showToast(editingAdminId ? "Admin uppdaterad" : "Admin tillagd", "success");
+        resetAdm(); renderAdmins();
+    };
+
+    window.deleteAdmin = async(u) => { 
+        if(confirm("Ta bort admin?")) {
+            await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) }); 
+            showToast("Admin borttagen", "info");
+            renderAdmins(); 
+        }
+    };
     renderAdmins();
 }
 
