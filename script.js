@@ -339,7 +339,7 @@ function initShiftsSettings() {
 }
 
 // ----------------------------------------------------------------------------------
-// FIXAD ADMIN-HANTERING (Redigera + Fält)
+// ADMIN-HANTERING
 // ----------------------------------------------------------------------------------
 function initAdminSettings() {
     const admBtn = document.getElementById('addAdminBtn');
@@ -466,6 +466,9 @@ async function initAdmin() {
     setupSidebarAddUser();
 }
 
+// ------------------------------------------------------------------
+// RENDER ADMIN GRID (Här tog vi bort grå bakgrund på spacer)
+// ------------------------------------------------------------------
 function renderAdminGrid() {
     const cont = document.getElementById('scheduleContainer');
     renderRoster();
@@ -480,9 +483,12 @@ function renderAdminGrid() {
     let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${s.time}</div>`).join('')}</div>`;
 
     globalStations.forEach(st => {
-        if(st.isSpacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#f5f5f5;"></div>`; return; }
+        if(st.isSpacer) { 
+            // HÄR ÄR ÄNDRINGEN: Tog bort 'background:#f5f5f5'
+            html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; 
+            return; 
+        }
         
-        // Admin-vyn använder direkta färger för tydlighet
         const contrast = isLight(st.color) ? '#000' : '#fff';
         const styles = `background-color:${st.color}; color:${contrast}; --station-color:${st.color};`; 
         
