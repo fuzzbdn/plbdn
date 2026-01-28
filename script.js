@@ -423,10 +423,16 @@ function initAdminSettings() {
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
         if(!Array.isArray(admins)) admins = [];
+        
         document.getElementById('adminListContainer').innerHTML = admins.map(a => `
-            <div style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                <span>${a.first_name||''} ${a.last_name||''} (${a.username})</span>
-                <div>
+            <div class="admin-list-item">
+                <div class="list-info-left">
+                    <strong>${a.username}</strong>
+                    <span style="color:#666; margin-left:5px; font-size:0.9em;">
+                        (${a.first_name||''} ${a.last_name||''})
+                    </span>
+                </div>
+                <div class="list-actions-right">
                     <button class="list-btn" onclick='startEditAdmin(${JSON.stringify(a).replace(/'/g,"&#39;")})'>✏️</button>
                     <button class="list-btn" onclick="deleteAdmin('${a.username}')">🗑️</button>
                 </div>
@@ -441,9 +447,9 @@ function initAdminSettings() {
         admEmail.value = u.email||"";
         admPass.placeholder = "Nytt lösen (valfritt)"; 
         admPass.value = "";
-        admBtn.innerText = "💾"; 
+        admBtn.innerText = "Spara"; 
         admBtn.style.background = "#2196F3"; 
-        admCancel.style.display = "block";
+        admCancel.style.display = "inline-flex";
     };
 
     const resetAdm = () => { 
@@ -838,5 +844,6 @@ window.openTab = function(tabId) {
         event.currentTarget.classList.add('active');
     }
 };
+
 
 
