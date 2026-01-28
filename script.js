@@ -295,16 +295,43 @@ function initStationsSettings() {
     const renderStations = () => {
         const cont = document.getElementById('stationListContainer');
         if(!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
+        
         cont.innerHTML = globalStations.map((st, i) => {
             const dragAttr = `draggable="true" ondragstart="handleStationDragStart(event)" ondragover="handleStationDragOver(event)" ondrop="handleStationDrop(event)" data-index="${i}"`;
-            if(st.isSpacer) return `<div class="draggable-station" ${dragAttr} style="background:#f9f9f9; color:#888;"><div style="display:flex; align-items:center;"><span class="drag-handle">☰</span><i>--- Mellanrum ---</i></div><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div>`;
-            return `<div class="draggable-station" ${dragAttr}><div style="display:flex; align-items:center; gap:10px;"><span class="drag-handle">☰</span><div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc;"></div><strong>${st.name}</strong></div><div><button class="list-btn" onclick="startEditStation(${i})">✏️</button><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div></div>`;
+            
+            // RENDERING FÖR MELLANRUM
+            if(st.isSpacer) {
+                return `
+                <div class="draggable-station" ${dragAttr} style="background:#f9f9f9; color:#888;">
+                    <div class="station-info-left">
+                        <span class="drag-handle">☰</span>
+                        <i>--- Mellanrum ---</i>
+                    </div>
+                    <div class="station-actions-right">
+                        <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
+                    </div>
+                </div>`;
+            }
+
+            // RENDERING FÖR VANLIG STATION
+            return `
+            <div class="draggable-station" ${dragAttr}>
+                <div class="station-info-left">
+                    <span class="drag-handle">☰</span>
+                    <div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc; flex-shrink:0;"></div>
+                    <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${st.name}</strong>
+                </div>
+                <div class="station-actions-right">
+                    <button class="list-btn" onclick="startEditStation(${i})">✏️</button>
+                    <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
+                </div>
+            </div>`;
         }).join('');
     };
 
     window.startEditStation = (i) => {
         editingStationIndex = i; stName.value = globalStations[i].name; stColor.value = globalStations[i].color;
-        stBtn.innerText = "💾"; stBtn.style.background = "#2196F3"; stCancel.style.display = "block";
+        stBtn.innerText = "💾"; stBtn.style.background = "#2196F3"; stCancel.style.display = "inline-flex";
     };
     const resetSt = () => { editingStationIndex = null; stName.value = ""; stBtn.innerText = "+"; stBtn.style.background = ""; stCancel.style.display = "none"; };
     stCancel.onclick = resetSt;
@@ -768,3 +795,4 @@ window.openTab = function(tabId) {
         event.currentTarget.classList.add('active');
     }
 };
+
