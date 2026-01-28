@@ -303,11 +303,11 @@ function initStationsSettings() {
             if(st.isSpacer) {
                 return `
                 <div class="draggable-station" ${dragAttr} style="background:#f9f9f9; color:#888;">
-                    <div class="station-info-left">
+                    <div class="list-info-left">
                         <span class="drag-handle">☰</span>
                         <i>--- Mellanrum ---</i>
                     </div>
-                    <div class="station-actions-right">
+                    <div class="list-actions-right">
                         <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
                     </div>
                 </div>`;
@@ -316,12 +316,12 @@ function initStationsSettings() {
             // RENDERING FÖR VANLIG STATION
             return `
             <div class="draggable-station" ${dragAttr}>
-                <div class="station-info-left">
+                <div class="list-info-left">
                     <span class="drag-handle">☰</span>
                     <div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc; flex-shrink:0;"></div>
                     <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${st.name}</strong>
                 </div>
-                <div class="station-actions-right">
+                <div class="list-actions-right">
                     <button class="list-btn" onclick="startEditStation(${i})">✏️</button>
                     <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
                 </div>
@@ -355,13 +355,56 @@ function initShiftsSettings() {
     const renderShifts = () => {
         const cont = document.getElementById('shiftListContainer');
         if(!Array.isArray(globalShifts)) globalShifts = DEFAULT_SHIFTS;
-        cont.innerHTML = globalShifts.map((sh, i) => `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee;"><div><strong>${sh.label}</strong> <span style="color:#666;">(${sh.time})</span></div><div><button class="list-btn" onclick="startEditShift(${i})">✏️</button><button class="list-btn" onclick="deleteShift(${i})">🗑️</button></div></div>`).join('');
+        cont.innerHTML = globalShifts.map((sh, i) => `
+        <div class="shift-list-item">
+            <div class="list-info-left">
+                <strong>${sh.label}</strong> 
+                <span style="color:#666; margin-left:5px;">(${sh.time})</span>
+            </div>
+            <div class="list-actions-right">
+                <button class="list-btn" onclick="startEditShift(${i})">✏️</button>
+                <button class="list-btn" onclick="deleteShift(${i})">🗑️</button>
+            </div>
+        </div>`).join('');
     };
-    window.startEditShift = (i) => { editingShiftIndex = i; shLabel.value = globalShifts[i].label; shTime.value = globalShifts[i].time; shBtn.innerText = "Spara"; shBtn.style.background = "#2196F3"; shCancel.style.display = "block"; };
-    const resetSh = () => { editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = ""; shCancel.style.display = "none"; };
+    
+    window.startEditShift = (i) => { 
+        editingShiftIndex = i; 
+        shLabel.value = globalShifts[i].label; 
+        shTime.value = globalShifts[i].time; 
+        shBtn.innerText = "Spara"; 
+        shBtn.style.background = "#2196F3"; 
+        shCancel.style.display = "inline-flex"; 
+    };
+    
+    const resetSh = () => { 
+        editingShiftIndex = null; 
+        shLabel.value = ""; 
+        shTime.value = ""; 
+        shBtn.innerText = "Lägg till Pass"; 
+        shBtn.style.background = ""; 
+        shCancel.style.display = "none"; 
+    };
+    
     shCancel.onclick = resetSh;
-    shBtn.onclick = async () => { if(!shLabel.value) return; const item = { label: shLabel.value, time: shTime.value }; if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item; else globalShifts.push(item); await saveData('config_shifts', globalShifts); showToast("Sparat", "success"); resetSh(); renderShifts(); };
-    window.deleteShift = async (i) => { if(confirm("Ta bort?")) { globalShifts.splice(i, 1); await saveData('config_shifts', globalShifts); renderShifts(); }};
+    shBtn.onclick = async () => { 
+        if(!shLabel.value) return; 
+        const item = { label: shLabel.value, time: shTime.value }; 
+        if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item; 
+        else globalShifts.push(item); 
+        await saveData('config_shifts', globalShifts); 
+        showToast("Sparat", "success"); 
+        resetSh(); 
+        renderShifts(); 
+    };
+    
+    window.deleteShift = async (i) => { 
+        if(confirm("Ta bort?")) { 
+            globalShifts.splice(i, 1); 
+            await saveData('config_shifts', globalShifts); 
+            renderShifts(); 
+        }
+    };
     renderShifts();
 }
 
@@ -795,4 +838,5 @@ window.openTab = function(tabId) {
         event.currentTarget.classList.add('active');
     }
 };
+
 
