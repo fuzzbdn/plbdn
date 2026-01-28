@@ -103,41 +103,65 @@ body {
 
 
 /* =========================================
-   4. FORMULÄR & KNAPPAR (HÖJDFIXEN)
+   4. FORMULÄR & KNAPPAR (FIXAD FÄRG & HÖJD)
    ========================================= */
 .form-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
 .form-group label { font-weight: 600; font-size: 0.9rem; opacity: 0.9; }
 
-/* Enhetlig höjd (42px) för alla inputs och knappar i settings */
+/* REGLER FÖR TEXTFÄLT (Höjd + Vit bakgrund) */
 .setting-card input[type="text"], 
 .setting-card input[type="password"], 
 .setting-card input[type="email"],
-.setting-card select,
-.setting-card .save-btn, 
-.setting-card .cancel-edit-btn,
-.setting-card button.save-btn {
-    height: 42px; /* Fixerad höjd */
+.setting-card select {
+    height: 42px;
     padding: 0 12px;
     border-radius: 4px;
     border: 1px solid var(--input-border);
-    background: var(--input-bg);
+    background: var(--input-bg); /* Vit bakgrund */
     color: var(--text-color);
+    font-size: 1rem;
+    box-sizing: border-box;
+    width: 100%;
+    vertical-align: middle;
+}
+
+/* REGLER FÖR KNAPPAR (Bara Höjd - Behåll färgerna!) */
+.setting-card .save-btn, 
+.setting-card .cancel-edit-btn,
+.setting-card button.save-btn {
+    height: 42px;
+    padding: 0 12px;
+    border-radius: 4px;
     font-size: 1rem;
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
-    line-height: normal; /* Viktigt för vertikal centrering */
+    justify-content: center;
+    line-height: normal;
+    /* Ingen background-color här, det sköts av .save-btn klassen nedan */
 }
 
-/* Undantag för färg-väljare och textarea */
-.setting-card input[type="color"] { height: 42px; padding: 2px; width: 50px; cursor: pointer; }
-.setting-card textarea { height: auto; padding: 10px; }
+/* Undantag */
+.setting-card input[type="color"] { height: 42px; padding: 2px; width: 50px; cursor: pointer; border: 1px solid var(--input-border); }
+.setting-card textarea { height: auto; padding: 10px; border: 1px solid var(--input-border); border-radius: 4px; background: var(--input-bg); color: var(--text-color); width: 100%; box-sizing: border-box; }
 
+/* KNAPP-FÄRGER */
 .save-btn { 
-    background-color: var(--btn-primary); color: white; border: none; cursor: pointer; font-weight: bold; justify-content: center;
+    background-color: var(--btn-primary); /* GRÖN */
+    color: white; 
+    border: none; 
+    cursor: pointer; 
+    font-weight: bold; 
 }
 .save-btn:hover { opacity: 0.9; }
-.cancel-edit-btn { background: #999; color: white; border: none; cursor: pointer; justify-content: center; display: none; }
+
+.cancel-edit-btn { 
+    background: #999; /* GRÅ */
+    color: white; 
+    border: none; 
+    cursor: pointer; 
+    display: none; /* Visas via JS */
+}
 
 .sidebar-input { flex: 1; padding: 8px 10px; border: 1px solid var(--input-border); border-radius: 4px; background: var(--input-bg); color: var(--text-color); }
 .sidebar-add-row { display: flex; gap: 8px; margin-bottom: 15px; }
@@ -145,15 +169,15 @@ body {
 
 
 /* =========================================
-   5. LISTOR (FIX FÖR KNAPP-RADER)
+   5. LISTOR (MED PENNA/SOPTUNNA PÅ RAD)
    ========================================= */
 .list-container { max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); }
 
-/* Gemensam stil för rader i listor (Stationer, Pass & Admins) */
+/* Gemensam stil för rader i listor */
 .draggable-station, .shift-list-item, .draggable-item, .admin-list-item {
     display: flex;
     justify-content: space-between;
-    align-items: center; /* Centrera vertikalt */
+    align-items: center;
     padding: 8px 12px;
     border-bottom: 1px solid var(--border-color);
     background-color: var(--bg-color);
@@ -168,11 +192,11 @@ body {
     display: flex; align-items: center; gap: 12px; flex: 1; overflow: hidden;
 }
 
-/* Höger sida (Knappar) - Tvinga dem att ligga på rad */
+/* Höger sida (Knappar) - Ligger alltid på rad */
 .list-actions-right {
     display: flex; 
     align-items: center; 
-    gap: 8px; /* Mellanrum mellan penna och soptunna */
+    gap: 8px; 
     flex-shrink: 0;
 }
 
@@ -228,4 +252,3 @@ body {
     #page-settings .tab-pane { display: none !important; }
     #page-settings .tab-pane.active { display: block !important; }
 }
-
