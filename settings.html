@@ -36,6 +36,7 @@
                 <button class="tab-btn" onclick="openTab('tab-shifts')">⏰ Arbetspass</button>
                 <button class="tab-btn" onclick="openTab('tab-theme')">🎨 Utseende & Tema</button>
                 <button class="tab-btn" onclick="openTab('tab-admins')">🔐 Administratörer</button>
+                <button class="tab-btn" onclick="openTab('tab-print')">🖨️ Utskrift</button>
                 <button class="tab-btn tab-btn-manual" onclick="openTab('tab-manual')">📖 Manual</button>
             </aside>
 
@@ -162,7 +163,37 @@
                         </div>
                     </div>
                 </div>
+<div id="tab-print" class="tab-pane">
+    <div class="setting-card">
+        <h3>🖨️ Skriv ut Schema</h3>
+        
+        <div class="form-group">
+            <label>Välj intervall:</label>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div>
+                    <span style="font-size:0.85em; color:#666;">Från datum:</span>
+                    <input type="date" id="printStartDate">
+                </div>
+                <div>
+                    <span style="font-size:0.85em; color:#666;">Till datum:</span>
+                    <input type="date" id="printEndDate">
+                </div>
+            </div>
+        </div>
 
+        <div style="display:flex; gap:10px; margin-bottom:20px;">
+            <button id="btnSetToday" class="list-btn" style="border:1px solid #ccc; border-radius:4px; padding:5px 10px; width:auto; font-size:0.9rem;">Idag</button>
+            <button id="btnSetWeek" class="list-btn" style="border:1px solid #ccc; border-radius:4px; padding:5px 10px; width:auto; font-size:0.9rem;">Hela denna vecka</button>
+            <button id="btnSetNextWeek" class="list-btn" style="border:1px solid #ccc; border-radius:4px; padding:5px 10px; width:auto; font-size:0.9rem;">Nästa vecka</button>
+        </div>
+
+        <div class="info-box" style="margin-bottom:20px;">
+            <strong>Tips:</strong> Om du väljer flera dagar kommer varje dag att skrivas ut på en egen sida.
+        </div>
+
+        <button id="doPrintBtn" class="save-btn" style="background-color:#455a64;">🖨️ Skapa utskrift</button>
+    </div>
+</div>
                 <div id="tab-manual" class="tab-pane">
                     <div class="setting-card manual-content">
                         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--btn-primary); padding-bottom:15px; margin-bottom:20px;">
@@ -300,3 +331,4 @@
 
 </body>
 </html>
+
