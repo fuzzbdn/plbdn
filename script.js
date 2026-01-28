@@ -202,20 +202,19 @@ function initReset() {
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     
-    // --- NYTT: HÄMTA SCHEMA FÖR ATT UTSKRIFT SKA FUNKA ---
+    // --- NYTT: HÄMTA SCHEMA ---
     const [draft, published, old] = await Promise.all([
         fetchData('schedule_draft'),
         fetchData('schedule_published'),
         fetchData('schedule')
     ]);
-    // Logik: Om draft finns använd den (senaste ändringarna), annars publicerad.
-    // Detta gör att namn syns i utskriften även om man står i settings.
+    // Om draft finns, använd den. Annars published.
     let dataToUse = draft;
     if (!dataToUse || Object.keys(dataToUse).length === 0) {
         dataToUse = published && Object.keys(published).length > 0 ? published : old;
     }
     globalScheduleData = dataToUse || {};
-    // -----------------------------------------------------
+    // ---------------------------
 
     const themeSelect = document.getElementById('themeSelect');
     const themeNameIn = document.getElementById('customThemeName');
@@ -271,7 +270,7 @@ async function initSettings(currentSettings) {
     initStationsSettings(); 
     initShiftsSettings(); 
     initAdminSettings();
-    initPrintTab(); // Starta utskriftsfliken
+    initExportTab(); // Initiera utskriftsfliken
 
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
@@ -283,6 +282,193 @@ async function initSettings(currentSettings) {
         await saveData('message', { text: msgIn.value, show: msgCheck.checked });
         showToast("Meddelande uppdaterat!", "success");
     };
+}
+
+/* =========================================
+   UTSKRIFTS & EXPORT-FUNKTIONER (SETTINGS)
+   ========================================= */
+function initExportTab() {
+    const startIn = document.getElementById('printStartDate');
+    const endIn = document.getElementById('printEndDate');
+    const today = new Date().toISOString().split('T')[0];
+    if(startIn) startIn.value = today;
+    if(endIn) endIn.value = today;
+
+    // 1. KNAPP: IDAG
+    const btnToday = document.getElementById('btnSetToday');
+    if(btnToday) btnToday.onclick = () => { startIn.value = today; endIn.value = today; };
+
+    // 2. KNAPP: HELA DENNA VECKA (Mån-Sön)
+    const btnWeek = document.getElementById('btnSetWeek');
+    if(btnWeek) btnWeek.onclick = () => {
+        const d = new Date();
+        const day = d.getDay();
+        // Räkna ut differens för att backa till måndag. Om day är 0 (Söndag), backa 6 dagar.
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+        
+        d.setDate(diff); // Sätt till Måndag
+        startIn.value = d.toISOString().split('T')[0];
+        
+        d.setDate(d.getDate() + 6); // Fram till Söndag
+        endIn.value = d.toISOString().split('T')[0];
+    };
+
+    // 3. KNAPP: NÄSTA VECKA (Mån-Sön)
+    const btnNextWeek = document.getElementById('btnSetNextWeek');
+    if(btnNextWeek) btnNextWeek.onclick = () => {
+        const d = new Date();
+        const day = d.getDay();
+        // Hitta nuvarande veckas måndag
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        
+        d.setDate(diff + 7); // Hoppa fram en vecka (till nästa måndag)
+        startIn.value = d.toISOString().split('T')[0];
+        
+        d.setDate(d.getDate() + 6); // Fram till Söndag
+        endIn.value = d.toISOString().split('T')[0];
+    };
+
+    // --- FUNKTION: SKRIV UT (PDF via webbläsaren) ---
+    const doPrint = document.getElementById('doPrintBtn');
+    if(doPrint) doPrint.onclick = () => {
+        const sDate = new Date(startIn.value);
+        const eDate = new Date(endIn.value);
+        if (sDate > eDate) return showToast("Startdatum måste vara före slutdatum", "error");
+
+        const printContainer = document.getElementById('print-container') || document.createElement('div');
+        printContainer.id = 'print-container';
+        if(!document.body.contains(printContainer)) document.body.appendChild(printContainer);
+        
+        let htmlContent = "";
+        let loopDate = new Date(sDate);
+
+        while (loopDate <= eDate) {
+            htmlContent += generateSingleDayPrintHtml(new Date(loopDate));
+            loopDate.setDate(loopDate.getDate() + 1);
+        }
+
+        printContainer.innerHTML = htmlContent;
+        window.print();
+        setTimeout(() => printContainer.innerHTML = '', 1000);
+    };
+
+    // --- FUNKTION: SPARA SOM BILDER (Loopa datum) ---
+    const doImage = document.getElementById('doImageBtn');
+    if(doImage) doImage.onclick = async () => {
+        const sDate = new Date(startIn.value);
+        const eDate = new Date(endIn.value);
+        if (sDate > eDate) return showToast("Startdatum måste vara före slutdatum", "error");
+
+        if(typeof html2canvas === 'undefined') {
+            return showToast("html2canvas saknas. Ladda om sidan.", "error");
+        }
+
+        const originalBtnText = doImage.innerText;
+        doImage.innerText = "Genererar...";
+        
+        // Skapa en tillfällig container för rendering (utanför skärmen)
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.top = '-9999px';
+        tempContainer.style.left = '0';
+        tempContainer.style.width = '1200px'; // Fast bredd för bra upplösning
+        tempContainer.style.backgroundColor = '#ffffff';
+        document.body.appendChild(tempContainer);
+
+        let loopDate = new Date(sDate);
+        let count = 0;
+
+        // Loopa igenom varje dag
+        while (loopDate <= eDate) {
+            // 1. Rendera HTML för dagen i containern
+            tempContainer.innerHTML = generateSingleDayPrintHtml(new Date(loopDate), true); // true = image mode (ingen page-break)
+            
+            // 2. Vänta lite för rendering
+            await new Promise(r => setTimeout(r, 100));
+
+            // 3. Skapa canvas
+            try {
+                const canvas = await html2canvas(tempContainer, { scale: 2 });
+                
+                // 4. Ladda ner
+                const link = document.createElement('a');
+                const dateStr = loopDate.toLocaleDateString('sv-SE');
+                link.download = `Schema-${dateStr}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.9);
+                link.click();
+                
+                count++;
+                // 5. Paus för att inte krascha webbläsaren vid många dagar
+                await new Promise(r => setTimeout(r, 500));
+                
+            } catch (err) {
+                console.error(err);
+                showToast("Fel vid bildgenerering: " + err, "error");
+            }
+
+            loopDate.setDate(loopDate.getDate() + 1);
+        }
+
+        document.body.removeChild(tempContainer);
+        doImage.innerText = originalBtnText;
+        showToast(`Klar! ${count} bild(er) nedladdade.`, "success");
+    };
+}
+
+function generateSingleDayPrintHtml(dateObj, forImage = false) {
+    const iso = getISOWeek(dateObj);
+    const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1; 
+    const dayName = days[dayIndex];
+    const dateStr = dateObj.toLocaleDateString('sv-SE');
+    const prefix = `y${iso.year}w${iso.week}-${dayName}-`;
+
+    const shifts = (Array.isArray(globalShifts) && globalShifts.length) ? globalShifts : DEFAULT_SHIFTS;
+    const stations = (Array.isArray(globalStations) && globalStations.length) ? globalStations : DEFAULT_STATIONS;
+
+    // Om det är för bild, skippa page-break style
+    const style = forImage ? 'padding:20px; font-family:sans-serif; background:#fff;' : 'page-break-after: always; padding: 20px; font-family: sans-serif;';
+    
+    let html = `<div class="print-page" style="${style}">`;
+    
+    html += `<div style="text-align:center; margin-bottom:20px;">
+                <h2 style="margin:0;">${dayName} ${dateStr}</h2>
+                <span style="font-size:0.9em; color:#666;">Vecka ${iso.week}, ${iso.year}</span>
+             </div>`;
+
+    html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length}, 1fr); gap:0; border:1px solid #000; border-bottom:none;">
+                <div style="background:#ddd; border-right:1px solid #000; padding:5px;"></div>
+                ${shifts.map(s => `<div style="background:#ddd; border-right:1px solid #000; padding:5px; text-align:center; font-weight:bold;">${s.time}<br><span style="font-size:0.8em; font-weight:normal;">${s.label}</span></div>`).join('')}
+             </div>`;
+
+    html += `<div style="border:1px solid #000; border-top:none;">`;
+    
+    stations.forEach(st => {
+        if (st.isSpacer) {
+            html += `<div style="height:15px; background:#f0f0f0; border-top:1px solid #000;"></div>`;
+            return;
+        }
+
+        const bg = st.color;
+        const fg = isLight(bg) ? '#000' : '#fff';
+        
+        html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length}, 1fr); border-top:1px solid #000;">
+                    <div style="background:${bg}; color:${fg}; padding:10px; font-weight:bold; border-right:1px solid #000; display:flex; align-items:center;">
+                        ${st.name}
+                    </div>`;
+        
+        shifts.forEach((sh, index) => {
+            const key = `${prefix}${st.name}-${sh.time}`;
+            const val = globalScheduleData[key] || "";
+            const borderRight = index === shifts.length - 1 ? '' : 'border-right:1px solid #000;';
+            html += `<div style="padding:5px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:bold; font-size:0.9rem; ${borderRight}">
+                        ${val}
+                     </div>`;
+        });
+        html += `</div>`;
+    });
+
+    html += `</div></div>`;
+    return html;
 }
 
 function initStationsSettings() {
@@ -513,146 +699,7 @@ function initAdminSettings() {
     renderAdmins();
 }
 
-/* =========================================
-   UTSKRIFTS-FUNKTIONER (SETTINGS)
-   ========================================= */
-/* =========================================
-   UTSKRIFTS-FUNKTIONER (SETTINGS)
-   ========================================= */
-function initPrintTab() {
-    const startIn = document.getElementById('printStartDate');
-    const endIn = document.getElementById('printEndDate');
-    
-    // Sätt dagens datum som standard
-    const today = new Date().toISOString().split('T')[0];
-    if(startIn) startIn.value = today;
-    if(endIn) endIn.value = today;
-
-    // 1. Knapp: IDAG
-    const btnToday = document.getElementById('btnSetToday');
-    if(btnToday) btnToday.onclick = () => { 
-        const now = new Date().toISOString().split('T')[0];
-        startIn.value = now; 
-        endIn.value = now; 
-    };
-
-    // 2. Knapp: HELA DENNA VECKA (Mån-Sön)
-    const btnWeek = document.getElementById('btnSetWeek');
-    if(btnWeek) btnWeek.onclick = () => {
-        const d = new Date();
-        const day = d.getDay();
-        // Räkna ut differens för att backa till måndag
-        // Om day är 0 (Söndag), backa 6 dagar. Annars backa (day - 1).
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
-        
-        d.setDate(diff); // Sätt datumet till Måndag
-        startIn.value = d.toISOString().split('T')[0];
-        
-        d.setDate(d.getDate() + 6); // Addera 6 dagar för att få Söndag
-        endIn.value = d.toISOString().split('T')[0];
-    };
-
-    // 3. Knapp: NÄSTA VECKA (Mån-Sön)
-    const btnNextWeek = document.getElementById('btnSetNextWeek');
-    if(btnNextWeek) btnNextWeek.onclick = () => {
-        const d = new Date();
-        const day = d.getDay();
-        // Hitta nuvarande veckas måndag först
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-        
-        d.setDate(diff + 7); // Hoppa fram 7 dagar till nästa veckas Måndag
-        startIn.value = d.toISOString().split('T')[0];
-        
-        d.setDate(d.getDate() + 6); // Till Söndag
-        endIn.value = d.toISOString().split('T')[0];
-    };
-
-    // 4. Utför Utskrift
-    const doPrint = document.getElementById('doPrintBtn');
-    if(doPrint) doPrint.onclick = () => {
-        const sDate = new Date(startIn.value);
-        const eDate = new Date(endIn.value);
-
-        if (sDate > eDate) return showToast("Startdatum måste vara före slutdatum", "error");
-
-        const printContainer = document.getElementById('print-container') || document.createElement('div');
-        printContainer.id = 'print-container';
-        if(!document.body.contains(printContainer)) document.body.appendChild(printContainer);
-        
-        let htmlContent = "";
-        let loopDate = new Date(sDate);
-
-        // Loopa igenom varje dag i intervallet
-        while (loopDate <= eDate) {
-            htmlContent += generateSingleDayPrintHtml(new Date(loopDate));
-            loopDate.setDate(loopDate.getDate() + 1); // Nästa dag
-        }
-
-        printContainer.innerHTML = htmlContent;
-        window.print();
-        
-        // Rensa efter en stund för att spara minne
-        setTimeout(() => printContainer.innerHTML = '', 1000);
-    };
-}
-
-function generateSingleDayPrintHtml(dateObj) {
-    const iso = getISOWeek(dateObj);
-    const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1; 
-    const dayName = days[dayIndex];
-    const dateStr = dateObj.toLocaleDateString('sv-SE');
-    const prefix = `y${iso.year}w${iso.week}-${dayName}-`;
-
-    const shifts = (Array.isArray(globalShifts) && globalShifts.length) ? globalShifts : DEFAULT_SHIFTS;
-    const stations = (Array.isArray(globalStations) && globalStations.length) ? globalStations : DEFAULT_STATIONS;
-
-    let html = `<div class="print-page" style="page-break-after: always; padding: 20px; font-family: sans-serif;">`;
-    
-    html += `<div style="text-align:center; margin-bottom:20px;">
-                <h2 style="margin:0;">${dayName} ${dateStr}</h2>
-                <span style="font-size:0.9em; color:#666;">Vecka ${iso.week}, ${iso.year}</span>
-             </div>`;
-
-    html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length}, 1fr); gap:0; border:1px solid #000; border-bottom:none;">
-                <div style="background:#ddd; border-right:1px solid #000; padding:5px;"></div>
-                ${shifts.map(s => `<div style="background:#ddd; border-right:1px solid #000; padding:5px; text-align:center; font-weight:bold;">${s.time}<br><span style="font-size:0.8em; font-weight:normal;">${s.label}</span></div>`).join('')}
-             </div>`;
-
-    html += `<div style="border:1px solid #000; border-top:none;">`;
-    
-    stations.forEach(st => {
-        if (st.isSpacer) {
-            html += `<div style="height:15px; background:#f0f0f0; border-top:1px solid #000;"></div>`;
-            return;
-        }
-
-        const bg = st.color;
-        const fg = isLight(bg) ? '#000' : '#fff';
-        
-        html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length}, 1fr); border-top:1px solid #000;">
-                    <div style="background:${bg}; color:${fg}; padding:10px; font-weight:bold; border-right:1px solid #000; display:flex; align-items:center;">
-                        ${st.name}
-                    </div>`;
-        
-        shifts.forEach((sh, index) => {
-            const key = `${prefix}${st.name}-${sh.time}`;
-            const val = globalScheduleData[key] || "";
-            const borderRight = index === shifts.length - 1 ? '' : 'border-right:1px solid #000;';
-            html += `<div style="padding:5px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:bold; font-size:0.9rem; ${borderRight}">
-                        ${val}
-                     </div>`;
-        });
-        html += `</div>`;
-    });
-
-    html += `</div></div>`;
-    return html;
-}
-
-/* =========================================
-   5. ADMIN PLANERING
-   ========================================= */
-async function initAdmin() {
+function initAdmin() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     let draft = await fetchData('schedule_draft');
     const published = await fetchData('schedule_published');
@@ -678,13 +725,12 @@ async function initAdmin() {
     updateGrid(picker.value);
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
-    document.getElementById('exportBtn').onclick = generateImage;
+    // Gammal export-knapp borttagen från admin.html, så denna rad kan tas bort eller behållas (gör inget om id saknas)
+    // document.getElementById('exportBtn').onclick = generateImage; 
+    
     setupSidebarAddUser();
 }
 
-// ------------------------------------------------------------------
-// RENDER ADMIN GRID
-// ------------------------------------------------------------------
 function renderAdminGrid() {
     const cont = document.getElementById('scheduleContainer');
     renderRoster();
@@ -799,93 +845,6 @@ function renderRoster() {
 async function saveShift(k, v) { globalScheduleData[k] = v.trim(); await saveData('schedule_draft', globalScheduleData); renderAdminGrid(); }
 async function handleDrop(e, k) { e.preventDefault(); const n = e.dataTransfer.getData("text"); let c = globalScheduleData[k]||""; if(!c.includes(n)) await saveShift(k, c?c+" / "+n:n); }
 
-/* =========================================
-   6. DISPLAY
-   ========================================= */
-let lastSnap="";
-function initDisplay() {
-    setInterval(()=>document.getElementById('clock').innerText=new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}),1000);
-    const refresh = async () => {
-        let pub = await fetchData('schedule_published');
-        if(!pub || !Object.keys(pub).length) pub = await fetchData('schedule');
-        const [sets, msg, themes] = await Promise.all([fetchData('settings'), fetchData('message'), fetchData('custom_themes')]);
-        
-        globalCustomThemes = themes || [];
-        const snap = JSON.stringify({s:pub, t:sets?.theme, m:msg});
-        if(snap === lastSnap) return; lastSnap=snap;
-        globalScheduleData = pub || {};
-
-        if(sets?.theme) applyTheme(sets.theme);
-        const mq = document.getElementById('marqueeContainer');
-        if(mq) { mq.style.display=(msg?.show&&msg?.text)?'block':'none'; if(msg?.text) document.getElementById('marqueeText').innerText=msg.text; }
-
-        const now = new Date(), iso = getISOWeek(now), today = days[now.getDay()===0?6:now.getDay()-1];
-        document.getElementById('mainTitle').innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
-        
-        const cont = document.getElementById('mainContainer');
-        if(!Array.isArray(globalShifts) || !globalShifts.length) globalShifts = DEFAULT_SHIFTS;
-        if(!Array.isArray(globalStations) || !globalStations.length) globalStations = DEFAULT_STATIONS;
-
-        let html = `<div class="time-header-row"><div></div>${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}</div>`;
-        globalStations.forEach(st => {
-            if(st.isSpacer) { html += `<div class="display-row" style="grid-column:1/-1; height:4vh;"></div>`; return; }
-            const contrast = isLight(st.color) ? '#000' : '#fff';
-            const vars = `style="--station-color:${st.color}; --contrast-color:${contrast};"`;
-            html += `<div class="display-row"><div class="station-label" ${vars}>${st.name}</div>`;
-            globalShifts.forEach(sh => {
-                const key = `y${iso.year}w${iso.week}-${today}-${st.name}-${sh.time}`;
-                const val = globalScheduleData[key] || "";
-                html += `<div class="shift-card ${val?'':'empty'}">${val}</div>`;
-            });
-            html += `</div>`;
-        });
-        cont.innerHTML = html;
-    };
-    refresh(); setInterval(refresh, 15000);
-}
-
-/* =========================================
-   7. EXPORT & ÖVRIGT
-   ========================================= */
-function generateImage() {
-    const btn=document.getElementById('exportBtn'), txt=btn.innerText; 
-    btn.innerText="Genererar...";
-    
-    // Använd en tillfällig div för att rendera schemat dolt
-    const div=document.createElement('div'); 
-    div.style.cssText="position:absolute; top:-9999px; left:0; width:1400px; background:#fff;";
-    
-    // Kopiera innehållet från den aktuella vyn
-    const source = document.getElementById('scheduleContainer');
-    if(source) {
-        div.innerHTML = `<div style="padding:20px;"><h2>Schema</h2>${source.innerHTML}</div>`;
-    } else {
-        div.innerText = "Ingen data";
-    }
-
-    document.body.appendChild(div);
-
-    if(typeof html2canvas==='undefined') {
-        showToast("Ladda om sidan först!", "error");
-        btn.innerText = txt;
-        return;
-    }
-
-    html2canvas(div,{scale:2}).then(c=>{
-        const a=document.createElement('a'); 
-        a.download=`Schema.jpg`; 
-        a.href=c.toDataURL('image/jpeg',0.9); 
-        a.click();
-        document.body.removeChild(div); 
-        btn.innerText=txt;
-    }).catch(e => {
-        console.error(e);
-        showToast("Fel vid bildgenerering", "error");
-        btn.innerText=txt;
-        document.body.removeChild(div);
-    });
-}
-
 function getISOWeek(d) { const date=new Date(d.getTime()); date.setHours(0,0,0,0); date.setDate(date.getDate()+3-(date.getDay()+6)%7); const w1=new Date(date.getFullYear(),0,4); return {week:1+Math.round(((date.getTime()-w1.getTime())/86400000-3+(w1.getDay()+6)%7)/7), year:date.getFullYear()}; }
 
 function setupSidebarAddUser() {
@@ -914,35 +873,6 @@ async function removeUser(u) {
     } 
 }
 
-/* =========================================
-   VÄDER-WIDGET (BODEN)
-   ========================================= */
-async function initWeatherBoden() {
-    let wDiv = document.getElementById('weatherWidget');
-    if (!wDiv) {
-        wDiv = document.createElement('div');
-        wDiv.id = 'weatherWidget';
-        const clock = document.getElementById('clock');
-        if (clock && clock.parentNode) clock.parentNode.insertBefore(wDiv, clock);
-    }
-    const fetchWeather = async () => {
-        try {
-            const url = 'https://api.open-meteo.com/v1/forecast?latitude=65.82&longitude=21.69&current_weather=true';
-            const res = await fetch(url);
-            const data = await res.json();
-            const temp = Math.round(data.current_weather.temperature);
-            wDiv.innerHTML = `BODEN: ${temp}°C`; 
-        } catch (e) { console.error("Ingen väderdata", e); }
-    };
-    fetchWeather();
-    setInterval(fetchWeather, 900000); 
-}
-if (document.body.id === 'page-display') setTimeout(initWeatherBoden, 1000);
-
-
-/* =========================================
-   FLIK-HANTERARE
-   ========================================= */
 window.openTab = function(tabId) {
     const allPanes = document.querySelectorAll('.tab-pane');
     allPanes.forEach(pane => {
@@ -962,4 +892,3 @@ window.openTab = function(tabId) {
         event.currentTarget.classList.add('active');
     }
 };
-
