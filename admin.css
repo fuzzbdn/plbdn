@@ -108,10 +108,11 @@ body {
 .form-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
 .form-group label { font-weight: 600; font-size: 0.9rem; opacity: 0.9; }
 
-/* REGLER FÖR TEXTFÄLT (Höjd + Vit bakgrund) */
+/* TEXTFÄLT (Höjd + Vit bakgrund) */
 .setting-card input[type="text"], 
 .setting-card input[type="password"], 
 .setting-card input[type="email"],
+.setting-card input[type="date"],
 .setting-card select {
     height: 42px;
     padding: 0 12px;
@@ -125,10 +126,11 @@ body {
     vertical-align: middle;
 }
 
-/* REGLER FÖR KNAPPAR (Bara Höjd - Behåll färgerna!) */
+/* KNAPPAR (Bara Höjd - Färg behålls!) */
 .setting-card .save-btn, 
 .setting-card .cancel-edit-btn,
-.setting-card button.save-btn {
+.setting-card button.save-btn,
+.setting-card .list-btn {
     height: 42px;
     padding: 0 12px;
     border-radius: 4px;
@@ -158,7 +160,7 @@ body {
 
 
 /* =========================================
-   5. LISTOR (Här ligger fixen!)
+   5. LISTOR (MED KNAPPAR PÅ RAD)
    ========================================= */
 .list-container { max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); }
 
@@ -176,8 +178,7 @@ body {
 .draggable-station { cursor: grab; }
 .draggable-station.dragging { opacity: 0.5; background: #e3f2fd; border: 1px dashed #2196F3; }
 
-/* --- GRÅMARKERAD PERSONAL (ASSIGNED) --- */
-/* Detta är koden som gör att valda namn blir gråa och kursiva */
+/* GRÅMARKERAD PERSONAL (ASSIGNED) */
 .draggable-item.assigned {
     background-color: #f5f5f5 !important;
     color: #aaa !important;
@@ -244,8 +245,10 @@ body {
 .dropdown-item:hover { background: #f0f0f0; }
 
 @media print {
-    .admin-header, .settings-sidebar, .sidebar-roster, .export-container, .logout-btn { display: none !important; }
-    body, .admin-layout, .settings-layout, .schedule-card { display: block !important; margin: 0 !important; width: 100% !important; background: white !important; }
-    #page-settings .tab-pane { display: none !important; }
-    #page-settings .tab-pane.active { display: block !important; }
+    .admin-header, .settings-sidebar, .sidebar-roster, .export-container, .logout-btn, .settings-container, .toast { display: none !important; }
+    body, #print-container { visibility: visible !important; background: white !important; margin: 0 !important; padding: 0 !important; width: 100% !important; height: auto !important; overflow: visible !important; }
+    #print-container { position: absolute; left: 0; top: 0; }
+    .print-page { page-break-after: always; break-after: page; min-height: 95vh; width: 100%; }
+    .print-page:last-child { page-break-after: auto; break-after: auto; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
