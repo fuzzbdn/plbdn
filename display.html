@@ -7,24 +7,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="base.css">
 	<link rel="stylesheet" href="display.css">
-    <script src="script.js" defer></script>
+    <script src="script.js?v=10" defer></script>
 </head>
 <body class="display-view" id="page-display">
 
 <div class="display-wrapper">
     <div class="top-bar">
-        <h1 id="mainTitle">...</h1> 
-        <div id="clock">00:00</div>
-    </div>
-    <div id="marqueeContainer" style="display:none; background:#ffeb3b; color:#000; padding:10px; margin-bottom:2vh; border-radius:8px; font-weight:bold; text-align:center; font-size:2.5vh; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-    <marquee id="marqueeText" scrollamount="10"></marquee>
-</div>
-    <div class="display-grid" id="mainContainer">
+        <h1 id="mainTitle">Laddar schema...</h1>
+        <div style="display:flex; align-items:center; gap:20px;">
+            <div id="weatherWidget"></div> <div id="clock">00:00</div>
         </div>
+    </div>
+    
+    <div id="marqueeContainer">
+        <marquee id="marqueeText" scrollamount="10"></marquee>
+    </div>
+    
+    <div id="mainContainer"></div>
 </div>
-	
-	
-</body>
 
+<div id="toast-container"></div> </body>
 </html>
-
