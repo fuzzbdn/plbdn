@@ -1,24 +1,22 @@
 /* =========================================
-   ADMIN.CSS - KOMPLETT FIL
-   Innehåller stilar för Admin-vyn, Inställningar och Manual
+   ADMIN.CSS - KOMPLETT & SEPARERAD
    ========================================= */
 
-/* --- 1. HEADER & TOPP-NAVIGERING --- */
+/* --- 1. HEADER (GEMENSAM) --- */
 .admin-header {
-    background-color: var(--header-bg, #ffffff);
-    padding: 15px 30px;
+    background-color: #ffffff;
+    padding: 15px 20px;
     width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-sizing: border-box;
     border-bottom: 1px solid var(--border-color);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 .header-content {
     width: 100%;
-    max-width: 1600px;
+    max-width: 1800px; /* Bredare för planering */
     margin: 0 auto;
     display: flex;
     justify-content: space-between;
@@ -27,77 +25,59 @@
 
 .admin-header h1 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     font-weight: 800;
     color: var(--header-text);
-    display: flex;
-    align-items: center;
-    gap: 10px;
 }
 
 .admin-header input[type="date"] {
-    padding: 6px 10px;
+    padding: 5px 10px;
     border: 1px solid var(--input-border);
-    border-radius: 6px;
-    font-size: 0.95rem;
-    color: var(--text-color);
+    border-radius: 4px;
+    font-size: 1rem;
     background: var(--input-bg);
-    font-family: inherit;
+    color: var(--text-color);
 }
 
 .logout-btn {
-    background-color: #ffebee;
-    color: #c62828;
-    border: 1px solid #ffcdd2;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.2s;
+    background-color: #ffebee; color: #c62828; border: none;
+    padding: 8px 16px; border-radius: 4px; cursor: pointer;
+    font-weight: bold; font-size: 0.9rem; transition: background 0.2s;
 }
-.logout-btn:hover { background-color: #ef9a9a; color: #fff; }
+.logout-btn:hover { background-color: #ffcdd2; }
 
 .back-link {
-    color: var(--text-color);
-    text-decoration: none;
-    background: var(--bg-color);
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    border: 1px solid var(--border-color);
-    font-weight: 600;
+    color: var(--text-color); text-decoration: none;
+    background: var(--bg-color); padding: 8px 12px;
+    border-radius: 4px; font-size: 0.9rem;
+    border: 1px solid var(--border-color); font-weight: 600;
     margin-left: 15px;
-    display: inline-flex;
-    align-items: center;
 }
 .back-link:hover { background: var(--border-color); }
 
 
-/* --- 2. LAYOUT-CONTAINERS --- */
+/* --- 2. HUVUDLAYOUTER (HÄR LÖSER VI KROCKEN) --- */
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    padding-bottom: 50px; /* Plats för footer/scroll */
+    padding: 20px;
 }
 
-/* Container för ADMIN-VYN (Planering) */
+/* A) Layout för ADMIN-sidan (Planering) */
 .admin-layout {
     display: flex;
     gap: 20px;
     max-width: 1800px;
-    margin: 20px auto;
+    margin: 0 auto;
     align-items: flex-start;
-    padding: 0 20px;
 }
 
-/* Container för INSTÄLLNINGS-VYN (Sidebar + Content) */
+/* B) Layout för SETTINGS-sidan (Inställningar & Manual) */
 .settings-container {
     max-width: 1200px;
-    margin: 30px auto;
-    padding: 0 20px;
+    margin: 0 auto;
+    padding: 20px;
 }
-
 .settings-layout {
     display: flex;
     gap: 30px;
@@ -105,7 +85,7 @@ body {
 }
 
 
-/* --- 3. ADMIN-VY: SIDOFÄLT (PERSONAL) --- */
+/* --- 3. ADMIN-VY: PERSONAL-LISTAN (VÄNSTER) --- */
 .sidebar-roster {
     width: 280px;
     flex-shrink: 0;
@@ -125,359 +105,179 @@ body {
 
 .roster-card h3 { margin-top: 0; margin-bottom: 15px; text-align: center; color: var(--header-text); }
 
-.sidebar-add-row { display: flex; gap: 8px; margin-bottom: 15px; }
+.sidebar-add-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; width: 100%; }
 .sidebar-input {
-    flex: 1;
-    padding: 8px;
-    border: 1px solid var(--input-border);
-    border-radius: 4px;
-    background: var(--input-bg);
-    color: var(--text-color);
+    flex: 1; min-width: 0; padding: 8px 10px;
+    border: 1px solid var(--input-border); border-radius: 4px;
+    font-size: 0.95rem; background: var(--input-bg); color: var(--text-color);
 }
 .sidebar-add-btn {
-    width: 36px;
-    background-color: var(--btn-primary);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1.2rem;
+    flex-shrink: 0; width: 36px; height: 36px;
+    background-color: var(--btn-primary); color: #fff;
+    border: 1px solid var(--border-color); border-radius: 4px;
+    font-weight: bold; cursor: pointer; font-size: 1.4rem;
+    display: flex; align-items: center; justify-content: center;
 }
 
-.roster-list { display: flex; flex-direction: column; gap: 6px; }
+.roster-list { display: flex; flex-direction: column; gap: 8px; }
 
 .draggable-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background-color: var(--bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    cursor: grab;
-    font-weight: 500;
-    font-size: 0.9rem;
-    color: var(--text-color);
-    user-select: none;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 12px; background-color: var(--bg-color);
+    border: 1px solid var(--border-color); border-radius: 6px;
+    cursor: grab; font-weight: 600; font-size: 0.95rem;
+    color: var(--text-color); user-select: none;
 }
-.draggable-item:hover { border-color: var(--btn-primary); transform: translateX(2px); }
+.draggable-item:hover { transform: translateY(-2px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-/* Personal som redan är inbokad (gråad) */
+/* Gråad personal (Assigned) */
 .draggable-item.assigned {
-    background-color: rgba(0,0,0,0.03);
-    color: #999;
-    border-color: transparent;
-    font-style: italic;
+    background-color: rgba(0,0,0,0.04); color: #aaa;
+    border-color: transparent; font-style: italic;
 }
-.draggable-item.assigned:hover { transform: none; border-color: transparent; }
+.draggable-item.assigned:hover { transform: none; box-shadow: none; }
 
-.remove-user-btn {
-    background: none; border: none; color: #e57373; cursor: pointer; font-weight: bold;
-    opacity: 0.5; padding: 0 5px;
-}
-.remove-user-btn:hover { opacity: 1; color: #d32f2f; }
+.remove-user-btn { background: none; border: none; color: #ff6b6b; font-weight: bold; cursor: pointer; margin-left: 8px; }
 
 
-/* --- 4. ADMIN-VY: SCHEMAT (GRID) --- */
+/* --- 4. ADMIN-VY: SCHEMA-GRID (HÖGER) --- */
 .schedule-card-wrapper { flex-grow: 1; min-width: 0; }
 
+/* Själva kortet runt schemat */
 .schedule-card {
-    background: var(--card-bg);
+    background: var(--card-bg); /* Vit bakgrund */
     padding: 20px;
     border-radius: 8px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border-color);
-    overflow-x: auto; /* Om schemat blir för brett */
 }
 
-/* Grid-containern genereras i JS, men här är basreglerna */
+/* Den inre behållaren som JS fyller med grid */
+#scheduleContainer {
+    display: block; /* JS sätter grid styles internt eller via klasser nedan */
+}
+
 .header-row {
-    display: grid;
-    /* Grid columns sätts inline i JS baserat på antal pass */
-    gap: 10px;
-    margin-bottom: 10px;
-    padding-bottom: 10px;
+    display: grid; 
+    /* grid-template-columns styrs via JS eller inline-styles */
+    gap: 10px; margin-bottom: 10px; padding-bottom: 5px;
     border-bottom: 2px solid var(--border-color);
-    font-weight: bold;
-    text-align: center;
+    font-weight: bold; text-align: center; color: var(--text-color);
 }
 
 .station-row {
-    display: grid;
-    /* Grid columns sätts inline i JS */
-    gap: 10px;
-    margin-bottom: 8px;
-    align-items: stretch;
-    min-height: 50px;
+    display: grid; 
+    gap: 10px; margin-bottom: 10px; align-items: center;
 }
 
 .station-label {
-    /* Färger sätts inline */
-    color: #fff;
-    font-weight: bold;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 5px;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-weight: bold; padding: 10px; border-radius: 4px;
+    color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    text-align: center; display: flex; align-items: center; justify-content: center;
+    height: 100%; min-height: 50px;
 }
 
 .shift-block {
-    background-color: var(--input-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 5px 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: background 0.2s;
-    position: relative;
-    min-height: 40px;
+    background-color: var(--input-bg); border: 1px solid var(--border-color);
+    border-radius: 6px; padding: 8px 12px; min-height: 50px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05); color: var(--text-color);
 }
-.shift-block.empty { background-color: rgba(0,0,0,0.02); border-style: dashed; }
-.shift-block.drag-over { background-color: #e3f2fd !important; border-color: #2196f3 !important; }
+.shift-block.empty { background-color: var(--bg-color) !important; box-shadow: none; }
+.shift-block.drag-over { background-color: #e3f2fd !important; border: 2px dashed #2196f3 !important; }
 
-.shift-text {
-    font-weight: 500;
-    font-size: 0.95rem;
-    flex-grow: 1;
-    margin-right: 5px;
-    outline: none; /* Vid contenteditable */
-}
-
-.shift-controls { display: flex; gap: 4px; opacity: 0.6; transition: opacity 0.2s; }
-.shift-block:hover .shift-controls { opacity: 1; }
-
-.add-user-btn, .clear-btn {
-    background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0 4px; border-radius: 3px;
-}
-.add-user-btn { color: #4caf50; } .add-user-btn:hover { background: #e8f5e9; }
-.clear-btn { color: #ef5350; } .clear-btn:hover { background: #ffebee; }
-
-/* Footer med knappar */
-.export-container {
-    display: flex; justify-content: space-between; margin-top: 20px;
-    padding-top: 20px; border-top: 1px solid var(--border-color);
-}
-.action-buttons { display: flex; gap: 10px; }
-
-.export-button {
-    background: #37474f; color: white; border: none; padding: 10px 18px;
-    cursor: pointer; border-radius: 6px; font-weight: 600; font-size: 0.9rem;
-    transition: background 0.2s; text-decoration: none; display: inline-block;
-}
-.export-button:hover { background: #455a64; }
-#publishBtn { background-color: #2e7d32; } #publishBtn:hover { background-color: #388e3c; }
+.shift-text { font-weight: 600; font-size: 1rem; flex-grow: 1; margin-right: 10px; }
+.shift-controls { display: flex; align-items: center; gap: 2px; }
+.add-user-btn { background: none; border: none; color: #4CAF50; font-size: 1.4rem; font-weight: bold; cursor: pointer; }
+.clear-btn { background: none; border: none; color: #e53935; font-size: 1.4rem; font-weight: bold; cursor: pointer; }
 
 
-/* --- 5. INSTÄLLNINGS-VY: SIDEBAR & FLIKAR --- */
+/* --- 5. INSTÄLLNINGAR: SIDEBAR (NYTT) --- */
 .settings-sidebar {
     width: 260px;
     flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    position: sticky;
-    top: 20px;
+    display: flex; flex-direction: column; gap: 10px;
+    position: sticky; top: 20px;
 }
 
 .tab-btn {
-    text-align: left;
-    padding: 14px 20px;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-color);
-    transition: all 0.2s ease;
+    text-align: left; padding: 15px 20px;
+    background: var(--card-bg); border: 1px solid var(--border-color);
+    border-radius: 8px; cursor: pointer; font-size: 1rem;
+    font-weight: 600; color: var(--text-color);
     display: flex; align-items: center; gap: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    box-shadow: var(--shadow); transition: all 0.2s;
 }
-
-.tab-btn:hover { background: var(--input-bg); transform: translateX(3px); }
-
-.tab-btn.active {
-    border-left: 5px solid var(--btn-primary);
-    background: #e3f2fd; /* Ljusblå tint för aktiv */
-    color: #0277bd;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.06);
-}
-
-/* Särskild stil för Manual-knappen */
-.manual-nav-btn {
-    margin-top: 20px !important;
-    border: 1px dashed var(--border-color) !important;
-    background: rgba(0,0,0,0.02) !important;
-}
+.tab-btn:hover { background: var(--input-bg); transform: translateX(5px); }
+.tab-btn.active { border-left: 5px solid var(--btn-primary); background: #e3f2fd; color: #0277bd; }
+.tab-btn-manual { margin-top: 20px; border: 1px dashed var(--border-color); background: rgba(0,0,0,0.02); }
 
 
-/* --- 6. INSTÄLLNINGS-VY: INNEHÅLL --- */
-.settings-content {
-    flex-grow: 1;
-    min-width: 0;
-}
-
-.tab-pane {
-    display: none; /* Dölj alla flikar som standard */
-    animation: slideIn 0.3s ease-out;
-}
+/* --- 6. INSTÄLLNINGAR: CONTENT --- */
+.settings-content { flex-grow: 1; min-width: 0; }
+.tab-pane { display: none; animation: fadeIn 0.3s ease; }
 .tab-pane.active { display: block; }
 
-@keyframes slideIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
 .setting-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 30px;
-    box-shadow: var(--shadow);
-    color: var(--card-text);
-    margin-bottom: 25px;
+    background: var(--card-bg); border: 1px solid var(--border-color);
+    border-radius: 8px; padding: 30px; box-shadow: var(--shadow);
+    color: var(--card-text); margin-bottom: 20px;
 }
+.setting-card h3 { margin-top: 0; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px; }
 
-.setting-card h3 {
-    margin-top: 0;
-    border-bottom: 2px solid var(--border-color);
-    padding-bottom: 15px;
-    margin-bottom: 25px;
-    color: var(--header-text);
-    font-size: 1.2rem;
-}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Formulärkomponenter */
-.form-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
-.form-group label { font-weight: 600; font-size: 0.9rem; opacity: 0.9; }
-
+/* Formulär (Inputs/Knappar) */
+.form-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
 input[type="text"], input[type="password"], input[type="email"], select, textarea {
-    padding: 10px;
-    border-radius: 6px;
-    border: 1px solid var(--input-border);
-    background: var(--input-bg);
-    color: var(--text-color);
-    font-size: 1rem;
-    font-family: inherit;
-    width: 100%; box-sizing: border-box;
+    padding: 10px; border-radius: 4px; border: 1px solid var(--input-border);
+    background: var(--input-bg); color: var(--text-color); font-size: 1rem; width: 100%;
 }
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--btn-primary); border-color: transparent; }
-
 .save-btn {
-    background-color: var(--btn-primary); color: #fff;
-    border: none; padding: 12px; border-radius: 6px;
-    cursor: pointer; font-weight: bold; font-size: 1rem;
-    width: 100%; transition: opacity 0.2s;
+    background-color: var(--btn-primary); color: white; border: none;
+    padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;
 }
 .save-btn:hover { opacity: 0.9; }
-.cancel-edit-btn { background: #90a4ae; color: white; border:none; padding: 0 15px; border-radius:6px; cursor:pointer; }
+.cancel-edit-btn { background: #999; color: white; border: none; padding: 0 10px; border-radius: 4px; cursor: pointer; }
 
 
-/* --- 7. MANUAL-STYLING (NYTT) --- */
-.manual-container { max-width: 900px; }
+/* --- 7. MANUAL (INUTI SETTINGS) --- */
+.manual-content { line-height: 1.6; max-width: 900px; }
+.manual-content h2 { color: var(--btn-primary); margin-top: 0; }
+.manual-content h3 { color: var(--header-text); border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
+.manual-info { background: #e3f2fd; padding: 15px; border-left: 4px solid #2196f3; margin: 15px 0; border-radius: 4px; }
+.manual-warn { background: #fff3e0; padding: 15px; border-left: 4px solid #ff9800; margin: 15px 0; border-radius: 4px; }
 
-.manual-body { line-height: 1.6; color: var(--text-color); }
-.manual-body h2 { color: var(--btn-primary); margin-top: 0; }
-.manual-body h3 { 
-    color: var(--header-text); 
-    border-bottom: 1px solid var(--border-color); 
-    padding-bottom: 8px; margin-top: 35px; 
+
+/* --- 8. FOOTER / EXPORT --- */
+.export-container { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+.export-button {
+    background: #333; color: white; border: none; padding: 10px 18px;
+    cursor: pointer; border-radius: 4px; font-weight: bold; text-decoration: none; margin-left: 10px;
 }
-.manual-body p { margin-bottom: 15px; }
-.manual-body ul, .manual-body ol { margin-bottom: 20px; padding-left: 25px; }
-.manual-body li { margin-bottom: 8px; }
-
-.info-box-manual, .warning-box-manual {
-    padding: 15px 20px;
-    border-radius: 6px;
-    margin: 20px 0;
-    font-size: 0.95rem;
-}
-.info-box-manual {
-    background: #e3f2fd;
-    border-left: 5px solid #2196f3;
-    color: #0d47a1;
-}
-.warning-box-manual {
-    background: #fff3e0;
-    border-left: 5px solid #ff9800;
-    color: #e65100;
-}
+.export-button:hover { background: #555; }
 
 
-/* --- 8. ÖVRIGA KOMPONENTER --- */
-
-/* Listor (Stationer/Pass/Admins) */
-.list-container {
-    max-height: 350px; overflow-y: auto;
-    border: 1px solid var(--border-color);
-    border-radius: 6px; background: var(--bg-color);
-}
-.draggable-station, .list-item {
-    padding: 10px 15px; border-bottom: 1px solid var(--border-color);
-    display: flex; justify-content: space-between; align-items: center;
-    background: var(--card-bg);
-}
-.list-btn { border: none; background: transparent; cursor: pointer; font-size: 1.2rem; }
-
-/* Dropdown (Snabbtillägg) */
-.dropdown-menu {
-    position: absolute; background: white; min-width: 220px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-    border-radius: 8px; border: 1px solid #ddd;
-    z-index: 9999; overflow: hidden;
-}
-.dropdown-item { padding: 10px 15px; cursor: pointer; color: #333; border-bottom: 1px solid #f5f5f5; }
-.dropdown-item:hover { background: #f0f7ff; }
-.dropdown-item.manual { color: #0277bd; font-weight: 600; background: #fdfdfd; }
-
-/* Toast (Notiser) */
-#toast {
-    visibility: hidden; min-width: 250px;
-    background-color: #323232; color: #fff;
-    text-align: center; border-radius: 8px;
-    padding: 16px; position: fixed; z-index: 10000;
-    left: 50%; bottom: 30px; transform: translateX(-50%);
-    font-size: 1rem; opacity: 0; transition: all 0.3s;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-#toast.show { visibility: visible; opacity: 1; bottom: 50px; }
-#toast.error { background-color: #d32f2f; }
-#toast.success { background-color: #388e3c; }
+/* --- 9. LISTOR & DRAG-DROP HELPER --- */
+.list-container { max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); }
+.draggable-station { padding: 8px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); }
+.list-btn { border: none; background: none; cursor: pointer; font-size: 1.1rem; padding: 5px; }
 
 
-/* --- 9. UTSKRIFT (PRINT) --- */
+/* --- 10. TOAST & DROPDOWNS --- */
+#toast { visibility: hidden; background-color: #333; color: #fff; padding: 16px; border-radius: 4px; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 10000; }
+#toast.show { visibility: visible; }
+.dropdown-menu { position: absolute; background: white; border: 1px solid #ccc; box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 10000; }
+.dropdown-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
+.dropdown-item:hover { background: #eee; }
+
+
+/* --- 11. PRINT --- */
 @media print {
-    /* Dölj allt runtomkring */
-    .admin-header, .settings-sidebar, .export-container, .logout-btn, .back-link { 
-        display: none !important; 
-    }
-    
-    /* Återställ layout för utskrift */
-    body, .admin-layout, .settings-container, .settings-layout {
-        display: block !important;
-        margin: 0 !important; padding: 0 !important;
-        width: 100% !important; max-width: none !important;
-        background: white !important;
-    }
-    
-    /* För Admin-vyn (Schemat) */
-    .admin-view .sidebar-roster { display: none; }
-    .admin-view .schedule-card {
-        box-shadow: none; border: none;
-        page-break-inside: avoid;
-    }
-    .shift-block.empty { border: 1px solid #ccc; } /* Visa tomma rutor tydligare */
-    
-    /* För Settings-vyn (Manualen) */
+    .admin-header, .settings-sidebar, .sidebar-roster, .export-container, .logout-btn { display: none !important; }
+    body, .admin-layout, .settings-layout { display: block !important; width: 100% !important; margin: 0 !important; background: white !important; }
+    .schedule-card, .setting-card { border: none; box-shadow: none; padding: 0; }
     #page-settings .tab-pane { display: none !important; }
     #page-settings .tab-pane.active { display: block !important; }
-    .setting-card { border: none; box-shadow: none; padding: 0; }
-    
-    /* Se till att bakgrundsfärger skrivs ut (viktigt för stationer!) */
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
