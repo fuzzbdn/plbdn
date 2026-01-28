@@ -252,7 +252,11 @@ async function initSettings(currentSettings) {
         };
     }
     
-    initStationsSettings(); initShiftsSettings(); initAdminSettings();
+    initStationsSettings(); 
+    initShiftsSettings(); 
+    initAdminSettings();
+    initPrintTab(); // NY: Starta utskriftsfliken
+
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
     const msgIn = document.getElementById('displayMessageInput');
@@ -408,9 +412,6 @@ function initShiftsSettings() {
     renderShifts();
 }
 
-// ----------------------------------------------------------------------------------
-// ADMIN-HANTERING
-// ----------------------------------------------------------------------------------
 function initAdminSettings() {
     const admBtn = document.getElementById('addAdminBtn');
     const admCancel = document.getElementById('cancelAdminEditBtn');
@@ -499,6 +500,120 @@ function initAdminSettings() {
 }
 
 /* =========================================
+   UTSKRIFTS-FUNKTIONER (SETTINGS)
+   ========================================= */
+function initPrintTab() {
+    const startIn = document.getElementById('printStartDate');
+    const endIn = document.getElementById('printEndDate');
+    
+    // Sätt dagens datum som standard
+    const today = new Date().toISOString().split('T')[0];
+    if(startIn) startIn.value = today;
+    if(endIn) endIn.value = today;
+
+    const btnToday = document.getElementById('btnSetToday');
+    if(btnToday) btnToday.onclick = () => { startIn.value = today; endIn.value = today; };
+
+    const btnWeek = document.getElementById('btnSetWeek');
+    if(btnWeek) btnWeek.onclick = () => {
+        const d = new Date();
+        const day = d.getDay() || 7; // 1=Mån, 7=Sön
+        if (day !== 1) d.setHours(-24 * (day - 1)); // Backa till måndag
+        startIn.value = d.toISOString().split('T')[0];
+        d.setDate(d.getDate() + 6); // Framåt till söndag
+        endIn.value = d.toISOString().split('T')[0];
+    };
+
+    const btnNextWeek = document.getElementById('btnSetNextWeek');
+    if(btnNextWeek) btnNextWeek.onclick = () => {
+        const d = new Date();
+        const day = d.getDay() || 7;
+        d.setDate(d.getDate() + (8 - day)); // Hoppa till nästa måndag
+        startIn.value = d.toISOString().split('T')[0];
+        d.setDate(d.getDate() + 6); // Till söndagen därpå
+        endIn.value = d.toISOString().split('T')[0];
+    };
+
+    const doPrint = document.getElementById('doPrintBtn');
+    if(doPrint) doPrint.onclick = () => {
+        const sDate = new Date(startIn.value);
+        const eDate = new Date(endIn.value);
+
+        if (sDate > eDate) return showToast("Startdatum måste vara före slutdatum", "error");
+
+        const printContainer = document.getElementById('print-container') || document.createElement('div');
+        printContainer.id = 'print-container';
+        if(!document.body.contains(printContainer)) document.body.appendChild(printContainer);
+        
+        let htmlContent = "";
+        let loopDate = new Date(sDate);
+
+        // Loopa igenom varje dag i intervallet
+        while (loopDate <= eDate) {
+            htmlContent += generateSingleDayPrintHtml(new Date(loopDate));
+            loopDate.setDate(loopDate.getDate() + 1); // Nästa dag
+        }
+
+        printContainer.innerHTML = htmlContent;
+        window.print();
+        setTimeout(() => printContainer.innerHTML = '', 1000);
+    };
+}
+
+function generateSingleDayPrintHtml(dateObj) {
+    const iso = getISOWeek(dateObj);
+    const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1; 
+    const dayName = days[dayIndex];
+    const dateStr = dateObj.toLocaleDateString('sv-SE');
+    const prefix = `y${iso.year}w${iso.week}-${dayName}-`;
+
+    const shifts = (Array.isArray(globalShifts) && globalShifts.length) ? globalShifts : DEFAULT_SHIFTS;
+    const stations = (Array.isArray(globalStations) && globalStations.length) ? globalStations : DEFAULT_STATIONS;
+
+    let html = `<div class="print-page" style="page-break-after: always; padding: 20px; font-family: sans-serif;">`;
+    
+    html += `<div style="text-align:center; margin-bottom:20px;">
+                <h2 style="margin:0;">${dayName} ${dateStr}</h2>
+                <span style="font-size:0.9em; color:#666;">Vecka ${iso.week}, ${iso.year}</span>
+             </div>`;
+
+    html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length}, 1fr); gap:0; border:1px solid #000; border-bottom:none;">
+                <div style="background:#ddd; border-right:1px solid #000; padding:5px;"></div>
+                ${shifts.map(s => `<div style="background:#ddd; border-right:1px solid #000; padding:5px; text-align:center; font-weight:bold;">${s.time}<br><span style="font-size:0.8em; font-weight:normal;">${s.label}</span></div>`).join('')}
+             </div>`;
+
+    html += `<div style="border:1px solid #000; border-top:none;">`;
+    
+    stations.forEach(st => {
+        if (st.isSpacer) {
+            html += `<div style="height:15px; background:#f0f0f0; border-top:1px solid #000;"></div>`;
+            return;
+        }
+
+        const bg = st.color;
+        const fg = isLight(bg) ? '#000' : '#fff';
+        
+        html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length}, 1fr); border-top:1px solid #000;">
+                    <div style="background:${bg}; color:${fg}; padding:10px; font-weight:bold; border-right:1px solid #000; display:flex; align-items:center;">
+                        ${st.name}
+                    </div>`;
+        
+        shifts.forEach((sh, index) => {
+            const key = `${prefix}${st.name}-${sh.time}`;
+            const val = globalScheduleData[key] || "";
+            const borderRight = index === shifts.length - 1 ? '' : 'border-right:1px solid #000;';
+            html += `<div style="padding:5px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:bold; font-size:0.9rem; ${borderRight}">
+                        ${val}
+                     </div>`;
+        });
+        html += `</div>`;
+    });
+
+    html += `</div></div>`;
+    return html;
+}
+
+/* =========================================
    5. ADMIN PLANERING
    ========================================= */
 async function initAdmin() {
@@ -527,18 +642,7 @@ async function initAdmin() {
     updateGrid(picker.value);
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
-    // EXPORTKNAPPAR
     document.getElementById('exportBtn').onclick = generateImage;
-    document.getElementById('printBtn').onclick = () => {
-        const pc = document.getElementById('print-container') || document.createElement('div');
-        pc.id = 'print-container';
-        if(!document.body.contains(pc)) document.body.appendChild(pc);
-        
-        pc.innerHTML = getScheduleHtmlForPrint();
-        window.print();
-        setTimeout(() => pc.innerHTML='', 1000);
-    };
-    
     setupSidebarAddUser();
 }
 
@@ -705,39 +809,38 @@ function initDisplay() {
 }
 
 /* =========================================
-   7. EXPORT & PRINT & ÖVRIGT
+   7. EXPORT & ÖVRIGT
    ========================================= */
-function getScheduleHtmlForPrint() {
-    const dateText = document.getElementById('currentDateDisplay').innerText;
-    const day = days[currentAdminDayIndex];
-    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
-    const shifts = (Array.isArray(globalShifts)&&globalShifts.length)?globalShifts:DEFAULT_SHIFTS;
-    const stations = (Array.isArray(globalStations)&&globalStations.length)?globalStations:DEFAULT_STATIONS;
-
-    let html = `<div style="font-family:sans-serif; padding:20px;"><div style="text-align:center; margin-bottom:20px;"><h1 style="font-size:24px; margin:0;">Bemanningsschema - ${dateText}</h1></div>
-    <div style="display:grid; grid-template-columns:150px repeat(${shifts.length},1fr); gap:10px; text-align:center; font-weight:bold; margin-bottom:10px;">
-    <div></div>${shifts.map(s=>`<div style="border:1px solid #000; padding:5px; background:#ddd;">${s.label}<br><span style="font-size:0.8em; font-weight:normal;">${s.time}</span></div>`).join('')}</div>`;
-
-    stations.forEach(st => {
-        if(st.isSpacer) { html += `<div style="grid-column:1/-1; height:30px;"></div>`; return; }
-        const bg = st.color, fg = isLight(bg)?'#000':'#fff';
-        html += `<div style="display:grid; grid-template-columns:150px repeat(${shifts.length},1fr); gap:10px; margin-bottom:10px;">
-            <div style="background:${bg}; color:${fg}; font-weight:bold; padding:10px; display:flex; align-items:center; justify-content:center; border:1px solid #000;">${st.name}</div>`;
-        shifts.forEach(sh => {
-            const val = globalScheduleData[`${prefix}${st.name}-${sh.time}`] || "";
-            html += `<div style="display:flex; align-items:center; justify-content:center; text-align:center; min-height:50px; padding:5px; font-weight:bold; border:1px solid #000; background:#fff;">${val}</div>`;
-        });
-        html += `</div>`;
-    });
-    return html + `</div>`;
-}
-
 function generateImage() {
     const btn=document.getElementById('exportBtn'), txt=btn.innerText; 
     btn.innerText="Genererar...";
+    
+    // Vi måste skapa en temporär "print"-vy för html2canvas eftersom vi inte kan använda den riktiga print-vyn
+    // Enklast är att återanvända print-logiken men rendera den till en dold div
     const div=document.createElement('div'); 
     div.style.cssText="position:absolute; top:-9999px; left:0; width:1400px; background:#fff;";
-    div.innerHTML=getScheduleHtmlForPrint(); 
+    
+    // Skapa en dags vy för bilden
+    const today = new Date(); // Eller valt datum
+    if(selectedWeek && selectedYear) {
+       // Om vi är i admin-vyn, använd valt datum
+       // Men generateImage anropas från admin, så vi kan ta currentAdminDayIndex
+       const d = new Date(); // Reset
+       // Lite krångligt att återskapa datumet från vecka/år/dag-index exakt här utan helper
+       // Förenkling: Använd getScheduleHtmlForPrint() om vi hade kvar den, men vi flyttade logiken till settings.
+       // För att bilden ska funka i admin behöver vi en enkel renderare här igen, eller flytta generateImage till settings också.
+       // Låt oss göra en enkel renderare för bilden baserat på admin-vyn.
+    }
+    
+    // Obs: generateImage är lite "legacy" nu när vi har bättre utskrift i settings. 
+    // Men för att den ska funka, låt oss ta innehållet i scheduleContainer rakt av.
+    const source = document.getElementById('scheduleContainer');
+    if(source) {
+        div.innerHTML = `<div style="padding:20px;"><h2>Schema</h2>${source.innerHTML}</div>`;
+    } else {
+        div.innerText = "Ingen data";
+    }
+
     document.body.appendChild(div);
 
     if(typeof html2canvas==='undefined') {
@@ -748,7 +851,7 @@ function generateImage() {
 
     html2canvas(div,{scale:2}).then(c=>{
         const a=document.createElement('a'); 
-        a.download=`Schema-${days[currentAdminDayIndex]}.jpg`; 
+        a.download=`Schema.jpg`; 
         a.href=c.toDataURL('image/jpeg',0.9); 
         a.click();
         document.body.removeChild(div); 
@@ -816,34 +919,24 @@ if (document.body.id === 'page-display') setTimeout(initWeatherBoden, 1000);
 
 
 /* =========================================
-   NY FUNKTION: HANTERA TABBAR
+   FLIK-HANTERARE
    ========================================= */
 window.openTab = function(tabId) {
-    // 1. Dölj alla flikar
     const allPanes = document.querySelectorAll('.tab-pane');
     allPanes.forEach(pane => {
         pane.classList.remove('active');
         pane.style.display = 'none';
     });
-
-    // 2. Avmarkera alla knappar
     const allBtns = document.querySelectorAll('.tab-btn');
     allBtns.forEach(btn => {
         btn.classList.remove('active');
     });
-
-    // 3. Visa vald flik
     const targetPane = document.getElementById(tabId);
     if (targetPane) {
         targetPane.classList.add('active');
         targetPane.style.display = 'block';
     }
-
-    // 4. Markera knappen
     if (event && event.currentTarget) {
         event.currentTarget.classList.add('active');
     }
 };
-
-
-
