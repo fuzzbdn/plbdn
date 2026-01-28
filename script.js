@@ -516,6 +516,9 @@ function initAdminSettings() {
 /* =========================================
    UTSKRIFTS-FUNKTIONER (SETTINGS)
    ========================================= */
+/* =========================================
+   UTSKRIFTS-FUNKTIONER (SETTINGS)
+   ========================================= */
 function initPrintTab() {
     const startIn = document.getElementById('printStartDate');
     const endIn = document.getElementById('printEndDate');
@@ -525,29 +528,46 @@ function initPrintTab() {
     if(startIn) startIn.value = today;
     if(endIn) endIn.value = today;
 
+    // 1. Knapp: IDAG
     const btnToday = document.getElementById('btnSetToday');
-    if(btnToday) btnToday.onclick = () => { startIn.value = today; endIn.value = today; };
+    if(btnToday) btnToday.onclick = () => { 
+        const now = new Date().toISOString().split('T')[0];
+        startIn.value = now; 
+        endIn.value = now; 
+    };
 
+    // 2. Knapp: HELA DENNA VECKA (Mån-Sön)
     const btnWeek = document.getElementById('btnSetWeek');
     if(btnWeek) btnWeek.onclick = () => {
         const d = new Date();
-        const day = d.getDay() || 7; // 1=Mån, 7=Sön
-        if (day !== 1) d.setHours(-24 * (day - 1)); // Backa till måndag
+        const day = d.getDay();
+        // Räkna ut differens för att backa till måndag
+        // Om day är 0 (Söndag), backa 6 dagar. Annars backa (day - 1).
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+        
+        d.setDate(diff); // Sätt datumet till Måndag
         startIn.value = d.toISOString().split('T')[0];
-        d.setDate(d.getDate() + 6); // Framåt till söndag
+        
+        d.setDate(d.getDate() + 6); // Addera 6 dagar för att få Söndag
         endIn.value = d.toISOString().split('T')[0];
     };
 
+    // 3. Knapp: NÄSTA VECKA (Mån-Sön)
     const btnNextWeek = document.getElementById('btnSetNextWeek');
     if(btnNextWeek) btnNextWeek.onclick = () => {
         const d = new Date();
-        const day = d.getDay() || 7;
-        d.setDate(d.getDate() + (8 - day)); // Hoppa till nästa måndag
+        const day = d.getDay();
+        // Hitta nuvarande veckas måndag först
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        
+        d.setDate(diff + 7); // Hoppa fram 7 dagar till nästa veckas Måndag
         startIn.value = d.toISOString().split('T')[0];
-        d.setDate(d.getDate() + 6); // Till söndagen därpå
+        
+        d.setDate(d.getDate() + 6); // Till Söndag
         endIn.value = d.toISOString().split('T')[0];
     };
 
+    // 4. Utför Utskrift
     const doPrint = document.getElementById('doPrintBtn');
     if(doPrint) doPrint.onclick = () => {
         const sDate = new Date(startIn.value);
@@ -570,6 +590,8 @@ function initPrintTab() {
 
         printContainer.innerHTML = htmlContent;
         window.print();
+        
+        // Rensa efter en stund för att spara minne
         setTimeout(() => printContainer.innerHTML = '', 1000);
     };
 }
@@ -940,3 +962,4 @@ window.openTab = function(tabId) {
         event.currentTarget.classList.add('active');
     }
 };
+
