@@ -504,3 +504,50 @@ select, input[type="text"], input[type="password"], input[type="email"] {
     
     .clear-btn { display: none !important; }
 }
+/* --- MANUAL STYLING --- */
+.manual-nav-btn {
+    margin-top: 20px !important;
+    background: rgba(0,0,0,0.05) !important;
+    border: 1px dashed var(--border-color) !important;
+}
+
+.manual-container {
+    text-align: left;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.manual-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--btn-primary);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.manual-body h3 {
+    color: var(--btn-primary);
+    margin-top: 30px;
+}
+
+.warning-box-manual {
+    background: #fff5f5;
+    border-left: 4px solid #f56565;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+/* Utskriftshantering */
+@media print {
+    #page-settings .settings-tabs, 
+    #page-settings .admin-header,
+    #page-settings .tab-content:not(#manual-tab) {
+        display: none !important;
+    }
+    #page-settings .settings-grid { display: block; }
+    #page-settings .manual-container { box-shadow: none; border: none; }
+    .print-manual-btn { display: none; }
+}
