@@ -44,11 +44,7 @@ function showToast(message, type = 'success') {
     let icon = type === 'error' ? '❌' : (type === 'info' ? 'ℹ️' : '✅');
     toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
     container.appendChild(toast);
-    
-    // Trigga animation
     setTimeout(() => toast.classList.add('show'), 10);
-    
-    // Ta bort efter 3 sekunder
     setTimeout(() => {
         toast.classList.remove('show');
         setTimeout(() => { if(container.contains(toast)) container.removeChild(toast); }, 300);
@@ -95,7 +91,6 @@ function isLight(color) {
     return ((r*299 + g*587 + b*114)/1000) >= 128;
 }
 
-// DYNAMISK TEMA-HANTERARE
 async function applyTheme(themeId) {
     const isAdmin = (document.body.id === 'page-admin' || document.body.id === 'page-settings');
     const oldStyle = document.getElementById('dynamic-theme-style');
@@ -145,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     else if (pageId === 'page-settings') { if(checkAuth()) initSettings(settings); }
     else if (pageId === 'page-display') { 
         initDisplay(); 
-        initWeatherBoden();
+        initWeatherBoden(); // STARTA VÄDRET
     }
 });
 
@@ -319,35 +314,10 @@ function initStationsSettings() {
     const renderStations = () => {
         const cont = document.getElementById('stationListContainer');
         if(!Array.isArray(globalStations)) globalStations = DEFAULT_STATIONS;
-        
         cont.innerHTML = globalStations.map((st, i) => {
             const dragAttr = `draggable="true" ondragstart="handleStationDragStart(event)" ondragover="handleStationDragOver(event)" ondrop="handleStationDrop(event)" data-index="${i}"`;
-            
-            if(st.isSpacer) {
-                return `
-                <div class="draggable-station" ${dragAttr} style="background:#f9f9f9; color:#888;">
-                    <div class="list-info-left">
-                        <span class="drag-handle">☰</span>
-                        <i>--- Mellanrum ---</i>
-                    </div>
-                    <div class="list-actions-right">
-                        <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
-                    </div>
-                </div>`;
-            }
-
-            return `
-            <div class="draggable-station" ${dragAttr}>
-                <div class="list-info-left">
-                    <span class="drag-handle">☰</span>
-                    <div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc; flex-shrink:0;"></div>
-                    <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${st.name}</strong>
-                </div>
-                <div class="list-actions-right">
-                    <button class="list-btn" onclick="startEditStation(${i})">✏️</button>
-                    <button class="list-btn" onclick="deleteStation(${i})">🗑️</button>
-                </div>
-            </div>`;
+            if(st.isSpacer) return `<div class="draggable-station" ${dragAttr} style="background:#f9f9f9; color:#888;"><div class="list-info-left"><span class="drag-handle">☰</span><i>--- Mellanrum ---</i></div><div class="list-actions-right"><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div></div>`;
+            return `<div class="draggable-station" ${dragAttr}><div class="list-info-left"><span class="drag-handle">☰</span><div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc; flex-shrink:0;"></div><strong>${st.name}</strong></div><div class="list-actions-right"><button class="list-btn" onclick="startEditStation(${i})">✏️</button><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div></div>`;
         }).join('');
     };
 
@@ -389,44 +359,11 @@ function initShiftsSettings() {
             </div>
         </div>`).join('');
     };
-    
-    window.startEditShift = (i) => { 
-        editingShiftIndex = i; 
-        shLabel.value = globalShifts[i].label; 
-        shTime.value = globalShifts[i].time; 
-        shBtn.innerText = "Spara"; 
-        shBtn.style.background = "#2196F3"; 
-        shCancel.style.display = "inline-flex"; 
-    };
-    
-    const resetSh = () => { 
-        editingShiftIndex = null; 
-        shLabel.value = ""; 
-        shTime.value = ""; 
-        shBtn.innerText = "Lägg till Pass"; 
-        shBtn.style.background = ""; 
-        shCancel.style.display = "none"; 
-    };
-    
+    window.startEditShift = (i) => { editingShiftIndex = i; shLabel.value = globalShifts[i].label; shTime.value = globalShifts[i].time; shBtn.innerText = "Spara"; shBtn.style.background = "#2196F3"; shCancel.style.display = "inline-flex"; };
+    const resetSh = () => { editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = ""; shCancel.style.display = "none"; };
     shCancel.onclick = resetSh;
-    shBtn.onclick = async () => { 
-        if(!shLabel.value) return; 
-        const item = { label: shLabel.value, time: shTime.value }; 
-        if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item; 
-        else globalShifts.push(item); 
-        await saveData('config_shifts', globalShifts); 
-        showToast("Sparat", "success"); 
-        resetSh(); 
-        renderShifts(); 
-    };
-    
-    window.deleteShift = async (i) => { 
-        if(confirm("Ta bort?")) { 
-            globalShifts.splice(i, 1); 
-            await saveData('config_shifts', globalShifts); 
-            renderShifts(); 
-        }
-    };
+    shBtn.onclick = async () => { if(!shLabel.value) return; const item = { label: shLabel.value, time: shTime.value }; if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item; else globalShifts.push(item); await saveData('config_shifts', globalShifts); showToast("Sparat", "success"); resetSh(); renderShifts(); };
+    window.deleteShift = async (i) => { if(confirm("Ta bort?")) { globalShifts.splice(i, 1); await saveData('config_shifts', globalShifts); renderShifts(); }};
     renderShifts();
 }
 
@@ -442,7 +379,6 @@ function initAdminSettings() {
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
         if(!Array.isArray(admins)) admins = [];
-        
         document.getElementById('adminListContainer').innerHTML = admins.map(a => `
             <div class="admin-list-item">
                 <div class="list-info-left">
@@ -835,12 +771,17 @@ async function removeUser(u) {
    ========================================= */
 async function initWeatherBoden() {
     let wDiv = document.getElementById('weatherWidget');
+    // Om wDiv saknas (finns i HTML, men om ej) så skapa ej här, 
+    // vi litar på att den finns i display.html.
+    // Men för säkerhets skull:
     if (!wDiv) {
+        // Fallback om någon använder gammal HTML
         wDiv = document.createElement('div');
         wDiv.id = 'weatherWidget';
         const clock = document.getElementById('clock');
         if (clock && clock.parentNode) clock.parentNode.insertBefore(wDiv, clock);
     }
+    
     const fetchWeather = async () => {
         try {
             const url = 'https://api.open-meteo.com/v1/forecast?latitude=65.82&longitude=21.69&current_weather=true';
@@ -853,8 +794,6 @@ async function initWeatherBoden() {
     fetchWeather();
     setInterval(fetchWeather, 900000); 
 }
-// OBS: Denna anropas nu inuti initAuth / DOMContentLoaded om vi är på display-sidan
-
 
 /* =========================================
    FLIK-HANTERARE
