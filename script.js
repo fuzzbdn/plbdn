@@ -739,32 +739,38 @@ async function initWeatherBoden() {
 }
 if (document.body.id === 'page-display') setTimeout(initWeatherBoden, 1000);
 
-/* =========================================
-   FUNKTION FÖR ATT BYTA FLIKAR I INSTÄLLNINGAR
-   ========================================= */
-function openTab(tabId) {
-    // 1. Dölj alla flikar (.tab-pane)
+
+// ===========================================
+// GLOBAL FUNKTION FÖR FLIKAR (SETTINGS)
+// ===========================================
+window.openTab = function(tabId) {
+    // 1. Dölj alla flikar
     const allPanes = document.querySelectorAll('.tab-pane');
     allPanes.forEach(pane => {
-        pane.classList.remove('active'); // CSS sköter display:none
+        pane.classList.remove('active');
+        // Lägg till display:none inline för säkerhets skull om CSS fallerar
+        pane.style.display = 'none';
     });
 
-    // 2. Avmarkera alla knappar (.tab-btn)
+    // 2. Avmarkera alla knappar
     const allBtns = document.querySelectorAll('.tab-btn');
     allBtns.forEach(btn => {
         btn.classList.remove('active');
     });
 
-    // 3. Visa den valda fliken
-    const selectedPane = document.getElementById(tabId);
-    if (selectedPane) {
-        selectedPane.classList.add('active');
+    // 3. Visa vald flik
+    const targetPane = document.getElementById(tabId);
+    if (targetPane) {
+        targetPane.classList.add('active');
+        targetPane.style.display = 'block';
+    } else {
+        console.error("Hittade inte fliken med ID:", tabId);
     }
 
-    // 4. Markera den klickade knappen som aktiv
-    // Vi använder event.currentTarget för att fånga knappen även om man klickar på en ikon inuti den
+    // 4. Markera knappen som aktiv
+    // Vi kollar vilken knapp som triggade eventet
     if (event && event.currentTarget) {
         event.currentTarget.classList.add('active');
     }
-}
+};
 
