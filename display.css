@@ -45,9 +45,22 @@ body.display-view {
 
 #mainTitle { font-size: 3.5vh; font-weight: 800; color: var(--header-text); margin: 0; }
 
-/* Väder & Klocka */
-#weatherWidget { font-size: 3.5vh; font-weight: 700; color: var(--header-text); margin-right: 20px; }
-#clock { font-size: 4.5vh; font-weight: 900; color: var(--header-text); background: var(--clock-bg); padding: 0.2vh 1.5vw; border-radius: 8px; }
+/* VÄDER & KLOCKA */
+#weatherWidget {
+    font-size: 3vh;
+    font-weight: 700;
+    color: var(--header-text);
+    margin-right: 1vw;
+}
+
+#clock { 
+    font-size: 4.5vh; 
+    font-weight: 900; 
+    color: var(--header-text); 
+    background: var(--clock-bg); 
+    padding: 0.5vh 1.5vw; 
+    border-radius: 8px; 
+}
 
 /* MARQUEE */
 #marqueeContainer {
@@ -63,7 +76,7 @@ body.display-view {
     box-shadow: var(--shadow);
 }
 
-/* GRID */
+/* GRID LAYOUT */
 #mainContainer { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
 
 .time-header-row, .display-row {
@@ -81,7 +94,7 @@ body.display-view {
     text-transform: uppercase; letter-spacing: 1px; text-align: center;
 }
 
-/* KORT */
+/* KORT & ETIKETTER */
 .station-label {
     background-color: var(--station-color, #fff); 
     color: var(--contrast-color, #000);
@@ -114,38 +127,11 @@ body.display-view {
     border-bottom: none;
 }
 
-/* --- TOAST NOTIFICATIONS (SAKNADES INNAN) --- */
-#toast-container {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    pointer-events: none;
-}
-
+/* TOAST (Popup) */
+#toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; pointer-events: none; }
 .toast {
-    background-color: #333;
-    color: #fff;
-    padding: 12px 24px;
-    border-radius: 4px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.3s, transform 0.3s;
-    font-weight: 500;
-    min-width: 250px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-family: 'Inter', sans-serif;
-    font-size: 1.5vh; /* Anpassad storlek för display */
-    pointer-events: auto;
+    background-color: #333; color: #fff; padding: 12px 24px; border-radius: 4px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2); opacity: 0; transform: translateY(20px);
+    transition: opacity 0.3s, transform 0.3s; font-weight: 500; margin-top: 10px;
 }
-
 .toast.show { opacity: 1; transform: translateY(0); }
-.toast.success { background-color: #4CAF50; border-left: 5px solid #2E7D32; }
-.toast.error   { background-color: #f44336; border-left: 5px solid #c62828; }
-.toast.info    { background-color: #2196F3; border-left: 5px solid #1565C0; }
