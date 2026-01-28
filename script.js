@@ -201,6 +201,22 @@ function initReset() {
    ========================================= */
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
+    
+    // --- NYTT: HÄMTA SCHEMA FÖR ATT UTSKRIFT SKA FUNKA ---
+    const [draft, published, old] = await Promise.all([
+        fetchData('schedule_draft'),
+        fetchData('schedule_published'),
+        fetchData('schedule')
+    ]);
+    // Logik: Om draft finns använd den (senaste ändringarna), annars publicerad.
+    // Detta gör att namn syns i utskriften även om man står i settings.
+    let dataToUse = draft;
+    if (!dataToUse || Object.keys(dataToUse).length === 0) {
+        dataToUse = published && Object.keys(published).length > 0 ? published : old;
+    }
+    globalScheduleData = dataToUse || {};
+    // -----------------------------------------------------
+
     const themeSelect = document.getElementById('themeSelect');
     const themeNameIn = document.getElementById('customThemeName');
     const themeCssIn = document.getElementById('customThemeCSS');
@@ -255,7 +271,7 @@ async function initSettings(currentSettings) {
     initStationsSettings(); 
     initShiftsSettings(); 
     initAdminSettings();
-    initPrintTab(); // NY: Starta utskriftsfliken
+    initPrintTab(); // Starta utskriftsfliken
 
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
@@ -303,7 +319,6 @@ function initStationsSettings() {
         cont.innerHTML = globalStations.map((st, i) => {
             const dragAttr = `draggable="true" ondragstart="handleStationDragStart(event)" ondragover="handleStationDragOver(event)" ondrop="handleStationDrop(event)" data-index="${i}"`;
             
-            // RENDERING FÖR MELLANRUM
             if(st.isSpacer) {
                 return `
                 <div class="draggable-station" ${dragAttr} style="background:#f9f9f9; color:#888;">
@@ -317,7 +332,6 @@ function initStationsSettings() {
                 </div>`;
             }
 
-            // RENDERING FÖR VANLIG STATION
             return `
             <div class="draggable-station" ${dragAttr}>
                 <div class="list-info-left">
@@ -815,25 +829,11 @@ function generateImage() {
     const btn=document.getElementById('exportBtn'), txt=btn.innerText; 
     btn.innerText="Genererar...";
     
-    // Vi måste skapa en temporär "print"-vy för html2canvas eftersom vi inte kan använda den riktiga print-vyn
-    // Enklast är att återanvända print-logiken men rendera den till en dold div
+    // Använd en tillfällig div för att rendera schemat dolt
     const div=document.createElement('div'); 
     div.style.cssText="position:absolute; top:-9999px; left:0; width:1400px; background:#fff;";
     
-    // Skapa en dags vy för bilden
-    const today = new Date(); // Eller valt datum
-    if(selectedWeek && selectedYear) {
-       // Om vi är i admin-vyn, använd valt datum
-       // Men generateImage anropas från admin, så vi kan ta currentAdminDayIndex
-       const d = new Date(); // Reset
-       // Lite krångligt att återskapa datumet från vecka/år/dag-index exakt här utan helper
-       // Förenkling: Använd getScheduleHtmlForPrint() om vi hade kvar den, men vi flyttade logiken till settings.
-       // För att bilden ska funka i admin behöver vi en enkel renderare här igen, eller flytta generateImage till settings också.
-       // Låt oss göra en enkel renderare för bilden baserat på admin-vyn.
-    }
-    
-    // Obs: generateImage är lite "legacy" nu när vi har bättre utskrift i settings. 
-    // Men för att den ska funka, låt oss ta innehållet i scheduleContainer rakt av.
+    // Kopiera innehållet från den aktuella vyn
     const source = document.getElementById('scheduleContainer');
     if(source) {
         div.innerHTML = `<div style="padding:20px;"><h2>Schema</h2>${source.innerHTML}</div>`;
