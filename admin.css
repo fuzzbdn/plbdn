@@ -1,8 +1,8 @@
 /* =========================================
-   ADMIN.CSS - FINAL REPAIRED VERSION
+   ADMIN.CSS - FIXAD VERSION
    ========================================= */
 
-/* --- 1. HEADER (Gemensam) --- */
+/* --- 1. HEADER (GEMENSAM) --- */
 .admin-header {
     background-color: #ffffff;
     padding: 15px 20px;
@@ -24,181 +24,201 @@
     align-items: center;
 }
 
-.admin-header h1 { margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--header-text); }
+.admin-header h1 { margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--header-text); }
 .admin-header input[type="date"] { padding: 5px 10px; border: 1px solid var(--input-border); border-radius: 4px; font-size: 1rem; background: var(--input-bg); color: var(--text-color); }
-
-.logout-btn { background-color: #ffebee; color: #c62828; border: 1px solid #ffcdd2; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.logout-btn { background-color: #ffebee; color: #c62828; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: background 0.2s; }
 .back-link { color: var(--text-color); text-decoration: none; background: var(--bg-color); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border-color); font-weight: 600; margin-left: 15px; }
 
 /* =========================================
-   2. ADMIN-VY (PLANERING) - LAYOUT
+   2. ADMIN-VY (PLANERING)
+   Här återställer vi original-designen exakt
    ========================================= */
-/* Denna layout gäller BARA på admin.html */
+
 .admin-layout {
     display: flex;
     gap: 20px;
-    max-width: 1800px;
+    max-width: 1600px; /* Originalbredd */
     margin: 0 auto;
     align-items: flex-start;
-    padding: 0 20px;
 }
 
-/* Vänsterspalten (Personal) */
+/* SIDO-PANELEN (PERSONAL) */
 .sidebar-roster {
     width: 280px;
-    flex-shrink: 0; /* Förhindra att den krymper */
+    flex-shrink: 0;
 }
 
 .roster-card {
     background: var(--card-bg);
-    padding: 15px;
+    padding: 20px;
     border-radius: 8px;
     box-shadow: var(--shadow);
-    border: 1px solid var(--border-color);
-    max-height: 85vh;
-    overflow-y: auto;
     position: sticky;
     top: 20px;
+    max-height: 85vh;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
 }
 
-.roster-card h3 { margin-top: 0; text-align: center; color: var(--header-text); }
+.roster-card h3 { margin-top: 0; margin-bottom: 15px; text-align: center; color: var(--header-text); }
 
-/* Högerspalten (Schemat) */
-.schedule-card-wrapper {
-    flex-grow: 1;
-    min-width: 0; /* VIKTIGT: Förhindrar att grid/flex trycker ut layouten */
+.sidebar-add-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; width: 100%; }
+
+.sidebar-input {
+    flex: 1; min-width: 0; padding: 8px 10px;
+    border: 1px solid var(--input-border); border-radius: 4px;
+    font-size: 0.95rem; background: var(--input-bg); color: var(--text-color);
 }
 
-.schedule-card {
+.sidebar-add-btn {
+    flex-shrink: 0; width: 36px; height: 36px;
+    background-color: var(--btn-primary); color: #fff;
+    border: 1px solid var(--border-color); border-radius: 4px;
+    font-weight: bold; cursor: pointer; font-size: 1.4rem;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.roster-list { display: flex; flex-direction: column; gap: 8px; }
+
+.draggable-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 12px; background-color: var(--bg-color);
+    border: 1px solid var(--border-color); border-radius: 6px;
+    cursor: grab; font-weight: 600; font-size: 0.95rem;
+    color: var(--text-color); user-select: none;
+}
+.draggable-item:hover { background-color: var(--input-bg); border-color: #90caf9; transform: translateY(-2px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.draggable-item.assigned { background-color: #f5f5f5; color: #aaa; border-color: #eee; font-style: italic; }
+.remove-user-btn { background: none; border: none; color: #ff6b6b; font-weight: bold; font-size: 1.2rem; cursor: pointer; margin-left: 8px; opacity: 0.4; }
+.remove-user-btn:hover { opacity: 1; }
+
+/* SCHEMAT (GRID) */
+.schedule-card-wrapper { flex-grow: 1; min-width: 0; }
+
+#scheduleContainer {
     background: var(--card-bg);
     padding: 20px;
     border-radius: 8px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border-color);
-    overflow-x: auto;
 }
 
-/* =========================================
-   3. INSTÄLLNINGAR-VY - LAYOUT
-   ========================================= */
-/* Denna layout gäller BARA på settings.html */
-.settings-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-
-.settings-layout {
-    display: flex;
-    gap: 30px;
-    align-items: flex-start;
-}
-
-/* Inställningar Meny (Sidebar) */
-.settings-sidebar {
-    width: 250px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
+/* HÄR VAR FELET - VI ÅTERINFÖR GRID-KOLUMNERNA */
+.header-row {
+    display: grid;
+    grid-template-columns: 150px 1fr 1fr 1fr; /* Station + 3 Pass */
     gap: 10px;
-    position: sticky;
-    top: 20px;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid var(--border-color);
+    font-weight: bold;
+    text-align: center;
+    color: var(--text-color);
 }
 
-.settings-content {
-    flex-grow: 1;
-    min-width: 0;
+.station-row {
+    display: grid;
+    grid-template-columns: 150px 1fr 1fr 1fr; /* Station + 3 Pass */
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
 }
-
-/* =========================================
-   4. KOMPONENTER (Knappar, Listor, Grid)
-   ========================================= */
-
-/* Personal-lista (Draggable) */
-.sidebar-add-row { display: flex; gap: 5px; margin-bottom: 10px; }
-.sidebar-input { flex: 1; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
-.sidebar-add-btn { width: 30px; background: var(--btn-primary); color: white; border: none; border-radius: 4px; cursor: pointer; }
-
-.roster-list { display: flex; flex-direction: column; gap: 5px; }
-.draggable-item {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px; background: var(--bg-color); border: 1px solid var(--border-color);
-    border-radius: 4px; cursor: grab; font-size: 0.9rem; user-select: none;
-}
-.draggable-item:hover { border-color: var(--btn-primary); }
-.draggable-item.assigned { background: #f5f5f5; color: #aaa; font-style: italic; border-color: transparent; }
-.remove-user-btn { border: none; background: none; color: #ff5252; cursor: pointer; font-weight: bold; }
-
-/* Schema Grid */
-.header-row, .station-row {
-    display: grid; 
-    gap: 10px; margin-bottom: 8px; 
-    /* Kolumner hanteras av JS inline-style */
-}
-.header-row { font-weight: bold; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 5px; }
-.station-row { align-items: stretch; min-height: 45px; }
 
 .station-label {
-    color: white; font-weight: bold; border-radius: 4px;
-    display: flex; align-items: center; justify-content: center;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    font-weight: bold; padding: 10px; border-radius: 4px;
+    color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    text-align: center; display: flex; align-items: center; justify-content: center;
+    height: 100%; min-height: 50px;
 }
 
 .shift-block {
-    background: var(--input-bg); border: 1px solid var(--border-color);
-    border-radius: 4px; padding: 4px 8px; display: flex;
-    justify-content: space-between; align-items: center;
-    min-height: 45px;
+    background-color: var(--input-bg); border: 1px solid var(--border-color);
+    border-radius: 6px; padding: 8px 12px; min-height: 50px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05); color: var(--text-color);
 }
-.shift-block.empty { background: transparent; border: 1px dashed #ccc; }
-.shift-text { font-weight: 500; font-size: 0.9rem; flex-grow: 1; }
-.shift-controls { display: flex; gap: 2px; }
-.add-user-btn { color: green; background: none; border: none; cursor: pointer; font-weight: bold; font-size: 1.2rem; }
-.clear-btn { color: red; background: none; border: none; cursor: pointer; font-weight: bold; font-size: 1.2rem; }
+.shift-block.empty { background-color: var(--bg-color) !important; border: 1px dashed #e0e0e0; box-shadow: none; }
+.shift-block.drag-over { background-color: #e3f2fd !important; border: 2px dashed #2196f3 !important; transform: scale(1.02); }
 
-/* Inställningar Tab-knappar */
+.shift-text { font-weight: 600; font-size: 1rem; color: var(--text-color); flex-grow: 1; margin-right: 10px; }
+.shift-controls { display: flex; align-items: center; gap: 2px; }
+.add-user-btn { background: none; border: none; color: #4CAF50; font-size: 1.4rem; font-weight: bold; cursor: pointer; }
+.clear-btn { background: none; border: none; color: #e53935; font-size: 1.4rem; font-weight: bold; cursor: pointer; }
+
+/* =========================================
+   3. INSTÄLLNINGAR-VY (NY DESIGN)
+   Separerad för att inte krocka med admin
+   ========================================= */
+
+.settings-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.settings-layout { display: flex; gap: 30px; align-items: flex-start; }
+
+/* Meny (Sidebar) */
+.settings-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 10px;
+    position: sticky; top: 20px;
+}
+
 .tab-btn {
-    text-align: left; padding: 12px 15px; background: white;
-    border: 1px solid var(--border-color); border-radius: 6px;
-    cursor: pointer; font-weight: 600; color: var(--text-color);
-    transition: 0.2s;
+    text-align: left; padding: 15px 20px;
+    background: var(--card-bg); border: 1px solid var(--border-color);
+    border-radius: 8px; cursor: pointer; font-size: 1rem;
+    font-weight: 600; color: var(--text-color);
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s;
 }
-.tab-btn:hover { background: #f9f9f9; transform: translateX(3px); }
+.tab-btn:hover { background: var(--input-bg); transform: translateX(5px); }
 .tab-btn.active { border-left: 5px solid var(--btn-primary); background: #e3f2fd; color: #0277bd; }
-.tab-btn-manual { margin-top: 15px; border-style: dashed; background: #fafafa; }
+.tab-btn-manual { margin-top: 20px; border: 1px dashed var(--border-color); background: rgba(0,0,0,0.02); }
 
-/* Content Cards */
-.setting-card {
-    background: white; border: 1px solid var(--border-color);
-    border-radius: 8px; padding: 25px; margin-bottom: 20px;
-    box-shadow: var(--shadow);
-}
+/* Innehåll */
+.settings-content { flex-grow: 1; min-width: 0; }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; animation: fadeIn 0.3s; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* Manual Styling */
-.manual-content { line-height: 1.6; }
-.manual-content h3 { color: var(--header-text); border-bottom: 1px solid #eee; margin-top: 25px; padding-bottom: 5px; }
-.manual-info { background: #e1f5fe; border-left: 4px solid #039be5; padding: 10px; margin: 10px 0; border-radius: 4px; }
-.manual-warn { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px; margin: 10px 0; border-radius: 4px; }
+.setting-card {
+    background: var(--card-bg); border: 1px solid var(--border-color);
+    border-radius: 8px; padding: 30px; box-shadow: var(--shadow);
+    color: var(--card-text); margin-bottom: 20px;
+}
+.setting-card h3 { margin-top: 0; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px; }
 
-/* Footer / Export */
-.export-container { margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
-.left-actions { margin-right: auto; }
-.export-button { padding: 10px 15px; border-radius: 4px; border: none; cursor: pointer; color: white; background: #455a64; font-weight: bold; text-decoration: none; }
-#publishBtn { background: #2e7d32; }
+/* Formulär (Inputs & Knappar) i Inställningar */
+.form-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; }
+.save-btn { background-color: var(--btn-primary); color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 0.95rem; }
+.save-btn:hover { opacity: 0.9; }
+.cancel-edit-btn { background: #999; color: white; border: none; padding: 0 10px; border-radius: 4px; cursor: pointer; }
+
+/* Listor i inställningar */
+.list-container { max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); }
+.draggable-station, .list-item { padding: 8px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); }
+.list-btn { border: none; background: none; cursor: pointer; font-size: 1.1rem; padding: 5px; }
+
+/* --- 4. MANUAL & ÖVRIGT --- */
+.manual-content { line-height: 1.6; max-width: 900px; }
+.manual-content h2 { color: var(--btn-primary); margin-top: 0; }
+.manual-content h3 { color: var(--header-text); border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
+.manual-info { background: #e3f2fd; padding: 15px; border-left: 4px solid #2196f3; margin: 15px 0; border-radius: 4px; }
+.manual-warn { background: #fff3e0; padding: 15px; border-left: 4px solid #ff9800; margin: 15px 0; border-radius: 4px; }
+
+.export-container { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+.export-button { background: #333; color: white; border: none; padding: 10px 18px; cursor: pointer; border-radius: 4px; font-weight: bold; text-decoration: none; margin-left: 10px; }
+.export-button:hover { background: #555; }
 
 /* Toast & Dropdown */
-#toast { visibility: hidden; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; z-index: 9999; }
+#toast { visibility: hidden; background-color: #333; color: #fff; padding: 16px; border-radius: 4px; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 10000; }
 #toast.show { visibility: visible; }
-.dropdown-menu { position: absolute; background: white; border: 1px solid #ccc; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 1000; }
-.dropdown-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
+.dropdown-menu { position: absolute; background: white; min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid #ccc; z-index: 10000; }
+.dropdown-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
 .dropdown-item:hover { background: #f0f0f0; }
 
-/* Print Fix */
+/* Print */
 @media print {
-    .admin-header, .settings-sidebar, .sidebar-roster, .export-container { display: none !important; }
-    body, .admin-layout, .settings-layout, .schedule-card { display: block !important; margin: 0 !important; width: 100% !important; border: none !important; box-shadow: none !important; background: white !important; }
-    .tab-pane { display: none !important; } .tab-pane.active { display: block !important; }
+    .admin-header, .settings-sidebar, .sidebar-roster, .export-container, .logout-btn { display: none !important; }
+    body, .admin-layout, .settings-layout, .schedule-card { display: block !important; margin: 0 !important; width: 100% !important; background: white !important; }
+    #page-settings .tab-pane { display: none !important; }
+    #page-settings .tab-pane.active { display: block !important; }
 }
