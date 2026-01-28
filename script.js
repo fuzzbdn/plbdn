@@ -738,3 +738,27 @@ async function initWeatherBoden() {
     setInterval(fetchWeather, 900000); 
 }
 if (document.body.id === 'page-display') setTimeout(initWeatherBoden, 1000);
+
+/**
+ * Hanterar flikbyten i inställningsvyn
+ */
+function openTab(tabId) {
+    // Dölj alla flik-innehåll
+    const contents = document.querySelectorAll('.tab-content');
+    contents.forEach(content => content.classList.add('hidden'));
+
+    // Ta bort 'active' från alla flik-knappar
+    const buttons = document.querySelectorAll('.tab-btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+
+    // Visa den valda fliken
+    const selectedTab = document.getElementById(tabId);
+    if (selectedTab) {
+        selectedTab.classList.remove('hidden');
+    }
+
+    // Sätt knappen som aktiv (baserat på klicket)
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+}
