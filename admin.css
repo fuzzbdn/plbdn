@@ -103,7 +103,7 @@ body {
 
 
 /* =========================================
-   4. FORMULÄR & KNAPPAR (FIXAD FÄRG & HÖJD)
+   4. FORMULÄR & KNAPPAR
    ========================================= */
 .form-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
 .form-group label { font-weight: 600; font-size: 0.9rem; opacity: 0.9; }
@@ -117,7 +117,7 @@ body {
     padding: 0 12px;
     border-radius: 4px;
     border: 1px solid var(--input-border);
-    background: var(--input-bg); /* Vit bakgrund */
+    background: var(--input-bg);
     color: var(--text-color);
     font-size: 1rem;
     box-sizing: border-box;
@@ -138,29 +138,18 @@ body {
     align-items: center;
     justify-content: center;
     line-height: normal;
-    /* Ingen background-color här, det sköts av .save-btn klassen nedan */
 }
 
-/* Undantag */
 .setting-card input[type="color"] { height: 42px; padding: 2px; width: 50px; cursor: pointer; border: 1px solid var(--input-border); }
 .setting-card textarea { height: auto; padding: 10px; border: 1px solid var(--input-border); border-radius: 4px; background: var(--input-bg); color: var(--text-color); width: 100%; box-sizing: border-box; }
 
-/* KNAPP-FÄRGER */
 .save-btn { 
-    background-color: var(--btn-primary); /* GRÖN */
-    color: white; 
-    border: none; 
-    cursor: pointer; 
-    font-weight: bold; 
+    background-color: var(--btn-primary); color: white; border: none; cursor: pointer; font-weight: bold; 
 }
 .save-btn:hover { opacity: 0.9; }
 
 .cancel-edit-btn { 
-    background: #999; /* GRÅ */
-    color: white; 
-    border: none; 
-    cursor: pointer; 
-    display: none; /* Visas via JS */
+    background: #999; color: white; border: none; cursor: pointer; display: none; 
 }
 
 .sidebar-input { flex: 1; padding: 8px 10px; border: 1px solid var(--input-border); border-radius: 4px; background: var(--input-bg); color: var(--text-color); }
@@ -169,7 +158,7 @@ body {
 
 
 /* =========================================
-   5. LISTOR (MED PENNA/SOPTUNNA PÅ RAD)
+   5. LISTOR (Här ligger fixen!)
    ========================================= */
 .list-container { max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); }
 
@@ -187,22 +176,29 @@ body {
 .draggable-station { cursor: grab; }
 .draggable-station.dragging { opacity: 0.5; background: #e3f2fd; border: 1px dashed #2196F3; }
 
-/* Vänster sida (Namn/Info) */
-.list-info-left {
-    display: flex; align-items: center; gap: 12px; flex: 1; overflow: hidden;
+/* --- GRÅMARKERAD PERSONAL (ASSIGNED) --- */
+/* Detta är koden som gör att valda namn blir gråa och kursiva */
+.draggable-item.assigned {
+    background-color: #f5f5f5 !important;
+    color: #aaa !important;
+    border-color: #eee;
+    font-style: italic;
+    opacity: 0.8;
+}
+.draggable-item.assigned:hover {
+    background-color: #f5f5f5 !important;
+    transform: none;
+    box-shadow: none;
+    cursor: default;
 }
 
-/* Höger sida (Knappar) - Ligger alltid på rad */
-.list-actions-right {
-    display: flex; 
-    align-items: center; 
-    gap: 8px; 
-    flex-shrink: 0;
-}
+/* Vänster sida (Namn/Info) */
+.list-info-left { display: flex; align-items: center; gap: 12px; flex: 1; overflow: hidden; }
+/* Höger sida (Knappar) */
+.list-actions-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 .drag-handle { cursor: grab; font-size: 1.2rem; color: #999; user-select: none; }
 
-/* Listknappar (Penna/Soptunna) */
 .list-btn { 
     border: none; background: none; cursor: pointer; 
     font-size: 1.2rem; padding: 4px; 
@@ -211,6 +207,7 @@ body {
 }
 .list-btn:hover { background-color: rgba(0,0,0,0.05); border-radius: 4px; }
 .remove-user-btn { background: none; border: none; color: #ff6b6b; cursor: pointer; font-weight: bold; font-size: 1.2rem; }
+
 
 /* =========================================
    6. ADMIN SCHEMAT & ÖVRIGT
