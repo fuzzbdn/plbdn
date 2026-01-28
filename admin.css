@@ -14,7 +14,7 @@
 
 .header-content {
     width: 100%;
-    max-width: 1800px;
+    max-width: 1600px;
     margin: 0 auto;
     display: flex;
     justify-content: space-between;
@@ -45,28 +45,12 @@
 }
 
 .logout-btn {
-    background-color: #ffebee;
-    color: #c62828;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 0.9rem;
-    transition: background 0.2s;
+    background-color: #ffebee; color: #c62828; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: background 0.2s;
 }
 .logout-btn:hover { background-color: #ffcdd2; }
 
 .back-link {
-    color: var(--text-color);
-    text-decoration: none;
-    background: var(--bg-color);
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    border: 1px solid var(--border-color);
-    font-weight: 600;
-    margin-left: 15px;
+    color: var(--text-color); text-decoration: none; background: var(--bg-color); padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; border: 1px solid var(--border-color); font-weight: 600; margin-left: 15px;
 }
 .back-link:hover { background: var(--border-color); }
 
@@ -75,117 +59,64 @@
    2. LAYOUTS (ADMIN & SETTINGS)
    ========================================= */
 body {
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    padding: 20px;
+    background-color: var(--bg-color); color: var(--text-color); padding: 20px;
 }
 
-/* --- ADMIN-VY (Planering) --- */
+/* ADMIN-VY */
 .admin-layout {
-    display: flex;
-    gap: 20px;
-    max-width: 1800px;
-    margin: 0 auto;
-    align-items: flex-start;
+    display: flex; gap: 20px; max-width: 1800px; margin: 0 auto; align-items: flex-start;
 }
+.sidebar-roster { width: 280px; flex-shrink: 0; }
 
-.sidebar-roster {
-    width: 280px;
-    flex-shrink: 0;
-}
-
-/* --- SETTINGS-VY (Inställningar - Sidebar) --- */
-/* Detta var delen som saknades sist! */
-.settings-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-.settings-layout {
-    display: flex;
-    gap: 30px;
-    align-items: flex-start;
-}
-
-.settings-sidebar {
-    width: 260px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    position: sticky;
-    top: 20px;
-}
-
-.settings-content {
-    flex-grow: 1;
-    min-width: 0;
-}
+/* SETTINGS-VY */
+.settings-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.settings-layout { display: flex; gap: 30px; align-items: flex-start; }
+.settings-sidebar { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 20px; }
+.settings-content { flex-grow: 1; min-width: 0; }
 
 
 /* =========================================
-   3. KOMPONENTER: KORT & FLIKAR
+   3. KOMPONENTER
    ========================================= */
 .roster-card, .schedule-card, .setting-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: var(--shadow);
-    color: var(--card-text);
+    background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow); color: var(--card-text);
 }
-
 .roster-card { padding: 20px; max-height: 85vh; overflow-y: auto; position: sticky; top: 20px; }
 .schedule-card { padding: 20px; overflow-x: auto; }
 .setting-card { padding: 30px; margin-bottom: 20px; }
 
 .roster-card h3, .setting-card h3 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--border-color);
-    padding-bottom: 15px;
-    color: var(--header-text);
-    text-align: center;
+    margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; color: var(--header-text); text-align: center;
 }
 .setting-card h3 { text-align: left; }
 
-/* Flik-knappar i Settings */
+/* Flik-knappar */
 .tab-btn {
-    text-align: left;
-    padding: 15px 20px;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-color);
-    display: flex; align-items: center; gap: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    transition: all 0.2s;
+    text-align: left; padding: 15px 20px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; color: var(--text-color); display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s;
 }
 .tab-btn:hover { background: var(--input-bg); transform: translateX(5px); }
 .tab-btn.active { border-left: 5px solid var(--btn-primary); background: #e3f2fd; color: #0277bd; }
 .tab-btn-manual { margin-top: 20px; border: 1px dashed var(--border-color); background: rgba(0,0,0,0.02); }
-
-/* Flik-innehåll */
 .tab-pane { display: none; }
 .tab-pane.active { display: block; animation: fadeIn 0.3s; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
 
 /* =========================================
-   4. FORMULÄR & INPUTS (HÖJDFIXEN)
+   4. FORMULÄR & KNAPPAR (HÖJDFIXEN)
    ========================================= */
 .form-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
 .form-group label { font-weight: 600; font-size: 0.9rem; opacity: 0.9; }
 
-/* Gemensam stil för input, select och knappar i Settings */
+/* Enhetlig höjd (42px) för alla inputs och knappar i settings */
 .setting-card input[type="text"], 
 .setting-card input[type="password"], 
 .setting-card input[type="email"],
 .setting-card select,
-.setting-card textarea {
+.setting-card .save-btn, 
+.setting-card .cancel-edit-btn,
+.setting-card button.save-btn {
+    height: 42px; /* Fixerad höjd */
     padding: 0 12px;
     border-radius: 4px;
     border: 1px solid var(--input-border);
@@ -193,159 +124,100 @@ body {
     color: var(--text-color);
     font-size: 1rem;
     box-sizing: border-box;
-    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    line-height: normal; /* Viktigt för vertikal centrering */
 }
 
-/* Tvinga samma höjd på enrads-fält och knappar */
-.setting-card input:not([type="checkbox"]):not([type="radio"]), 
-.setting-card select,
-.save-btn, .cancel-edit-btn {
-    height: 42px; /* Enhetlig höjd */
-    line-height: normal;
-}
-.setting-card textarea { height: auto; padding-top: 10px; padding-bottom: 10px; }
-
-.sidebar-input {
-    flex: 1; padding: 8px 10px; border: 1px solid var(--input-border);
-    border-radius: 4px; background: var(--input-bg); color: var(--text-color);
-}
+/* Undantag för färg-väljare och textarea */
+.setting-card input[type="color"] { height: 42px; padding: 2px; width: 50px; cursor: pointer; }
+.setting-card textarea { height: auto; padding: 10px; }
 
 .save-btn { 
-    background-color: var(--btn-primary); color: white; border: none; 
-    border-radius: 4px; cursor: pointer; font-weight: bold; 
-    display: inline-flex; align-items: center; justify-content: center;
+    background-color: var(--btn-primary); color: white; border: none; cursor: pointer; font-weight: bold; justify-content: center;
 }
 .save-btn:hover { opacity: 0.9; }
+.cancel-edit-btn { background: #999; color: white; border: none; cursor: pointer; justify-content: center; display: none; }
 
-.cancel-edit-btn { 
-    background: #999; color: white; border: none; border-radius: 4px; 
-    cursor: pointer; display: none; font-weight: bold;
-}
-
+.sidebar-input { flex: 1; padding: 8px 10px; border: 1px solid var(--input-border); border-radius: 4px; background: var(--input-bg); color: var(--text-color); }
 .sidebar-add-row { display: flex; gap: 8px; margin-bottom: 15px; }
-.sidebar-add-btn {
-    width: 36px; height: 36px; background-color: var(--btn-primary); color: white;
-    border: 1px solid var(--border-color); border-radius: 4px;
-    font-weight: bold; cursor: pointer; font-size: 1.4rem;
-    display: flex; align-items: center; justify-content: center;
-}
+.sidebar-add-btn { width: 36px; height: 36px; background-color: var(--btn-primary); color: white; border: 1px solid var(--border-color); border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
 
 
 /* =========================================
-   5. LISTOR & DRAG-DROP (RAD-FIXEN)
+   5. LISTOR (FIX FÖR KNAPP-RADER)
    ========================================= */
-.list-container {
-    max-height: 350px; overflow-y: auto;
-    border: 1px solid var(--border-color);
-    border-radius: 4px; background: var(--input-bg);
-}
+.list-container { max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); }
 
-/* Draggable items (Admin personal & Settings stationer) */
-.draggable-item, .draggable-station {
+/* Gemensam stil för rader i listor (Stationer & Pass) */
+.draggable-station, .shift-list-item, .draggable-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    padding: 10px 15px;
+    align-items: center; /* Centrera vertikalt */
+    padding: 8px 12px;
     border-bottom: 1px solid var(--border-color);
     background-color: var(--bg-color);
-    cursor: grab;
     min-height: 45px;
 }
 
-/* Speciell fix för stationer i inställningar */
-.draggable-station {
-    flex-flow: row nowrap; /* Tvinga allt på en rad */
-    gap: 15px;
-}
-
-.draggable-item:hover, .draggable-station:hover {
-    background-color: var(--input-bg);
-    box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
-}
-
+.draggable-station { cursor: grab; }
 .draggable-station.dragging { opacity: 0.5; background: #e3f2fd; border: 1px dashed #2196F3; }
 
-/* Inre containers för snyggare layout */
-.station-info-left {
-    display: flex; align-items: center; gap: 12px;
-    flex: 1; overflow: hidden; /* För långa namn */
+/* Vänster sida (Namn/Info) */
+.list-info-left {
+    display: flex; align-items: center; gap: 12px; flex: 1; overflow: hidden;
 }
-.station-actions-right {
-    display: flex; align-items: center; gap: 5px;
+
+/* Höger sida (Knappar) - Tvinga dem att ligga på rad */
+.list-actions-right {
+    display: flex; 
+    align-items: center; 
+    gap: 8px; /* Mellanrum mellan penna och soptunna */
     flex-shrink: 0;
 }
 
 .drag-handle { cursor: grab; font-size: 1.2rem; color: #999; user-select: none; }
-.list-btn, .remove-user-btn {
+
+/* Listknappar (Penna/Soptunna) */
+.list-btn { 
     border: none; background: none; cursor: pointer; 
-    font-size: 1.1rem; padding: 5px; color: var(--text-color);
+    font-size: 1.2rem; padding: 4px; 
+    color: var(--text-color); 
     display: flex; align-items: center; justify-content: center;
 }
-.remove-user-btn { color: #ff6b6b; opacity: 0.6; }
-.remove-user-btn:hover { opacity: 1; }
-
+.list-btn:hover { background-color: rgba(0,0,0,0.05); border-radius: 4px; }
+.remove-user-btn { background: none; border: none; color: #ff6b6b; cursor: pointer; font-weight: bold; font-size: 1.2rem; }
 
 /* =========================================
-   6. ADMIN SCHEMAT (GRID)
+   6. ADMIN SCHEMAT & ÖVRIGT
    ========================================= */
 .schedule-card-wrapper { flex-grow: 1; min-width: 0; }
-
-.header-row, .station-row {
-    display: grid;
-    grid-template-columns: 150px 1fr 1fr 1fr;
-    gap: 10px; margin-bottom: 10px;
-}
+.header-row, .station-row { display: grid; grid-template-columns: 150px 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
 .header-row { font-weight: bold; text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; }
 .station-row { align-items: center; }
-
-.station-label {
-    font-weight: bold; padding: 10px; border-radius: 4px;
-    color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-    text-align: center; display: flex; align-items: center; justify-content: center;
-    height: 100%; min-height: 50px;
-}
-
-.shift-block {
-    background-color: var(--input-bg); border: 1px solid var(--border-color);
-    border-radius: 6px; padding: 8px 12px; min-height: 50px;
-    display: flex; justify-content: space-between; align-items: center;
-    color: var(--text-color); position: relative;
-}
+.station-label { font-weight: bold; padding: 10px; border-radius: 4px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3); text-align: center; display: flex; align-items: center; justify-content: center; height: 100%; min-height: 50px; }
+.shift-block { background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; min-height: 50px; display: flex; justify-content: space-between; align-items: center; color: var(--text-color); }
 .shift-block.empty { background-color: var(--bg-color); border: 1px dashed #ccc; }
 .shift-block.drag-over { background: #e3f2fd; border: 2px dashed #2196f3; }
-
 .shift-text { font-weight: 600; flex-grow: 1; margin-right: 10px; }
 .shift-controls { display: flex; gap: 2px; }
 .add-user-btn { color: #4CAF50; font-size: 1.4rem; background: none; border: none; cursor: pointer; font-weight: bold; }
 .clear-btn { color: #e53935; font-size: 1.4rem; background: none; border: none; cursor: pointer; font-weight: bold; }
 
-
-/* =========================================
-   7. MANUAL (STYLING)
-   ========================================= */
+/* Manual & Toast */
 .manual-content { line-height: 1.6; max-width: 900px; }
 .manual-content h2 { border-bottom: 2px solid var(--btn-primary); padding-bottom: 10px; margin-top: 40px; color: var(--btn-primary); }
 .manual-content h3 { margin-top: 30px; color: var(--header-text); }
-.manual-content ul, .manual-content ol { padding-left: 20px; }
-.manual-content code { background: #edf2f7; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: #c53030; }
-
 .info-box { background: #ebf8ff; border-left: 4px solid var(--btn-primary); padding: 15px; margin: 20px 0; border-radius: 0 4px 4px 0; }
 .warning-box { background: #fff5f5; border-left: 4px solid #fc8181; padding: 15px; margin: 20px 0; border-radius: 0 4px 4px 0; }
-
 .step { display: flex; gap: 15px; margin-bottom: 20px; }
 .step-num { background: var(--btn-primary); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
 .step-content { flex: 1; padding-top: 4px; }
 
-
-/* =========================================
-   8. ÖVRIGT (TOAST, EXPORT, PRINT)
-   ========================================= */
 .export-container { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); }
 .export-button { background: #333; color: white; border: none; padding: 10px 18px; cursor: pointer; border-radius: 4px; font-weight: bold; text-decoration: none; margin-left: 10px; }
-
 #toast { visibility: hidden; background-color: #333; color: #fff; padding: 16px; border-radius: 4px; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 10000; }
 #toast.show { visibility: visible; }
-
 .dropdown-menu { position: absolute; background: white; min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid #ccc; z-index: 10000; }
 .dropdown-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
 .dropdown-item:hover { background: #f0f0f0; }
