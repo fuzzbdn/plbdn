@@ -149,8 +149,8 @@ body {
    ========================================= */
 .list-container { max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); }
 
-/* Gemensam stil för rader i listor (Stationer & Pass) */
-.draggable-station, .shift-list-item, .draggable-item {
+/* Gemensam stil för rader i listor (Stationer, Pass & Admins) */
+.draggable-station, .shift-list-item, .draggable-item, .admin-list-item {
     display: flex;
     justify-content: space-between;
     align-items: center; /* Centrera vertikalt */
@@ -228,3 +228,4 @@ body {
     #page-settings .tab-pane { display: none !important; }
     #page-settings .tab-pane.active { display: block !important; }
 }
+
