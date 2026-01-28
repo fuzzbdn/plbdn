@@ -44,7 +44,11 @@ function showToast(message, type = 'success') {
     let icon = type === 'error' ? '❌' : (type === 'info' ? 'ℹ️' : '✅');
     toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
     container.appendChild(toast);
+    
+    // Trigga animation
     setTimeout(() => toast.classList.add('show'), 10);
+    
+    // Ta bort efter 3 sekunder
     setTimeout(() => {
         toast.classList.remove('show');
         setTimeout(() => { if(container.contains(toast)) container.removeChild(toast); }, 300);
@@ -141,7 +145,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     else if (pageId === 'page-settings') { if(checkAuth()) initSettings(settings); }
     else if (pageId === 'page-display') { 
         initDisplay(); 
-        initWeatherBoden(); // Starta vädret direkt här!
+        initWeatherBoden();
     }
 });
 
@@ -548,7 +552,6 @@ function initExportTab() {
         endIn.value = d.toISOString().split('T')[0];
     };
 
-    // --- SKRIV UT ---
     const doPrint = document.getElementById('doPrintBtn');
     if(doPrint) doPrint.onclick = () => {
         const sDate = new Date(startIn.value);
@@ -572,7 +575,6 @@ function initExportTab() {
         setTimeout(() => printContainer.innerHTML = '', 1000);
     };
 
-    // --- SPARA SOM BILDER ---
     const doImage = document.getElementById('doImageBtn');
     if(doImage) doImage.onclick = async () => {
         const sDate = new Date(startIn.value);
@@ -599,9 +601,7 @@ function initExportTab() {
 
         while (loopDate <= eDate) {
             tempContainer.innerHTML = generateSingleDayPrintHtml(new Date(loopDate), true);
-            
             await new Promise(r => setTimeout(r, 100));
-
             try {
                 const canvas = await html2canvas(tempContainer, { scale: 2 });
                 const link = document.createElement('a');
