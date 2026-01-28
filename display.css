@@ -1,5 +1,5 @@
 /* =========================================
-   DISPLAY.CSS - KORRIGERAD
+   DISPLAY.CSS - KORRIGERAD & STYLAD
    ========================================= */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
 
@@ -44,12 +44,23 @@ body.display-view {
 }
 
 #mainTitle { font-size: 3.5vh; font-weight: 800; color: var(--header-text); margin: 0; }
+
+/* VÄDER-WIDGET */
+#weatherWidget {
+    font-size: 3.5vh;
+    font-weight: 700;
+    color: var(--header-text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 #clock { font-size: 4.5vh; font-weight: 900; color: var(--header-text); background: var(--clock-bg); padding: 0.2vh 1.5vw; border-radius: 8px; }
 
 /* GRID */
 #mainContainer { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
 
-/* Rader (Layout sätts nu dynamiskt via JS) */
+/* Rader */
 .time-header-row, .display-row {
     display: grid;
     gap: 1.5vw;
@@ -67,7 +78,7 @@ body.display-view {
 
 /* KORT */
 .station-label {
-    /* Här hämtas färgen från JS */
+    /* Färgen hämtas nu dynamiskt från scriptet */
     background-color: var(--station-color, #fff); 
     color: var(--contrast-color, #000);
     
@@ -75,7 +86,7 @@ body.display-view {
     display: flex; align-items: center; justify-content: flex-start;
     padding-left: 1.5vw; box-shadow: var(--shadow); height: 100%;
     
-    /* Liten färgad kant för extra tydlighet */
+    /* Skapar en snygg mörkare kant automatiskt med genomskinlighet */
     border-left: 8px solid rgba(0,0,0,0.1); 
 }
 
@@ -88,7 +99,9 @@ body.display-view {
     box-shadow: var(--shadow);
     display: flex; align-items: center; justify-content: center;
     text-align: center; height: 100%;
-    border-bottom: 4px solid var(--station-color, transparent); /* Matchar stationens färg */
+    
+    /* Matchar stationens färg i en linje nertill */
+    border-bottom: 4px solid var(--station-color, transparent);
 }
 
 .shift-card.empty {
