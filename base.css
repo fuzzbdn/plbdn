@@ -76,3 +76,96 @@ body {
 .modal-btn.confirm { background-color: var(--btn-primary); color: #fff; }
 .modal-btn.cancel { background-color: #e0e0e0; color: #333; }
 .modal-btn.cancel:hover { background-color: #d5d5d5; }
+
+/* =========================================
+   STANDARD LAYOUT (Återställer Grid)
+   ========================================= */
+
+/* 1. Huvudbehållaren - En lista uppifrån och ner */
+#mainContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+}
+
+/* 2. RUTNÄTET - Detta återställer kolumnerna! */
+/* Sätter layout för både tidsrubrikerna och stationsraderna */
+.time-header-row, .display-row {
+    display: grid;
+    /* Stationen (220px) + 3 st Pass (delar på resten) */
+    grid-template-columns: 220px 1fr 1fr 1fr; 
+    gap: 1.5vw;
+    align-items: stretch; /* Gör alla boxar lika höga */
+}
+
+/* 3. Tidsrubrikerna */
+.time-header-row {
+    margin-bottom: 5px;
+}
+.time-header {
+    text-align: center;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    background: rgba(255,255,255,0.5);
+    padding: 5px;
+    border-radius: 4px;
+}
+
+/* 4. Stationen (Vänster box) */
+.station-label {
+    background-color: #ffffff;
+    color: #333;
+    padding: 0 15px; /* Padding på sidorna */
+    font-weight: 800;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center; /* Centrera text vertikalt */
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    min-height: 60px;
+    
+    /* Färgstrecket på sidan (Använder variabeln från JS) */
+    border-left: 8px solid var(--station-color, #ccc);
+    border-top: none;     /* Ta bort toppen från andra teman */
+    border-bottom: none;  /* Ta bort botten från andra teman */
+}
+
+/* 5. Arbetspassen (Höger boxar) */
+.shift-card {
+    background-color: #ffffff;
+    color: #333;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin: 0; /* Nollställ marginaler */
+    border: none;
+}
+
+/* Tomma rutor (för att de inte ska synas för mycket) */
+.shift-card.empty {
+    background-color: rgba(255,255,255,0.2);
+    box-shadow: none;
+    border: 2px dashed #e0e0e0;
+}
+
+/* 6. Mellanrum (Spacers) */
+.spacer-row {
+    height: 30px;
+    display: block !important; /* Tvinga fram spacern i standardläget */
+}
+
+/* 7. Dölj "etiketter" (FM/EM) från standardläget */
+/* Dessa ska bara synas i "Modern"-temat */
+.shift-card::before {
+    content: none;
+}
