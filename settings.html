@@ -134,25 +134,24 @@
                             </div>
                             <div style="flex:1; min-width:250px;">
                                 <label style="font-size:0.9rem; font-weight:600; display:block; margin-bottom:5px;">Förhandsgranskning:</label>
-                                <div id="themePreviewBox" class="preview-container">
-                                    <div class="preview-header">
-                                        <span>Display</span>
-                                        <span>12:00</span>
-                                    </div>
-                                    
-                                    <div class="preview-content">
-                                        <div class="preview-row">
-                                            <div class="preview-station" style="background-color: #ffb74d; color: #000;">Björkliden</div>
-                                            <div class="preview-card">Erika</div>
-                                            <div class="preview-card">Anna W</div>
-                                        </div>
-                                        <div class="preview-row">
-                                            <div class="preview-station" style="background-color: #81c784; color: #000;">Boden</div>
-                                            <div class="preview-card">Emil</div>
-                                            <div class="preview-card">Alma</div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <div style="flex:1; min-width:300px;">
+    <label style="font-size:0.9rem; font-weight:600; display:block; margin-bottom:5px;">Förhandsgranskning:</label>
+    
+    <div style="
+        border: 1px solid #ccc; 
+        border-radius: 8px; 
+        overflow: hidden; 
+        height: 200px; /* Höjd på fönstret */
+        background: #eee;
+    ">
+        <iframe id="themePreviewIframe" src="preview.html" style="
+            width: 100%; 
+            height: 100%; 
+            border: none;
+            pointer-events: none; /* Stänger av klick i iframen */
+        "></iframe>
+    </div>
+</div>
                             </div>
                         </div>
                     </div>
@@ -241,5 +240,6 @@
 
 </body>
 </html>
+
 
 
