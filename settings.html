@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="admin.css">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="script.js?v=8" defer></script>
+    <script src="script.js?v=14" defer></script>
 </head>
 <body id="page-settings">
 
@@ -61,35 +61,18 @@
                 <div id="tab-export" class="tab-pane">
                     <div class="setting-card">
                         <h3>🖨️ Skriv ut eller Spara Bild</h3>
-                        
                         <div class="form-group">
                             <label>Välj intervall:</label>
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                                <div>
-                                    <span style="font-size:0.85em; color:#666;">Från datum:</span>
-                                    <input type="date" id="printStartDate">
-                                </div>
-                                <div>
-                                    <span style="font-size:0.85em; color:#666;">Till datum:</span>
-                                    <input type="date" id="printEndDate">
-                                </div>
+                                <div><span style="font-size:0.85em; color:#666;">Från:</span><input type="date" id="printStartDate"></div>
+                                <div><span style="font-size:0.85em; color:#666;">Till:</span><input type="date" id="printEndDate"></div>
                             </div>
                         </div>
-
                         <div style="display:flex; gap:10px; margin-bottom:20px;">
-                            <button id="btnSetToday" class="list-btn" style="border:1px solid #ccc; border-radius:4px; padding:0 15px; width:auto; font-size:0.9rem;">Idag</button>
-                            <button id="btnSetWeek" class="list-btn" style="border:1px solid #ccc; border-radius:4px; padding:0 15px; width:auto; font-size:0.9rem;">Hela denna vecka</button>
-                            <button id="btnSetNextWeek" class="list-btn" style="border:1px solid #ccc; border-radius:4px; padding:0 15px; width:auto; font-size:0.9rem;">Nästa vecka</button>
+                            <button id="btnSetToday" class="list-btn" style="border:1px solid #ccc;">Idag</button>
+                            <button id="btnSetWeek" class="list-btn" style="border:1px solid #ccc;">Denna vecka</button>
+                            <button id="btnSetNextWeek" class="list-btn" style="border:1px solid #ccc;">Nästa vecka</button>
                         </div>
-
-                        <div class="info-box" style="margin-bottom:20px;">
-                            <strong>Tips:</strong> 
-                            <ul>
-                                <li><strong>Skriv ut:</strong> Skapar en utskrift där varje dag får en egen sida.</li>
-                                <li><strong>Spara bild:</strong> Laddar ner en separat bildfil (.jpg) för varje vald dag.</li>
-                            </ul>
-                        </div>
-
                         <div style="display:flex; gap:15px;">
                             <button id="doPrintBtn" class="save-btn" style="background-color:#455a64; flex:1;">🖨️ Skriv ut</button>
                             <button id="doImageBtn" class="save-btn" style="background-color:#0277bd; flex:1;">📷 Spara som bild(er)</button>
@@ -102,8 +85,8 @@
                         <h3>📍 Hantera Platser</h3>
                         <div class="form-group">
                             <div class="flex-row" style="display:flex; gap:8px;">
-                                <input type="text" id="newStationName" placeholder="Namn på station..." style="flex:1;">
-                                <input type="color" id="newStationColor" value="#cccccc" style="width:50px; height:42px; padding:0; border:none; cursor:pointer;">
+                                <input type="text" id="newStationName" placeholder="Namn..." style="flex:1;">
+                                <input type="color" id="newStationColor" value="#cccccc" style="width:50px; height:42px; padding:0; border:none;">
                                 <button id="addStationBtn" class="save-btn" style="width:auto; padding:0 20px;">Lägg till</button>
                                 <button id="cancelStationEditBtn" class="cancel-edit-btn" style="display:none;">Avbryt</button>
                             </div>
@@ -136,78 +119,29 @@
                     </div>
                 </div>
 
-<div id="tab-theme" class="tab-pane">
-    <div class="setting-card">
-        <h3>🎨 Välj Tema</h3>
-        
-        <div style="display:flex; gap:20px; flex-wrap:wrap;">
-            <div style="flex:1; min-width:250px;">
-                <div class="form-group">
-                    <label>Aktivt tema:</label>
-                    <select id="themeSelect">
-                        <option value="light">Ljus (Standard)</option>
-                    </select>
-                </div>
-                <button id="saveThemeBtn" class="save-btn">Aktivera Tema</button>
-            </div>
-
-            <div style="flex:1; min-width:250px;">
-                <label style="font-size:0.9rem; font-weight:600; display:block; margin-bottom:5px;">Förhandsgranskning:</label>
-                <div id="themePreviewBox" style="
-                    border: 1px solid #ccc; 
-                    border-radius: 8px; 
-                    padding: 20px; 
-                    height: 150px; 
-                    display: flex; 
-                    flex-direction: column; 
-                    justify-content: center; 
-                    align-items: center; 
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-                    transition: all 0.3s;
-                    background-color: #f4f4f9; /* Standard */
-                    color: #333; /* Standard */
-                ">
-                    <h4 style="margin:0 0 10px 0;">Rubrik</h4>
-                    <div style="
-                        background: rgba(0,0,0,0.05); 
-                        padding: 10px; 
-                        border-radius: 4px; 
-                        width: 80%; 
-                        text-align: center;
-                        border: 1px solid rgba(0,0,0,0.1);
-                    ">
-                        Innehållskort
+                <div id="tab-theme" class="tab-pane">
+                    <div class="setting-card">
+                        <h3>🎨 Välj Tema</h3>
+                        <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:250px;">
+                                <div class="form-group">
+                                    <label>Aktivt tema:</label>
+                                    <select id="themeSelect">
+                                        <option value="light">Ljus (Standard)</option>
+                                    </select>
+                                </div>
+                                <button id="saveThemeBtn" class="save-btn">Aktivera Tema</button>
+                            </div>
+                            <div style="flex:1; min-width:250px;">
+                                <label style="font-size:0.9rem; font-weight:600; display:block; margin-bottom:5px;">Förhandsgranskning:</label>
+                                <div id="themePreviewBox" style="border: 1px solid #ccc; border-radius: 8px; padding: 20px; height: 100px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: all 0.3s; background-color: #f4f4f9; color: #333;">
+                                    <h4 style="margin:0 0 10px 0;">Rubrik</h4>
+                                    <div style="background: rgba(0,0,0,0.05); padding: 5px 10px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">Innehåll</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="setting-card">
-        <h3>🛠️ Skapa eget tema (CSS)</h3>
-        <div class="form-group">
-            <label>Redigera befintligt:</label>
-            <div style="display:flex; gap:10px;">
-                <select id="editThemeSelect" style="flex:1;">
-                    <option value="">-- Välj tema --</option>
-                </select>
-                <button id="deleteThemeBtn" class="save-btn" style="background:#e53935; width:auto;">🗑️</button>
-            </div>
-        </div>
-        <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
-        <div class="form-group">
-            <input type="text" id="customThemeName" placeholder="Temanamn">
-            <input type="hidden" id="customThemeId"> 
-        </div>
-        <div class="form-group">
-            <textarea id="customThemeCSS" rows="10" style="width:100%; font-family:monospace; background:#222; color:#0f0; padding:10px;" placeholder="/* CSS kod här */"></textarea>
-        </div>
-        <div style="display:flex; gap:10px;">
-            <button id="saveCustomThemeBtn" class="save-btn">💾 Spara</button>
-            <button id="clearThemeEditorBtn" class="save-btn" style="background:#999;">Rensa</button>
-        </div>
-    </div>
-</div>
                     <div class="setting-card">
                         <h3>🛠️ Skapa eget tema (CSS)</h3>
                         <div class="form-group">
@@ -225,39 +159,32 @@
                             <input type="hidden" id="customThemeId"> 
                         </div>
                         <div class="form-group">
-                            <textarea id="customThemeCSS" rows="10" style="width:100%; font-family:monospace; background:#222; color:#0f0; padding:10px;" placeholder="/* CSS kod här */"></textarea>
+                            <textarea id="customThemeCSS" rows="8" style="width:100%; font-family:monospace; background:#222; color:#0f0; padding:10px;" placeholder="/* CSS kod här */"></textarea>
                         </div>
                         <div style="display:flex; gap:10px;">
                             <button id="saveCustomThemeBtn" class="save-btn">💾 Spara</button>
                             <button id="clearThemeEditorBtn" class="save-btn" style="background:#999;">Rensa</button>
                         </div>
                     </div>
-                </div>
-
-                <div id="tab-admins" class="tab-pane">
+                </div> <div id="tab-admins" class="tab-pane">
                     <div class="setting-card">
                         <h3>👤 Administratörer</h3>
                         <div class="form-group" style="background:var(--bg-color); padding:15px; border-radius:6px; border:1px solid var(--border-color);">
                             <label style="margin-bottom:10px; display:block;">Hantera admin:</label>
-                            
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
                                 <input type="text" id="newAdminFirstName" placeholder="Förnamn">
                                 <input type="text" id="newAdminLastName" placeholder="Efternamn">
                             </div>
-                            
                             <input type="email" id="newAdminEmail" placeholder="E-post" style="width:100%; margin-bottom:10px;">
-                            
                             <div style="display:flex; gap:10px; margin-bottom:10px;">
                                 <input type="text" id="newAdminUser" placeholder="Användarnamn" style="flex:1;">
                                 <input type="password" id="newAdminPass" placeholder="Lösenord" style="flex:1;">
                             </div>
-
                             <div style="display:flex; gap:10px;">
                                 <button id="addAdminBtn" class="save-btn">Spara / Skapa konto</button>
                                 <button id="cancelAdminEditBtn" class="cancel-edit-btn" style="display:none;">Avbryt</button>
                             </div>
                         </div>
-                        
                         <div style="margin-top:20px;">
                             <h4 style="font-size:0.9rem; margin-bottom:10px; opacity:0.7;">Befintliga administratörer:</h4>
                             <div id="adminListContainer" class="list-container">Laddar...</div>
@@ -271,135 +198,18 @@
                             <h2 style="margin:0; color:var(--btn-primary);">Användarmanual STRUL</h2>
                             <button onclick="window.print()" class="export-button">🖨️ Skriv ut</button>
                         </div>
-
-                        <nav style="background:#f4f6f8; padding:15px; border-radius:8px; margin-bottom:30px;">
-                            <p><strong>Innehåll:</strong></p>
-                            <ul>
-                                <li><a href="#intro" style="color:var(--btn-primary); text-decoration:none;">1. Introduktion</a></li>
-                                <li><a href="#login" style="color:var(--btn-primary); text-decoration:none;">2. Inloggning</a></li>
-                                <li><a href="#planning" style="color:var(--btn-primary); text-decoration:none;">3. Planering (Admin)</a></li>
-                                <li><a href="#display" style="color:var(--btn-primary); text-decoration:none;">4. Display-vyn</a></li>
-                                <li><a href="#settings" style="color:var(--btn-primary); text-decoration:none;">5. Inställningar</a></li>
-                                <li><a href="#troubleshoot" style="color:var(--btn-primary); text-decoration:none;">6. Felsökning</a></li>
-                            </ul>
-                        </nav>
-
                         <div id="intro">
                             <h2>1. Introduktion</h2>
-                            <p>Välkommen till <strong>STRUL</strong> (Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen). Detta system är utformat för att ersätta manuella papperslistor med en digital, realtidsuppdaterad lägesbild över bemanningen.</p>
-                            <div class="info-box">
-                                <strong>Systemkrav:</strong> STRUL fungerar i alla moderna webbläsare (Chrome, Edge, Firefox, Safari). Ingen installation krävs.
-                            </div>
+                            <p>Välkommen till STRUL.</p>
                         </div>
-
-                        <div id="login">
-                            <h2>2. Inloggning & Behörighet</h2>
-                            <p>För att kunna ändra i schemat krävs inloggning. Display-vyn är dock öppen för visning utan lösenord.</p>
-                            
-                            <h3>Logga in som administratör</h3>
-                            <div class="step">
-                                <div class="step-num">1</div>
-                                <div class="step-content">Gå till startsidan <code>index.html</code>.</div>
-                            </div>
-                            <div class="step">
-                                <div class="step-num">2</div>
-                                <div class="step-content">Ange ditt användarnamn och lösenord.</div>
-                            </div>
-                            <div class="step">
-                                <div class="step-num">3</div>
-                                <div class="step-content">Klicka på <strong>Logga in</strong>. Du skickas nu till Admin-panelen.</div>
-                            </div>
-
-                            <h3>Glömt lösenord?</h3>
-                            <p>Klicka på länken "Glömt lösenord?" på inloggningssidan, ange din e-post och följ instruktionerna för att återställa det via <code>reset.html</code>.</p>
                         </div>
-
-                        <div id="planning" class="page-break">
-                            <h2>3. Planering (Admin-vyn)</h2>
-                            <p>Detta är systemets hjärta där du styr bemanningen. Gränssnittet är uppdelat i en personalista (vänster) och schemat (höger).</p>
-
-                            <h3>Drag-and-Drop (Dra och Släpp)</h3>
-                            <p>Det snabbaste sättet att bemanna en station:</p>
-                            <ul>
-                                <li>Ta tag i ett namn i listan till vänster.</li>
-                                <li>Dra namnet till önskad ruta i schemat.</li>
-                                <li>Släpp musknappen.</li>
-                            </ul>
-                            <div class="info-box">
-                                <strong>Tips:</strong> Personallistan är "intelligent". Namn som redan är placerade i schemat blir <strong>gråmarkerade</strong> i listan för att förhindra dubbelbokning.
-                            </div>
-
-                            <h3>Manuella ändringar & Gäster</h3>
-                            <p>Om du behöver lägga till en person som inte finns i listan, eller vill använda snabbmenyn:</p>
-                            <ol>
-                                <li>Klicka på <strong>+</strong> ikonen i en tom ruta (eller bredvid ett befintligt namn).</li>
-                                <li>Välj en person från rullgardinsmenyn, eller...</li>
-                                <li>Välj <em>"+ Skriv in eget namn..."</em> för att manuellt ange en tillfällig resurs (gäst).</li>
-                            </ol>
-
-                            <h3>Draft vs Publicerad (Viktigt!)</h3>
-                            <div class="warning-box">
-                                Dina ändringar syns <strong>INTE</strong> på storskärmarna direkt. Detta är en säkerhetsfunktion för att du ska kunna planera i lugn och ro.
-                            </div>
-                            <p>När du är klar med din planering, klicka på den gröna knappen <strong>📡 Publicera</strong> längst ner till höger. Först då uppdateras displayerna i rummet.</p>
-                        </div>
-
-                        <div id="display">
-                            <h2>4. Display-vyn</h2>
-                            <p>Display-vyn är den passiva skärm som visas på väggen i ledningscentralen.</p>
-                            
-                            <h3>Starta Display-läge</h3>
-                            <p>På inloggningssidan (<code>index.html</code>), klicka på knappen <strong>📺 Visa Schema (Display)</strong>. Inget lösenord krävs.</p>
-
-                            <h3>Funktioner i Display-vyn</h3>
-                            <ul>
-                                <li><strong>Automatisk Uppdatering:</strong> Skärmen hämtar ny data var 15:e sekund. Du behöver aldrig trycka på F5.</li>
-                                <li><strong>Väder:</strong> Visar aktuell temperatur för Boden (hämtas från Open-Meteo).</li>
-                                <li><strong>Marquee (Rullande text):</strong> Visar viktiga driftsmeddelanden längst ner.</li>
-                            </ul>
-                        </div>
-
-                        <div id="settings" class="page-break">
-                            <h2>5. Inställningar & Konfiguration</h2>
-                            <p>Klicka på <strong>⚙️ Inställningar</strong> från Admin-vyn för att anpassa systemet.</p>
-
-                            <h3>Hantera Stationer & Pass</h3>
-                            <ul>
-                                <li><strong>Stationer:</strong> Du kan lägga till nya stationer, byta färg på dem eller ta bort dem. Du kan även lägga till "Mellanrum" för att gruppera stationerna visuellt.</li>
-                                <li><strong>Pass:</strong> Här definierar du vilka tider som gäller (t.ex. Förmiddag 06:30 - 14:00).</li>
-                            </ul>
-
-                            <h3>Utseende & Teman</h3>
-                            <p>STRUL har en inbyggd <strong>CSS-editor</strong>. Du kan välja mellan färdiga teman eller skapa ett eget "Custom Theme".</p>
-                            <div class="info-box">
-                                För att byta till "Mörkt läge" eller liknande, välj tema i rullgardinsmenyn och klicka "Spara Tema".
-                            </div>
-
-                            <h3>Meddelanden</h3>
-                            <p>Här skriver du in texten som ska rulla längst ner på display-skärmarna. Glöm inte att kryssa i "Visa meddelande" för att aktivera den.</p>
-                        </div>
-
-                        <div id="troubleshoot">
-                            <h2>6. Felsökning</h2>
-                            
-                            <h3>Skärmen uppdateras inte?</h3>
-                            <p>Kontrollera att admin har klickat på <strong>Publicera</strong>. Om nätverket går ner försöker skärmen återansluta automatiskt, men en manuell omladdning (F5) kan ibland behövas.</p>
-
-                            <h3>Jag kan inte logga in?</h3>
-                            <p>Kontrollera att du har rätt lösenord. Om problemet kvarstår, kontakta systemadministratören för att återställa kontot via databasen eller återställningslänken.</p>
-
-                            <h3>Utskriften ser konstig ut?</h3>
-                            <p>När du klickar på <strong>🖨️ Skriv ut</strong> i Admin-vyn, se till att "Bakgrundsgrafik" är ikryssat i din skrivares inställningar för att få med färgerna på stationerna.</p>
-                        </div>
-                    </div>
                 </div>
 
             </main>
         </div>
     </div>
 
-    <div id="toast">Sparat!</div>
+    <div id="toast-container"></div> 
 
 </body>
 </html>
-
