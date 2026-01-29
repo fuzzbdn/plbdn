@@ -1,4 +1,38 @@
 /* =========================================
+   BASE.CSS - GEMENSAMT & STANDARD (LJUST)
+   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 0;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.hidden { display: none !important; }
+
+/* =========================================
+   STANDARDTEMA (LJUST)
+   ========================================= */
+:root {
+    --bg-color: #f4f4f9;
+    --text-color: #333333;
+    --header-bg: #ffffff;
+    --header-text: #444444;
+    --card-bg: #ffffff;
+    --card-text: #333333;
+    --border-color: #dddddd;
+    --input-bg: #ffffff;
+    --input-border: #cccccc;
+    --shadow: 0 2px 10px rgba(0,0,0,0.1);
+    --btn-primary: #4CAF50;
+    --btn-text: #ffffff;
+}
+
+/* =========================================
    CUSTOM MODAL (Bekräfta-ruta)
    ========================================= */
 .modal-overlay {
