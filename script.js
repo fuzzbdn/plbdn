@@ -44,6 +44,8 @@ function showToast(message, type = 'success') {
     let icon = type === 'error' ? '❌' : (type === 'info' ? 'ℹ️' : '✅');
     toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
     container.appendChild(toast);
+    
+    // Trigga animation och borttagning
     setTimeout(() => toast.classList.add('show'), 10);
     setTimeout(() => {
         toast.classList.remove('show');
@@ -235,7 +237,6 @@ function initReset() {
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     
-    // HÄMTA SCHEMA FÖR EXPORT
     const [draft, published, old] = await Promise.all([
         fetchData('schedule_draft'),
         fetchData('schedule_published'),
@@ -264,15 +265,19 @@ async function initSettings(currentSettings) {
         }
     }
 
+    // FIXAD: Bättre Regex för att läsa CSS-variabler
     function updatePreviewBox(themeId) {
         if (!previewBox) return;
         let bg = '#f4f4f9';
         let text = '#333333';
+        
         if (themeId && themeId !== 'light') {
             const t = globalCustomThemes.find(x => x.id === themeId);
             if (t && t.css) {
-                const bgMatch = t.css.match(/--bg-color:\s*([^;]+)/);
-                const textMatch = t.css.match(/--text-color:\s*([^;]+)/);
+                // Sök efter variabel-värden mer robust
+                const bgMatch = t.css.match(/--bg-color\s*:\s*([^;}]+)/);
+                const textMatch = t.css.match(/--text-color\s*:\s*([^;}]+)/);
+                
                 if (bgMatch) bg = bgMatch[1].trim();
                 if (textMatch) text = textMatch[1].trim();
             }
@@ -650,7 +655,7 @@ function generateSingleDayPrintHtml(dateObj, forImage = false) {
 }
 
 /* =========================================
-   6. DISPLAY (DYNAMISK LAYOUT)
+   6. DISPLAY (DYNAMISK LAYOUT + FELHANTERING)
    ========================================= */
 let lastSnap="";
 function initDisplay() {
@@ -677,10 +682,11 @@ function initDisplay() {
             const cont = document.getElementById('mainContainer');
             if (!cont) return;
 
+            // FIX: Hämta standardvärden om listorna är tomma för att undvika layout-krasch
             if(!Array.isArray(globalShifts) || !globalShifts.length) globalShifts = DEFAULT_SHIFTS;
             if(!Array.isArray(globalStations) || !globalStations.length) globalStations = DEFAULT_STATIONS;
 
-            // SAFETY: If shifts are empty, fallback to 3 columns to avoid crash
+            // SAFETY: Om det mot förmodan ändå är tomt (fetch fail), sätt default
             const cols = (globalShifts.length > 0) ? globalShifts.length : 3;
             const gridStyle = `style="display:grid; grid-template-columns: 220px repeat(${cols}, 1fr); gap:1.5vw;"`;
 
@@ -698,7 +704,12 @@ function initDisplay() {
                 html += `</div>`;
             });
             cont.innerHTML = html;
-        } catch (e) { console.error("Display Error", e); }
+        } catch (e) { 
+            console.error("Display Error", e); 
+            // Försök visa felmeddelande om möjligt
+            const cont = document.getElementById('mainContainer');
+            if(cont) cont.innerHTML = `<h3 style="text-align:center; color:red;">Kunde inte ladda schemat.</h3>`;
+        }
     };
     refresh(); setInterval(refresh, 15000);
 }
