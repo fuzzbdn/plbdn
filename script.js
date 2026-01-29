@@ -59,6 +59,7 @@ function showConfirm(message) {
         const btnYes = document.getElementById('btnConfirmYes');
         const btnNo = document.getElementById('btnConfirmNo');
 
+        // Om modalen saknas i HTML (t.ex. på settings-sidan om den glömts), använd vanlig confirm
         if(!modal) { resolve(confirm(message)); return; }
 
         msgEl.innerText = message;
@@ -235,7 +236,6 @@ function initReset() {
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     
-    // HÄMTA SCHEMA FÖR EXPORT
     const [draft, published, old] = await Promise.all([
         fetchData('schedule_draft'),
         fetchData('schedule_published'),
@@ -264,7 +264,6 @@ async function initSettings(currentSettings) {
         }
     }
 
-    // FIXAD: Bättre Regex och felhantering
     function updatePreviewBox(themeId) {
         if (!previewBox) return;
         let bg = '#f4f4f9';
@@ -273,9 +272,8 @@ async function initSettings(currentSettings) {
         if (themeId && themeId !== 'light') {
             const t = globalCustomThemes.find(x => x.id === themeId);
             if (t && t.css) {
-                const bgMatch = t.css.match(/--bg-color\s*:\s*([^;]+)/);
-                const textMatch = t.css.match(/--text-color\s*:\s*([^;]+)/);
-                
+                const bgMatch = t.css.match(/--bg-color\s*:\s*([^;}]+)/);
+                const textMatch = t.css.match(/--text-color\s*:\s*([^;}]+)/);
                 if (bgMatch) bg = bgMatch[1].trim();
                 if (textMatch) text = textMatch[1].trim();
             }
@@ -318,7 +316,7 @@ async function initSettings(currentSettings) {
         document.getElementById('deleteThemeBtn').onclick = async () => {
             const id = editSelect.value;
             if(!id) return;
-            if(confirm("Radera detta tema?")) {
+            if(await showConfirm("Radera detta tema?")) {
                 globalCustomThemes = globalCustomThemes.filter(t => t.id !== id);
                 await saveData('custom_themes', globalCustomThemes);
                 if(themeSelect.value === id) { themeSelect.value = 'light'; await saveData('settings', { theme: 'light' }); }
@@ -396,7 +394,7 @@ function initStationsSettings() {
         showToast("Sparat", "success"); resetSt(); renderStations();
     };
     document.getElementById('addSpacerBtn').onclick = async () => { globalStations.push({ isSpacer: true }); await saveData('config_stations', globalStations); renderStations(); };
-    window.deleteStation = async (i) => { if(confirm("Ta bort?")) { globalStations.splice(i, 1); await saveData('config_stations', globalStations); renderStations(); }};
+    window.deleteStation = async (i) => { if(await showConfirm("Ta bort?")) { globalStations.splice(i, 1); await saveData('config_stations', globalStations); renderStations(); }};
     renderStations();
 }
 
@@ -423,7 +421,7 @@ function initShiftsSettings() {
     const resetSh = () => { editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = ""; shCancel.style.display = "none"; };
     shCancel.onclick = resetSh;
     shBtn.onclick = async () => { if(!shLabel.value) return; const item = { label: shLabel.value, time: shTime.value }; if(editingShiftIndex !== null) globalShifts[editingShiftIndex] = item; else globalShifts.push(item); await saveData('config_shifts', globalShifts); showToast("Sparat", "success"); resetSh(); renderShifts(); };
-    window.deleteShift = async (i) => { if(confirm("Ta bort?")) { globalShifts.splice(i, 1); await saveData('config_shifts', globalShifts); renderShifts(); }};
+    window.deleteShift = async (i) => { if(await showConfirm("Ta bort?")) { globalShifts.splice(i, 1); await saveData('config_shifts', globalShifts); renderShifts(); }};
     renderShifts();
 }
 
@@ -504,7 +502,7 @@ function initAdminSettings() {
     };
 
     window.deleteAdmin = async(u) => { 
-        if(confirm("Ta bort admin?")) {
+        if(await showConfirm("Ta bort admin?")) {
             await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) }); 
             showToast("Admin borttagen", "info");
             renderAdmins(); 
