@@ -108,7 +108,7 @@ body {
 .form-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
 .form-group label { font-weight: 600; font-size: 0.9rem; opacity: 0.9; }
 
-/* TEXTFÄLT (Höjd + Vit bakgrund) */
+/* TEXTFÄLT */
 .setting-card input[type="text"], 
 .setting-card input[type="password"], 
 .setting-card input[type="email"],
@@ -126,7 +126,7 @@ body {
     vertical-align: middle;
 }
 
-/* KNAPPAR (Bara Höjd - Färg behålls!) */
+/* KNAPPAR */
 .setting-card .save-btn, 
 .setting-card .cancel-edit-btn,
 .setting-card button.save-btn,
@@ -160,11 +160,10 @@ body {
 
 
 /* =========================================
-   5. LISTOR (MED KNAPPAR PÅ RAD)
+   5. LISTOR
    ========================================= */
 .list-container { max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); }
 
-/* Gemensam stil för rader i listor */
 .draggable-station, .shift-list-item, .draggable-item, .admin-list-item {
     display: flex;
     justify-content: space-between;
@@ -178,7 +177,6 @@ body {
 .draggable-station { cursor: grab; }
 .draggable-station.dragging { opacity: 0.5; background: #e3f2fd; border: 1px dashed #2196F3; }
 
-/* GRÅMARKERAD PERSONAL (ASSIGNED) */
 .draggable-item.assigned {
     background-color: #f5f5f5 !important;
     color: #aaa !important;
@@ -193,11 +191,8 @@ body {
     cursor: default;
 }
 
-/* Vänster sida (Namn/Info) */
 .list-info-left { display: flex; align-items: center; gap: 12px; flex: 1; overflow: hidden; }
-/* Höger sida (Knappar) */
 .list-actions-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
 .drag-handle { cursor: grab; font-size: 1.2rem; color: #999; user-select: none; }
 
 .list-btn { 
@@ -239,13 +234,14 @@ body {
 .export-container { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); }
 .export-button { background: #333; color: white; border: none; padding: 10px 18px; cursor: pointer; border-radius: 4px; font-weight: bold; text-decoration: none; margin-left: 10px; }
 
-/* --- TOAST NOTIFICATIONS (HÄR ÄR TILLÄGGET) --- */
+/* --- FIX: STYLING FÖR POPUP-NOTISER (TOAST) --- */
 #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; pointer-events: none; }
 .toast {
     background-color: #333; color: #fff; padding: 12px 24px; border-radius: 4px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.2); opacity: 0; transform: translateY(20px);
     transition: opacity 0.3s, transform 0.3s; font-weight: 500; margin-top: 10px;
     pointer-events: auto;
+    display: flex; align-items: center; gap: 10px;
 }
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast.success { background-color: #4CAF50; border-left: 5px solid #2E7D32; }
