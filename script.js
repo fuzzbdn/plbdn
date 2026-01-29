@@ -51,7 +51,7 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// NY: CUSTOM MODAL (Istället för window.confirm)
+// CUSTOM MODAL
 function showConfirm(message) {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');
@@ -59,16 +59,11 @@ function showConfirm(message) {
         const btnYes = document.getElementById('btnConfirmYes');
         const btnNo = document.getElementById('btnConfirmNo');
 
-        if(!modal) {
-            // Fallback om HTML saknas
-            resolve(confirm(message));
-            return;
-        }
+        if(!modal) { resolve(confirm(message)); return; }
 
         msgEl.innerText = message;
-        modal.classList.add('show'); // Visa
+        modal.classList.add('show');
 
-        // Hantera klick
         const handleYes = () => { cleanup(); resolve(true); };
         const handleNo = () => { cleanup(); resolve(false); };
 
@@ -254,14 +249,14 @@ async function initSettings(currentSettings) {
 
     const themeSelect = document.getElementById('themeSelect');
     const editSelect = document.getElementById('editThemeSelect');
-    const previewBox = document.getElementById('themePreviewBox'); // Hämta preview-rutan
+    const previewBox = document.getElementById('themePreviewBox'); 
 
     function populateThemeDropdowns() {
         const current = themeSelect.value || (currentSettings?.theme || 'light');
         themeSelect.innerHTML = `<option value="light">Ljus (Standard)</option>` + 
                                 globalCustomThemes.map(t => `<option value="${t.id}">✨ ${t.name}</option>`).join('');
         themeSelect.value = current;
-        updatePreviewBox(current); // Uppdatera preview direkt
+        updatePreviewBox(current);
 
         if(editSelect) {
             editSelect.innerHTML = '<option value="">-- Välj tema att redigera --</option>' + 
@@ -269,31 +264,23 @@ async function initSettings(currentSettings) {
         }
     }
 
-    // FUNKTION FÖR ATT UPPDATERA PREVIEW-RUTAN
     function updatePreviewBox(themeId) {
         if (!previewBox) return;
-        
-        // Standardvärden (Ljus)
         let bg = '#f4f4f9';
         let text = '#333333';
-        
         if (themeId && themeId !== 'light') {
             const t = globalCustomThemes.find(x => x.id === themeId);
             if (t && t.css) {
-                // Enkel regex för att hitta färger i CSS-strängen
                 const bgMatch = t.css.match(/--bg-color:\s*([^;]+)/);
                 const textMatch = t.css.match(/--text-color:\s*([^;]+)/);
-                
                 if (bgMatch) bg = bgMatch[1].trim();
                 if (textMatch) text = textMatch[1].trim();
             }
         }
-        
         previewBox.style.backgroundColor = bg;
         previewBox.style.color = text;
     }
 
-    // Lyssnare för ändring av tema
     themeSelect.onchange = (e) => {
         updatePreviewBox(e.target.value);
     };
