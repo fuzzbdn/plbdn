@@ -120,41 +120,68 @@
                 </div>
 
                 <div id="tab-theme" class="tab-pane">
-                    <div class="setting-card">
-                        <h3>🎨 Välj Tema</h3>
-                        <div style="display:flex; gap:20px; flex-wrap:wrap;">
-                            <div style="flex:1; min-width:250px;">
-                                <div class="form-group">
-                                    <label>Aktivt tema:</label>
-                                    <select id="themeSelect">
-                                        <option value="light">Ljus (Standard)</option>
-                                    </select>
-                                </div>
-                                <button id="saveThemeBtn" class="save-btn">Aktivera Tema</button>
-                            </div>
-                            <div style="flex:1; min-width:250px;">
-                                <label style="font-size:0.9rem; font-weight:600; display:block; margin-bottom:5px;">Förhandsgranskning:</label>
-                                <div style="flex:1; min-width:300px;">
-    <label style="font-size:0.9rem; font-weight:600; display:block; margin-bottom:5px;">Förhandsgranskning:</label>
-    
-    <div style="
-        border: 1px solid #ccc; 
-        border-radius: 8px; 
-        overflow: hidden; 
-        height: 200px; /* Höjd på fönstret */
-        background: #eee;
-    ">
-        <iframe id="themePreviewIframe" src="preview.html" style="
-            width: 100%; 
-            height: 100%; 
-            border: none;
-            pointer-events: none; /* Stänger av klick i iframen */
-        "></iframe>
+    <div class="setting-card">
+        <h3>🎨 Välj Tema</h3>
+        
+        <div style="display:flex; gap:40px; align-items: flex-start;">
+            
+            <div style="width: 280px; flex-shrink: 0;">
+                <div class="form-group">
+                    <label>Aktivt tema:</label>
+                    <select id="themeSelect">
+                        <option value="light">Ljus (Standard)</option>
+                    </select>
+                </div>
+                <button id="saveThemeBtn" class="save-btn" style="width:100%;">Aktivera Tema</button>
+            </div>
+
+            <div style="flex:1; min-width:0;">
+                <label style="font-size:0.9rem; font-weight:600; display:block; margin-bottom:5px;">Förhandsgranskning:</label>
+                
+                <div style="
+                    border: 1px solid #ccc; 
+                    border-radius: 8px; 
+                    overflow: hidden; 
+                    height: 350px; /* Större höjd */
+                    background: #eee;
+                    box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+                ">
+                    <iframe id="themePreviewIframe" src="preview.html" style="
+                        width: 100%; 
+                        height: 100%; 
+                        border: none;
+                        pointer-events: none;
+                    "></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="setting-card">
+        <h3>🛠️ Skapa eget tema (CSS)</h3>
+        <div class="form-group">
+            <label>Redigera befintligt:</label>
+            <div style="display:flex; gap:10px;">
+                <select id="editThemeSelect" style="flex:1;">
+                    <option value="">-- Välj tema --</option>
+                </select>
+                <button id="deleteThemeBtn" class="save-btn" style="background:#e53935; width:auto;">🗑️</button>
+            </div>
+        </div>
+        <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+        <div class="form-group">
+            <input type="text" id="customThemeName" placeholder="Temanamn">
+            <input type="hidden" id="customThemeId"> 
+        </div>
+        <div class="form-group">
+            <textarea id="customThemeCSS" rows="8" style="width:100%; font-family:monospace; background:#222; color:#0f0; padding:10px;" placeholder="/* CSS kod här */"></textarea>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button id="saveCustomThemeBtn" class="save-btn">💾 Spara</button>
+            <button id="clearThemeEditorBtn" class="save-btn" style="background:#999;">Rensa</button>
+        </div>
     </div>
 </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <div class="setting-card">
                         <h3>🛠️ Skapa eget tema (CSS)</h3>
@@ -240,6 +267,7 @@
 
 </body>
 </html>
+
 
 
 
