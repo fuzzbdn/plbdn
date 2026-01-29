@@ -8,8 +8,15 @@ let globalShifts = [];
 let globalScheduleData = {};
 
 export function initDisplay() {
-    setInterval(() => { const el = document.getElementById('clock'); if(el) el.innerText = new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}); }, 1000);
-    initWeatherBoden();
+    // Starta klockan direkt
+    setInterval(() => {
+        const el = document.getElementById('clock');
+        if(el) el.innerText = new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
+    }, 1000);
+
+    // Initialisera väder (dynamiskt)
+    initWeather();
+
     refreshLoop();
 }
 
@@ -68,9 +75,34 @@ function renderGrid(today, iso) {
     cont.innerHTML = html;
 }
 
-async function initWeatherBoden() {
+// NY: DYNAMISK VÄDERFUNKTION
+async function initWeather() {
     let wDiv = document.getElementById('weatherWidget');
-    if (!wDiv) return;
-    const fetchW = async () => { try { const url = 'https://api.open-meteo.com/v1/forecast?latitude=65.82&longitude=21.69&current_weather=true'; const res = await fetch(url); const data = await res.json(); wDiv.innerHTML = `BODEN: ${Math.round(data.current_weather.temperature)}°C`; } catch (e) {} };
+    if (!wDiv) {
+        // Skapa elementet om det saknas (för säkerhets skull)
+        wDiv = document.createElement('div');
+        wDiv.id = 'weatherWidget';
+        const clock = document.getElementById('clock');
+        if (clock && clock.parentNode) clock.parentNode.insertBefore(wDiv, clock);
+    }
+
+    const fetchW = async () => {
+        try {
+            // Hämta sparad config eller kör default
+            let config = await fetchData('weather_config');
+            if (!config || !config.latitude) {
+                config = { latitude: "65.82", longitude: "21.69", name: "BODEN" };
+            }
+
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.latitude}&longitude=${config.longitude}&current_weather=true`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            const temp = Math.round(data.current_weather.temperature);
+            const cityName = config.name.toUpperCase();
+            
+            wDiv.innerHTML = `${cityName}: ${temp}°C`; 
+        } catch (e) { console.error("Ingen väderdata", e); }
+    };
     fetchW(); setInterval(fetchW, 900000); 
 }
