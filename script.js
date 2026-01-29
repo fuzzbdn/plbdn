@@ -91,6 +91,7 @@ function isLight(color) {
     return ((r*299 + g*587 + b*114)/1000) >= 128;
 }
 
+// DYNAMISK TEMA-HANTERARE
 async function applyTheme(themeId) {
     const isAdmin = (document.body.id === 'page-admin' || document.body.id === 'page-settings');
     const oldStyle = document.getElementById('dynamic-theme-style');
@@ -121,26 +122,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pageId === 'page-login') { initLogin(); return; }
     if (pageId === 'page-reset') { initReset(); return; }
 
-    const [users, settings, dbStations, dbShifts, themes] = await Promise.all([
-        fetchData('users'), 
-        fetchData('settings'), 
-        fetchData('config_stations'), 
-        fetchData('config_shifts'),
-        fetchData('custom_themes')
-    ]);
+    try {
+        const [users, settings, dbStations, dbShifts, themes] = await Promise.all([
+            fetchData('users'), 
+            fetchData('settings'), 
+            fetchData('config_stations'), 
+            fetchData('config_shifts'),
+            fetchData('custom_themes')
+        ]);
 
-    globalUserList = Array.isArray(users) ? users : [];
-    globalStations = (Array.isArray(dbStations) && dbStations.length > 0) ? dbStations : DEFAULT_STATIONS;
-    globalShifts = (Array.isArray(dbShifts) && dbShifts.length > 0) ? dbShifts : DEFAULT_SHIFTS;
-    globalCustomThemes = Array.isArray(themes) ? themes : [];
+        globalUserList = Array.isArray(users) ? users : [];
+        globalStations = (Array.isArray(dbStations) && dbStations.length > 0) ? dbStations : DEFAULT_STATIONS;
+        globalShifts = (Array.isArray(dbShifts) && dbShifts.length > 0) ? dbShifts : DEFAULT_SHIFTS;
+        globalCustomThemes = Array.isArray(themes) ? themes : [];
 
-    if (settings?.theme) applyTheme(settings.theme);
+        if (settings?.theme) applyTheme(settings.theme);
 
-    if (pageId === 'page-admin') { if(checkAuth()) initAdmin(); }
-    else if (pageId === 'page-settings') { if(checkAuth()) initSettings(settings); }
-    else if (pageId === 'page-display') { 
-        initDisplay(); 
-        initWeatherBoden(); 
+        if (pageId === 'page-admin') { if(checkAuth()) initAdmin(); }
+        else if (pageId === 'page-settings') { if(checkAuth()) initSettings(settings); }
+        else if (pageId === 'page-display') { 
+            initDisplay(); 
+            initWeatherBoden(); 
+        }
+    } catch (err) {
+        console.error("Init Error:", err);
     }
 });
 
@@ -767,6 +772,89 @@ async function removeUser(u) {
 }
 
 /* =========================================
+   6. DISPLAY (MED FELHANTERING)
+   ========================================= */
+let lastSnap="";
+function initDisplay() {
+    // Starta klockan direkt
+    setInterval(() => {
+        const el = document.getElementById('clock');
+        if(el) el.innerText = new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
+    }, 1000);
+
+    const refresh = async () => {
+        try {
+            let pub = await fetchData('schedule_published');
+            if(!pub || !Object.keys(pub).length) pub = await fetchData('schedule');
+            
+            const [sets, msg, themes] = await Promise.all([fetchData('settings'), fetchData('message'), fetchData('custom_themes')]);
+            
+            globalCustomThemes = themes || [];
+            
+            // Kolla ändringar
+            const snap = JSON.stringify({s:pub, t:sets?.theme, m:msg});
+            if(snap === lastSnap) return; 
+            lastSnap = snap;
+            
+            globalScheduleData = pub || {};
+
+            if(sets?.theme) applyTheme(sets.theme);
+            const mq = document.getElementById('marqueeContainer');
+            if(mq) { 
+                mq.style.display = (msg?.show && msg?.text) ? 'block' : 'none'; 
+                if(msg?.text) document.getElementById('marqueeText').innerText = msg.text; 
+            }
+
+            const now = new Date();
+            const iso = getISOWeek(now);
+            const today = days[now.getDay()===0?6:now.getDay()-1];
+            
+            const titleEl = document.getElementById('mainTitle');
+            if(titleEl) titleEl.innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
+            
+            const cont = document.getElementById('mainContainer');
+            if(!cont) return;
+
+            // SÄKERSTÄLL ATT DATA FINNS
+            if(!Array.isArray(globalShifts) || !globalShifts.length) globalShifts = DEFAULT_SHIFTS;
+            if(!Array.isArray(globalStations) || !globalStations.length) globalStations = DEFAULT_STATIONS;
+
+            // RITA UT
+            const gridStyle = `style="display:grid; grid-template-columns: 220px repeat(${globalShifts.length}, 1fr); gap:1.5vw;"`;
+
+            let html = `<div class="time-header-row" ${gridStyle}><div></div>${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}</div>`;
+            
+            globalStations.forEach(st => {
+                if(st.isSpacer) { 
+                    html += `<div class="display-row" style="grid-column:1/-1; height:4vh;"></div>`; 
+                    return; 
+                }
+                const contrast = isLight(st.color) ? '#000' : '#fff';
+                const vars = `style="--station-color:${st.color}; --contrast-color:${contrast};"`;
+                
+                html += `<div class="display-row" ${gridStyle}><div class="station-label" ${vars}>${st.name}</div>`;
+                
+                globalShifts.forEach(sh => {
+                    const key = `y${iso.year}w${iso.week}-${today}-${st.name}-${sh.time}`;
+                    const val = globalScheduleData[key] || "";
+                    html += `<div class="shift-card ${val?'':'empty'}">${val}</div>`;
+                });
+                
+                html += `</div>`;
+            });
+            cont.innerHTML = html;
+
+        } catch (e) {
+            console.error("Display Error:", e);
+            showToast("Fel vid laddning av schema: " + e.message, "error");
+        }
+    };
+    
+    refresh(); 
+    setInterval(refresh, 15000);
+}
+
+/* =========================================
    VÄDER-WIDGET (BODEN)
    ========================================= */
 async function initWeatherBoden() {
@@ -789,8 +877,6 @@ async function initWeatherBoden() {
     fetchWeather();
     setInterval(fetchWeather, 900000); 
 }
-// OBS: Denna anropas nu inuti initAuth / DOMContentLoaded om vi är på display-sidan
-
 
 /* =========================================
    FLIK-HANTERARE
