@@ -45,7 +45,6 @@ function showToast(message, type = 'success') {
     toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
     container.appendChild(toast);
     
-    // Trigga animation och borttagning
     setTimeout(() => toast.classList.add('show'), 10);
     setTimeout(() => {
         toast.classList.remove('show');
@@ -53,7 +52,6 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// CUSTOM MODAL
 function showConfirm(message) {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');
@@ -237,6 +235,7 @@ function initReset() {
 async function initSettings(currentSettings) {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     
+    // HÄMTA SCHEMA FÖR EXPORT
     const [draft, published, old] = await Promise.all([
         fetchData('schedule_draft'),
         fetchData('schedule_published'),
@@ -265,7 +264,7 @@ async function initSettings(currentSettings) {
         }
     }
 
-    // FIXAD: Bättre Regex för att läsa CSS-variabler
+    // FIXAD: Bättre Regex och felhantering
     function updatePreviewBox(themeId) {
         if (!previewBox) return;
         let bg = '#f4f4f9';
@@ -274,9 +273,8 @@ async function initSettings(currentSettings) {
         if (themeId && themeId !== 'light') {
             const t = globalCustomThemes.find(x => x.id === themeId);
             if (t && t.css) {
-                // Sök efter variabel-värden mer robust
-                const bgMatch = t.css.match(/--bg-color\s*:\s*([^;}]+)/);
-                const textMatch = t.css.match(/--text-color\s*:\s*([^;}]+)/);
+                const bgMatch = t.css.match(/--bg-color\s*:\s*([^;]+)/);
+                const textMatch = t.css.match(/--text-color\s*:\s*([^;]+)/);
                 
                 if (bgMatch) bg = bgMatch[1].trim();
                 if (textMatch) text = textMatch[1].trim();
