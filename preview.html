@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>Preview</title>
+    <link rel="stylesheet" href="base.css">
+    <link rel="stylesheet" href="display.css">
+    <style>
+        /* Skala ner innehållet så det passar i den lilla rutan */
+        body {
+            transform: scale(0.6); /* Förminska till 60% */
+            transform-origin: top left;
+            width: 166%; /* Kompensera bredden (100 / 0.6) */
+            height: 166%;
+            overflow: hidden;
+            background-color: var(--bg-color); /* Viktigt för att temat ska synas */
+        }
+        /* Dölj scrollbars */
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="display-view">
+
+<div class="display-wrapper">
+    <div class="top-bar">
+        <h1 id="mainTitle">Förhandsgranskning</h1>
+        <div style="display:flex; align-items:center;">
+            <div id="weatherWidget" style="margin-right:20px; font-weight:700;">BODEN: 5°C</div>
+            <div id="clock">12:00</div>
+        </div>
+    </div>
+    
+    <div id="mainContainer">
+        <div class="time-header-row" style="display:grid; grid-template-columns: 220px 1fr 1fr; gap:1.5vw;">
+            <div></div>
+            <div class="time-header">Förmiddag</div>
+            <div class="time-header">Eftermiddag</div>
+        </div>
+
+        <div class="display-row" style="display:grid; grid-template-columns: 220px 1fr 1fr; gap:1.5vw;">
+            <div class="station-label" style="--station-color:#ffb74d; --contrast-color:#000;">Björkliden</div>
+            <div class="shift-card">Anders</div>
+            <div class="shift-card">Bertil</div>
+        </div>
+
+        <div class="display-row" style="display:grid; grid-template-columns: 220px 1fr 1fr; gap:1.5vw;">
+            <div class="station-label" style="--station-color:#81c784; --contrast-color:#000;">Boden</div>
+            <div class="shift-card">Cecilia</div>
+            <div class="shift-card empty"></div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
