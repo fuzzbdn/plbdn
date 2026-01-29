@@ -169,3 +169,12 @@ body {
 .shift-card::before {
     content: none;
 }
+/* Minska höjden på varje rad */
+.display-row, .station-label, .shift-card {
+    min-height: 50px !important; /* Minskar från standard 60-70px */
+}
+
+/* Minska marginalerna mellan raderna */
+#mainContainer {
+    gap: 5px !important; /* Tätare mellan raderna */
+}
