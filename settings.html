@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="admin.css">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="script.js?v=16" defer></script>
+    <script src="script.js?v=17" defer></script>
 </head>
 <body id="page-settings">
 
@@ -166,7 +166,9 @@
                             <button id="clearThemeEditorBtn" class="save-btn" style="background:#999;">Rensa</button>
                         </div>
                     </div>
-                </div> <div id="tab-admins" class="tab-pane">
+                </div>
+
+                <div id="tab-admins" class="tab-pane">
                     <div class="setting-card">
                         <h3>👤 Administratörer</h3>
                         <div class="form-group" style="background:var(--bg-color); padding:15px; border-radius:6px; border:1px solid var(--border-color);">
@@ -210,6 +212,17 @@
     </div>
 
     <div id="toast-container"></div> 
+
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 style="margin-top:0;">Bekräfta</h3>
+            <p id="confirmMessage" style="font-size:1.1rem; margin-bottom:20px;">Är du säker?</p>
+            <div class="modal-buttons">
+                <button id="btnConfirmNo" class="modal-btn cancel">Avbryt</button>
+                <button id="btnConfirmYes" class="modal-btn confirm">Ja, kör!</button>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>
