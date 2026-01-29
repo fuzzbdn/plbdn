@@ -1,5 +1,5 @@
 /* =========================================
-   BASE.CSS - GEMENSAMT & STANDARD (LJUST)
+   BASE.CSS - GEMENSAMT & STANDARD
    ========================================= */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
 
@@ -9,14 +9,14 @@ body {
     font-family: 'Inter', 'Segoe UI', sans-serif;
     margin: 0;
     padding: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
     transition: background-color 0.3s, color 0.3s;
 }
 
 .hidden { display: none !important; }
 
-/* =========================================
-   STANDARDTEMA (LJUST)
-   ========================================= */
+/* STANDARDTEMA (LJUST) */
 :root {
     --bg-color: #f4f4f9;
     --text-color: #333333;
@@ -32,26 +32,20 @@ body {
     --btn-text: #ffffff;
 }
 
-/* =========================================
-   CUSTOM MODAL (Bekräfta-ruta)
-   ========================================= */
+/* CUSTOM MODAL (Bekräfta-ruta) */
 .modal-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(2px);
     z-index: 20000;
-    display: none; /* Dold standard */
+    display: none;
     align-items: center;
     justify-content: center;
     opacity: 0;
     transition: opacity 0.2s;
 }
-
-.modal-overlay.show {
-    display: flex;
-    opacity: 1;
-}
+.modal-overlay.show { display: flex; opacity: 1; }
 
 .modal-box {
     background: var(--card-bg);
@@ -66,17 +60,9 @@ body {
     transition: transform 0.2s;
     border: 1px solid var(--border-color);
 }
+.modal-overlay.show .modal-box { transform: scale(1); }
 
-.modal-overlay.show .modal-box {
-    transform: scale(1);
-}
-
-.modal-buttons {
-    display: flex;
-    gap: 15px;
-    margin-top: 25px;
-    justify-content: center;
-}
+.modal-buttons { display: flex; gap: 15px; margin-top: 25px; justify-content: center; }
 
 .modal-btn {
     padding: 10px 20px;
@@ -87,14 +73,6 @@ body {
     font-size: 1rem;
     flex: 1;
 }
-
-.modal-btn.confirm {
-    background-color: var(--btn-primary);
-    color: white;
-}
-
-.modal-btn.cancel {
-    background-color: #e0e0e0;
-    color: #333;
-}
+.modal-btn.confirm { background-color: var(--btn-primary); color: #fff; }
+.modal-btn.cancel { background-color: #e0e0e0; color: #333; }
 .modal-btn.cancel:hover { background-color: #d5d5d5; }
