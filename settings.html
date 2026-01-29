@@ -33,7 +33,7 @@
             
             <aside class="settings-sidebar">
                 <button class="tab-btn active" onclick="openTab('tab-general')">📢 Allmänt & Meddelanden</button>
-                <button class="tab-btn" onclick="openTab('tab-export')">🖨️ Utskrift & Export</button>
+                <button class="tab-btn" onclick="openTab('tab-weather')">🌤️ Väder & Plats</button> <button class="tab-btn" onclick="openTab('tab-export')">🖨️ Utskrift & Export</button>
                 <button class="tab-btn" onclick="openTab('tab-stations')">🚉 Platser / Stationer</button>
                 <button class="tab-btn" onclick="openTab('tab-shifts')">⏰ Arbetspass</button>
                 <button class="tab-btn" onclick="openTab('tab-theme')">🎨 Utseende & Tema</button>
@@ -55,6 +55,41 @@
                             <label for="showMessageCheckbox" style="margin:0; cursor:pointer;">Visa meddelande på skärmen</label>
                         </div>
                         <button id="saveMessageBtn" class="save-btn">Uppdatera Meddelande</button>
+                    </div>
+                </div>
+
+                <div id="tab-weather" class="tab-pane">
+                    <div class="setting-card">
+                        <h3>🌤️ Väderinställningar</h3>
+                        <p>Här ställer du in vilken plats vädret ska visas för på displayen.</p>
+                        
+                        <div class="form-group">
+                            <label>Stad / Platsnamn (Visas på skärmen):</label>
+                            <input type="text" id="weatherCityName" placeholder="t.ex. BODEN">
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <div class="form-group">
+                                <label>Latitud:</label>
+                                <input type="text" id="weatherLat" placeholder="t.ex. 65.82">
+                            </div>
+                            <div class="form-group">
+                                <label>Longitud:</label>
+                                <input type="text" id="weatherLong" placeholder="t.ex. 21.69">
+                            </div>
+                        </div>
+
+                        <button id="saveWeatherBtn" class="save-btn">Spara Inställningar</button>
+
+                        <div style="margin-top:20px; padding:15px; background:#e3f2fd; border-radius:6px; font-size:0.9rem;">
+                            <strong>Hitta koordinater:</strong>
+                            <ol style="margin:5px 0 0 20px; padding:0;">
+                                <li>Gå till <a href="https://maps.google.com" target="_blank" style="color:#0277bd;">Google Maps</a>.</li>
+                                <li>Högerklicka på din plats på kartan.</li>
+                                <li>Klicka på siffrorna som visas överst i menyn (t.ex. 65.823, 21.690) för att kopiera dem.</li>
+                                <li>Klistra in den första siffran i <b>Latitud</b> och den andra i <b>Longitud</b>.</li>
+                            </ol>
+                        </div>
                     </div>
                 </div>
 
@@ -142,7 +177,7 @@
                                     border: 1px solid #ccc; 
                                     border-radius: 8px; 
                                     overflow: hidden; 
-                                    height: 350px; /* Större höjd för tydlighet */
+                                    height: 350px; 
                                     background: #eee;
                                     box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
                                 ">
@@ -150,7 +185,7 @@
                                         width: 100%; 
                                         height: 100%; 
                                         border: none;
-                                        pointer-events: none; /* Inga klick i preview */
+                                        pointer-events: none;
                                     "></iframe>
                                 </div>
                             </div>
@@ -209,11 +244,15 @@
                     </div>
                 </div>
 
-<div id="tab-manual" class="tab-pane">
-    <div class="setting-card" style="padding: 0; overflow: hidden; height: 80vh; border:none; box-shadow:none; background:transparent;">
-        <iframe src="manual.html" style="width: 100%; height: 100%; border: none; border-radius: 8px; background: white; box-shadow: var(--shadow);"></iframe>
+                <div id="tab-manual" class="tab-pane">
+                    <div class="setting-card" style="padding: 0; overflow: hidden; height: 80vh; border:none; box-shadow:none; background:transparent;">
+                        <iframe src="manual.html" style="width: 100%; height: 100%; border: none; border-radius: 8px; background: white; box-shadow: var(--shadow);"></iframe>
+                    </div>
+                </div>
+
+            </main>
+        </div>
     </div>
-</div>
 
     <div id="toast-container"></div> 
 
@@ -230,4 +269,3 @@
 
 </body>
 </html>
-
