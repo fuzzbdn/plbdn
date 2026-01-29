@@ -650,181 +650,57 @@ function generateSingleDayPrintHtml(dateObj, forImage = false) {
 }
 
 /* =========================================
-   5. ADMIN PLANERING
+   6. DISPLAY (DYNAMISK LAYOUT)
    ========================================= */
-async function initAdmin() {
-    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
-    let draft = await fetchData('schedule_draft');
-    const published = await fetchData('schedule_published');
-    const old = await fetchData('schedule');
-    if(!draft || !Object.keys(draft).length) draft = (published && Object.keys(published).length) ? published : old;
-    globalScheduleData = draft || {};
+let lastSnap="";
+function initDisplay() {
+    setInterval(()=>document.getElementById('clock').innerText=new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}),1000);
+    const refresh = async () => {
+        try {
+            let pub = await fetchData('schedule_published');
+            if(!pub || !Object.keys(pub).length) pub = await fetchData('schedule');
+            
+            const [sets, msg, themes] = await Promise.all([fetchData('settings'), fetchData('message'), fetchData('custom_themes')]);
+            
+            globalCustomThemes = themes || [];
+            const snap = JSON.stringify({s:pub, t:sets?.theme, m:msg});
+            if(snap === lastSnap) return; lastSnap=snap;
+            globalScheduleData = pub || {};
 
-    document.getElementById('publishBtn').onclick = async () => {
-        // HÄR ANVÄNDS DEN NYA MODALEN
-        if(await showConfirm("Vill du publicera schemat till displayen?")) { 
-            await saveData('schedule_published', globalScheduleData); 
-            showToast("Schemat är publicerat!", "success"); 
-        }
+            if(sets?.theme) applyTheme(sets.theme);
+            const mq = document.getElementById('marqueeContainer');
+            if(mq) { mq.style.display=(msg?.show&&msg?.text)?'block':'none'; if(msg?.text) document.getElementById('marqueeText').innerText=msg.text; }
+
+            const now = new Date(), iso = getISOWeek(now), today = days[now.getDay()===0?6:now.getDay()-1];
+            document.getElementById('mainTitle').innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
+            
+            const cont = document.getElementById('mainContainer');
+            if (!cont) return;
+
+            if(!Array.isArray(globalShifts) || !globalShifts.length) globalShifts = DEFAULT_SHIFTS;
+            if(!Array.isArray(globalStations) || !globalStations.length) globalStations = DEFAULT_STATIONS;
+
+            // SAFETY: If shifts are empty, fallback to 3 columns to avoid crash
+            const cols = (globalShifts.length > 0) ? globalShifts.length : 3;
+            const gridStyle = `style="display:grid; grid-template-columns: 220px repeat(${cols}, 1fr); gap:1.5vw;"`;
+
+            let html = `<div class="time-header-row" ${gridStyle}><div></div>${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}</div>`;
+            globalStations.forEach(st => {
+                if(st.isSpacer) { html += `<div class="display-row" style="grid-column:1/-1; height:4vh;"></div>`; return; }
+                const contrast = isLight(st.color) ? '#000' : '#fff';
+                const vars = `style="--station-color:${st.color}; --contrast-color:${contrast};"`;
+                html += `<div class="display-row" ${gridStyle}><div class="station-label" ${vars}>${st.name}</div>`;
+                globalShifts.forEach(sh => {
+                    const key = `y${iso.year}w${iso.week}-${today}-${st.name}-${sh.time}`;
+                    const val = globalScheduleData[key] || "";
+                    html += `<div class="shift-card ${val?'':'empty'}">${val}</div>`;
+                });
+                html += `</div>`;
+            });
+            cont.innerHTML = html;
+        } catch (e) { console.error("Display Error", e); }
     };
-    const picker = document.getElementById('adminDatePicker');
-    picker.value = new Date().toISOString().split('T')[0];
-    picker.onchange = (e) => updateGrid(e.target.value);
-    
-    function updateGrid(dateStr) {
-        const d = new Date(dateStr);
-        const iso = getISOWeek(d);
-        selectedWeek = iso.week; selectedYear = iso.year;
-        currentAdminDayIndex = d.getDay()===0?6:d.getDay()-1;
-        document.getElementById('currentDateDisplay').innerText = `${days[currentAdminDayIndex]} v.${selectedWeek}, ${selectedYear}`;
-        renderAdminGrid();
-    }
-    updateGrid(picker.value);
-    document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
-    
-    setupSidebarAddUser();
-}
-
-function renderAdminGrid() {
-    const cont = document.getElementById('scheduleContainer');
-    renderRoster();
-    if(!cont) return;
-
-    const dayName = days[currentAdminDayIndex];
-    const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
-
-    if(!Array.isArray(globalShifts) || !globalShifts.length) globalShifts = DEFAULT_SHIFTS;
-    if(!Array.isArray(globalStations) || !globalStations.length) globalStations = DEFAULT_STATIONS;
-
-    let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${s.time}</div>`).join('')}</div>`;
-
-    globalStations.forEach(st => {
-        if(st.isSpacer) { 
-            html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; 
-            return; 
-        }
-        
-        const contrast = isLight(st.color) ? '#000' : '#fff';
-        const styles = `background-color:${st.color}; color:${contrast}; --station-color:${st.color};`; 
-        
-        html += `<div class="station-row"><div class="station-label" style="${styles}">${st.name}</div>`;
-        globalShifts.forEach(sh => {
-            const key = `${prefix}${st.name}-${sh.time}`;
-            const val = globalScheduleData[key] || "";
-            html += `
-            <div class="shift-block ${val?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event,'${key}')">
-                <span class="shift-text" contenteditable="true" onblur="saveShift('${key}', this.innerText)">${val}</span>
-                <div class="shift-controls">
-                    <button class="add-user-btn" onclick="manualAdd(event, '${key}')" title="Lägg till">+</button>
-                    ${val ? `<button class="clear-btn" onclick="saveShift('${key}', '')">&times;</button>`:''}
-                </div>
-            </div>`;
-        });
-        html += `</div>`;
-    });
-    cont.innerHTML = html;
-}
-
-window.manualAdd = (e, key) => {
-    e.stopPropagation();
-    const existing = document.getElementById('quick-dropdown');
-    if (existing) existing.remove();
-
-    const day = days[currentAdminDayIndex];
-    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
-    const busyUsers = new Set();
-    Object.keys(globalScheduleData).forEach(k => { if(k.startsWith(prefix) && globalScheduleData[k]) { globalScheduleData[k].split('/').forEach(n => busyUsers.add(n.trim())); }});
-    const availableUsers = globalUserList.filter(u => !busyUsers.has(u));
-    availableUsers.sort();
-
-    const menu = document.createElement('div');
-    menu.id = 'quick-dropdown';
-    menu.className = 'dropdown-menu';
-    menu.style.left = `${e.pageX}px`;
-    menu.style.top = `${e.pageY + 10}px`;
-
-    let html = '';
-    if (availableUsers.length > 0) {
-        html += availableUsers.map(u => `<div class="dropdown-item" onclick="selectUser('${key}', '${u}')">${u}</div>`).join('');
-    } else {
-        html += `<div class="dropdown-item disabled">Ingen ledig</div>`;
-    }
-    html += `<div class="dropdown-item manual" onclick="selectUserManual('${key}')">+ Skriv in eget namn...</div>`;
-    menu.innerHTML = html;
-    document.body.appendChild(menu);
-    document.addEventListener('click', function closeMenu(evt) { if (!menu.contains(evt.target)) menu.remove(); }, { once: true });
-};
-
-window.selectUser = async (key, name) => {
-    const currentVal = globalScheduleData[key] || "";
-    const newVal = currentVal ? currentVal + " / " + name : name;
-    const menu = document.getElementById('quick-dropdown');
-    if(menu) menu.remove();
-    await saveShift(key, newVal);
-};
-
-window.selectUserManual = async (key) => {
-    const menu = document.getElementById('quick-dropdown');
-    if(menu) menu.remove();
-    setTimeout(async () => {
-        const name = prompt("Ange namn:");
-        if (name) {
-            const currentVal = globalScheduleData[key] || "";
-            const newVal = currentVal ? currentVal + " / " + name : name;
-            await saveShift(key, newVal);
-        }
-    }, 50);
-};
-
-function renderRoster() {
-    const list = document.getElementById('draggableUserList');
-    if(!list) return;
-    const day = days[currentAdminDayIndex];
-    const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
-    const work = new Set();
-    Object.keys(globalScheduleData).forEach(k => { if(k.startsWith(prefix) && globalScheduleData[k]) { globalScheduleData[k].split('/').forEach(n => work.add(n.trim())); }});
-    const sortedUsers = [...globalUserList].sort((a, b) => {
-        const aBusy = work.has(a);
-        const bBusy = work.has(b);
-        if (aBusy === bBusy) return a.localeCompare(b);
-        return aBusy ? 1 : -1; 
-    });
-    list.innerHTML = sortedUsers.map(u => {
-        const isAssigned = work.has(u);
-        const assignedClass = isAssigned ? 'assigned' : '';
-        return `<div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('text','${u}')">${u} <button class="remove-user-btn" onclick="removeUser('${u}')">&times;</button></div>`;
-    }).join('');
-}
-
-async function saveShift(k, v) { globalScheduleData[k] = v.trim(); await saveData('schedule_draft', globalScheduleData); renderAdminGrid(); }
-async function handleDrop(e, k) { e.preventDefault(); const n = e.dataTransfer.getData("text"); let c = globalScheduleData[k]||""; if(!c.includes(n)) await saveShift(k, c?c+" / "+n:n); }
-
-function getISOWeek(d) { const date=new Date(d.getTime()); date.setHours(0,0,0,0); date.setDate(date.getDate()+3-(date.getDay()+6)%7); const w1=new Date(date.getFullYear(),0,4); return {week:1+Math.round(((date.getTime()-w1.getTime())/86400000-3+(w1.getDay()+6)%7)/7), year:date.getFullYear()}; }
-
-function setupSidebarAddUser() {
-    const btn=document.getElementById('sidebarAddBtn'), inp=document.getElementById('sidebarNewName');
-    if(btn&&inp) { 
-        btn.onclick=async()=>{
-            if(inp.value){
-                globalUserList.push(inp.value);
-                globalUserList.sort();
-                await saveData('users',globalUserList);
-                showToast("Personal tillagd", "success");
-                inp.value='';
-                renderRoster();
-            }
-        }; 
-        inp.onkeydown=e=>{if(e.key==='Enter')btn.click();} 
-    }
-}
-
-async function removeUser(u) { 
-    if(confirm('Ta bort '+u+'?')){
-        globalUserList=globalUserList.filter(user=>user!==u);
-        await saveData('users',globalUserList);
-        showToast("Personal borttagen", "info");
-        renderRoster();
-    } 
+    refresh(); setInterval(refresh, 15000);
 }
 
 /* =========================================
@@ -850,8 +726,6 @@ async function initWeatherBoden() {
     fetchWeather();
     setInterval(fetchWeather, 900000); 
 }
-if (document.body.id === 'page-display') setTimeout(initWeatherBoden, 1000);
-
 
 /* =========================================
    FLIK-HANTERARE
