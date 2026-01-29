@@ -209,103 +209,11 @@
                     </div>
                 </div>
 
-                <div id="tab-manual" class="tab-pane">
-                    <div class="setting-card manual-content">
-                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--btn-primary); padding-bottom:15px; margin-bottom:20px;">
-                            <h2 style="margin:0; color:var(--btn-primary);">Användarmanual STRUL</h2>
-                            <button onclick="window.print()" class="export-button">🖨️ Skriv ut</button>
-                        </div>
-
-                        <nav style="background:#f4f6f8; padding:15px; border-radius:8px; margin-bottom:30px;">
-                            <p><strong>Innehåll:</strong></p>
-                            <ul style="margin:0; padding-left:20px;">
-                                <li><a href="#intro" style="color:var(--btn-primary); text-decoration:none;">1. Introduktion</a></li>
-                                <li><a href="#login" style="color:var(--btn-primary); text-decoration:none;">2. Inloggning</a></li>
-                                <li><a href="#planning" style="color:var(--btn-primary); text-decoration:none;">3. Planering (Admin)</a></li>
-                                <li><a href="#display" style="color:var(--btn-primary); text-decoration:none;">4. Display-vyn</a></li>
-                                <li><a href="#settings" style="color:var(--btn-primary); text-decoration:none;">5. Inställningar</a></li>
-                                <li><a href="#troubleshoot" style="color:var(--btn-primary); text-decoration:none;">6. Felsökning</a></li>
-                            </ul>
-                        </nav>
-
-                        <div id="intro">
-                            <h3>1. Introduktion</h3>
-                            <p>Välkommen till <strong>STRUL</strong> (Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen). Detta verktyg hjälper er att planera dagens bemanning, visa vem som sitter var, och enkelt kommunicera detta via en storskärm.</p>
-                        </div>
-
-                        <div id="login">
-                            <h3>2. Inloggning</h3>
-                            <p>För att redigera schemat måste du vara inloggad administratör. Gå till startsidan och ange dina uppgifter.</p>
-                            <div class="info-box">
-                                <strong>Glömt lösenord?</strong> Klicka på "Glömt lösenord?" på inloggningssidan och ange din e-postadress. Om din e-post finns registrerad får du en länk (i en simulerad miljö/logg) för att återställa det.
-                            </div>
-                        </div>
-
-                        <div id="planning">
-                            <h3>3. Planering (Admin)</h3>
-                            <p>I admin-vyn ser du en översikt över alla <strong>Stationer</strong> (vänsterledet) och <strong>Pass</strong> (kolumnerna).</p>
-                            
-                            <h4>Lägga till personal</h4>
-                            <div class="step">
-                                <div class="step-num">1</div>
-                                <div class="step-content">Klicka på det gröna <strong>+</strong> tecknet i rutan där du vill lägga till någon.</div>
-                            </div>
-                            <div class="step">
-                                <div class="step-num">2</div>
-                                <div class="step-content">Välj en person från listan över tillgänglig personal, eller klicka på <em>"Skriv in eget namn..."</em> för att skriva manuellt.</div>
-                            </div>
-
-                            <h4>Flytta och Ta bort</h4>
-                            <p>Du kan <strong>dra och släppa</strong> namn från sidomenyn direkt in i schemat. För att ta bort någon från ett pass, klicka på det röda krysset vid namnet, eller klicka på <strong>Rensa</strong>-knappen (krysset) i rutan.</p>
-
-                            <h4>Publicera</h4>
-                            <div class="warning-box">
-                                <strong>Viktigt:</strong> Ändringar du gör sparas som ett "utkast" automatiskt. För att de ska synas på storskärmen måste du klicka på den gröna knappen <strong>📡 Publicera</strong> nere till höger.
-                            </div>
-                        </div>
-
-                        <div id="display">
-                            <h3>4. Display-vyn</h3>
-                            <p>Display-vyn är optimerad för TV-skärmar. Den visar:</p>
-                            <ul>
-                                <li>Aktuellt datum och vecka.</li>
-                                <li>Väder för Boden (uppdateras automatiskt).</li>
-                                <li>Digital klocka.</li>
-                                <li>Schemat för dagen (Publicerad version).</li>
-                                <li>Rullande meddelande (om aktiverat).</li>
-                            </ul>
-                            <p>Sidan uppdaterar sig själv var 15:e sekund för att hämta nya publiceringar.</p>
-                        </div>
-
-                        <div id="settings">
-                            <h3>5. Inställningar</h3>
-                            <p>Under kugghjulet hittar du systemets inställningar.</p>
-                            
-                            <h4>Stationer & Pass</h4>
-                            <p>Här kan du lägga till, ta bort och byta färg på stationerna (t.ex. Boden, Kiruna) och ändra tiderna för arbetspassen.</p>
-
-                            <h4>Tema</h4>
-                            <p>Vill du ha mörkt läge eller andra färger? Välj ett färdigt tema eller skapa ditt eget med CSS-kod.</p>
-
-                            <h4>Utskrift & Export</h4>
-                            <p>Här kan du skriva ut schemat på papper eller spara det som en bild (.jpg) för att maila ut.</p>
-                        </div>
-
-                        <div id="troubleshoot">
-                            <h3>6. Felsökning</h3>
-                            
-                            <p><strong>Skärmen uppdateras inte?</strong><br>
-                            Kontrollera att admin har klickat på <strong>Publicera</strong>. Om nätverket går ner försöker skärmen återansluta automatiskt, men en manuell omladdning (F5) kan ibland behövas.</p>
-
-                            <p><strong>Jag kan inte logga in?</strong><br>
-                            Kontrollera att du har rätt lösenord. Om problemet kvarstår, kontakta systemadministratören.</p>
-                        </div>
-                    </div>
-                </div>
-
-            </main>
-        </div>
+<div id="tab-manual" class="tab-pane">
+    <div class="setting-card" style="padding: 0; overflow: hidden; height: 80vh; border:none; box-shadow:none; background:transparent;">
+        <iframe src="manual.html" style="width: 100%; height: 100%; border: none; border-radius: 8px; background: white; box-shadow: var(--shadow);"></iframe>
     </div>
+</div>
 
     <div id="toast-container"></div> 
 
@@ -322,3 +230,4 @@
 
 </body>
 </html>
+
