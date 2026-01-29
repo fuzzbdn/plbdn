@@ -33,7 +33,8 @@
             
             <aside class="settings-sidebar">
                 <button class="tab-btn active" onclick="openTab('tab-general')">📢 Allmänt & Meddelanden</button>
-                <button class="tab-btn" onclick="openTab('tab-weather')">🌤️ Väder & Plats</button> <button class="tab-btn" onclick="openTab('tab-export')">🖨️ Utskrift & Export</button>
+                <button class="tab-btn" onclick="openTab('tab-weather')">🌤️ Väder & Plats</button>
+                <button class="tab-btn" onclick="openTab('tab-export')">🖨️ Utskrift & Export</button>
                 <button class="tab-btn" onclick="openTab('tab-stations')">🚉 Platser / Stationer</button>
                 <button class="tab-btn" onclick="openTab('tab-shifts')">⏰ Arbetspass</button>
                 <button class="tab-btn" onclick="openTab('tab-theme')">🎨 Utseende & Tema</button>
@@ -58,33 +59,33 @@
                     </div>
                 </div>
 
-<div id="tab-weather" class="tab-pane">
-    <div class="setting-card">
-        <h3>🌤️ Väderinställningar</h3>
-        <p>Sök efter din stad för att visa rätt väder på displayen.</p>
-        
-        <div class="form-group" style="display:flex; gap:10px;">
-            <input type="text" id="weatherSearchInput" placeholder="Sök stad (t.ex. Stockholm)..." style="flex:1;">
-            <button id="searchLocationBtn" class="save-btn" style="width:auto; background:#2196F3;">🔍 Sök</button>
-        </div>
+                <div id="tab-weather" class="tab-pane">
+                    <div class="setting-card">
+                        <h3>🌤️ Väderinställningar</h3>
+                        <p>Sök efter din stad för att visa rätt väder på displayen.</p>
+                        
+                        <div class="form-group" style="display:flex; gap:10px;">
+                            <input type="text" id="weatherSearchInput" placeholder="Sök stad (t.ex. Stockholm)..." style="flex:1;">
+                            <button id="searchLocationBtn" class="save-btn" style="width:auto; background:#2196F3;">🔍 Sök</button>
+                        </div>
 
-        <div id="searchResultsContainer" style="display:none; margin-bottom:20px;">
-            <label style="font-size:0.9rem; font-weight:600; margin-bottom:5px; display:block;">Välj plats från listan:</label>
-            <select id="locationResultsSelect" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ccc; font-size:1rem;">
-                </select>
-        </div>
+                        <div id="searchResultsContainer" style="display:none; margin-bottom:20px;">
+                            <label style="font-size:0.9rem; font-weight:600; margin-bottom:5px; display:block;">Välj plats från listan:</label>
+                            <select id="locationResultsSelect" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ccc; font-size:1rem;">
+                                </select>
+                        </div>
 
-        <div style="background:#e3f2fd; padding:15px; border-radius:6px; border:1px solid #90caf9; margin-bottom:20px;">
-            <strong style="display:block; margin-bottom:5px; color:#0d47a1;">Nuvarande inställning:</strong>
-            <div id="currentWeatherDisplay" style="font-size:1.1rem;">Laddar...</div>
-            <input type="hidden" id="weatherLat">
-            <input type="hidden" id="weatherLong">
-            <input type="hidden" id="weatherCityName">
-        </div>
+                        <div style="background:#e3f2fd; padding:15px; border-radius:6px; border:1px solid #90caf9; margin-bottom:20px;">
+                            <strong style="display:block; margin-bottom:5px; color:#0d47a1;">Nuvarande inställning:</strong>
+                            <div id="currentWeatherDisplay" style="font-size:1.1rem;">Laddar...</div>
+                            <input type="hidden" id="weatherLat">
+                            <input type="hidden" id="weatherLong">
+                            <input type="hidden" id="weatherCityName">
+                        </div>
 
-        <button id="saveWeatherBtn" class="save-btn">Spara Inställningar</button>
-    </div>
-</div>
+                        <button id="saveWeatherBtn" class="save-btn">Spara Inställningar</button>
+                    </div>
+                </div>
 
                 <div id="tab-export" class="tab-pane">
                     <div class="setting-card">
@@ -262,4 +263,3 @@
 
 </body>
 </html>
-
