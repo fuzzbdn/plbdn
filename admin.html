@@ -27,7 +27,11 @@
                 </div>
             </div>
 
-            <div id="currentDateDisplay" style="font-size: 1.2rem; font-weight: 800; color: var(--text-color);"></div>
+            <div class="date-navigation">
+                <button id="prevDayBtn" class="nav-arrow" title="Föregående dag">◀</button>
+                <div id="currentDateDisplay"></div>
+                <button id="nextDayBtn" class="nav-arrow" title="Nästa dag">▶</button>
+            </div>
             
             <div style="display:flex; align-items:center; gap:15px;">
                 <span id="currentUserDisplay" style="font-weight:500; opacity:0.8;"></span>
@@ -85,3 +89,4 @@
 
 </body>
 </html>
+
