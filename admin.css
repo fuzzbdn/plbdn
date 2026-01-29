@@ -227,3 +227,41 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* --- DATUM-NAVIGERING (NY) --- */
+.date-navigation {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Avstånd mellan pilar och text */
+    background: rgba(0,0,0,0.03); /* Lätt bakgrund för att hålla ihop gruppen */
+    padding: 5px 15px;
+    border-radius: 20px;
+}
+
+#currentDateDisplay {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text-color);
+    min-width: 200px; /* Förhindrar att layouten hoppar när textlängden ändras */
+    text-align: center;
+}
+
+.nav-arrow {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #555;
+    cursor: pointer;
+    padding: 0 5px;
+    transition: color 0.2s, transform 0.2s;
+    line-height: 1;
+}
+
+.nav-arrow:hover {
+    color: #000;
+    transform: scale(1.2); /* Gör pilen lite större vid hovring */
+}
+
+.nav-arrow:active {
+    transform: scale(0.9);
+}
