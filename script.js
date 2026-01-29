@@ -30,7 +30,7 @@ let editingAdminId = null;
 let dragSrcStationEl = null;
 
 /* =========================================
-   2. HJÄLPFUNKTIONER (Toast, API)
+   2. HJÄLPFUNKTIONER (Toast, Modal, API)
    ========================================= */
 function showToast(message, type = 'success') {
     let container = document.getElementById('toast-container');
@@ -49,6 +49,38 @@ function showToast(message, type = 'success') {
         toast.classList.remove('show');
         setTimeout(() => { if(container.contains(toast)) container.removeChild(toast); }, 300);
     }, 3000);
+}
+
+// NY: CUSTOM MODAL (Istället för window.confirm)
+function showConfirm(message) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmModal');
+        const msgEl = document.getElementById('confirmMessage');
+        const btnYes = document.getElementById('btnConfirmYes');
+        const btnNo = document.getElementById('btnConfirmNo');
+
+        if(!modal) {
+            // Fallback om HTML saknas
+            resolve(confirm(message));
+            return;
+        }
+
+        msgEl.innerText = message;
+        modal.classList.add('show'); // Visa
+
+        // Hantera klick
+        const handleYes = () => { cleanup(); resolve(true); };
+        const handleNo = () => { cleanup(); resolve(false); };
+
+        function cleanup() {
+            modal.classList.remove('show');
+            btnYes.removeEventListener('click', handleYes);
+            btnNo.removeEventListener('click', handleNo);
+        }
+
+        btnYes.addEventListener('click', handleYes);
+        btnNo.addEventListener('click', handleNo);
+    });
 }
 
 async function fetchData(type) {
@@ -70,7 +102,7 @@ async function saveData(type, data) {
 
     const token = sessionStorage.getItem('jwtToken');
     if (!token) { 
-        showToast("Sessionen utlöpt. Logga in igen.", "error"); 
+        showToast("Sessionen utlöpt.", "error"); 
         setTimeout(() => window.location.href="index.html", 2000);
         return; 
     }
@@ -91,7 +123,6 @@ function isLight(color) {
     return ((r*299 + g*587 + b*114)/1000) >= 128;
 }
 
-// DYNAMISK TEMA-HANTERARE
 async function applyTheme(themeId) {
     const isAdmin = (document.body.id === 'page-admin' || document.body.id === 'page-settings');
     const oldStyle = document.getElementById('dynamic-theme-style');
@@ -222,21 +253,51 @@ async function initSettings(currentSettings) {
     globalScheduleData = dataToUse || {};
 
     const themeSelect = document.getElementById('themeSelect');
-    const themeNameIn = document.getElementById('customThemeName');
-    const themeCssIn = document.getElementById('customThemeCSS');
-    const themeIdIn = document.getElementById('customThemeId');
     const editSelect = document.getElementById('editThemeSelect');
+    const previewBox = document.getElementById('themePreviewBox'); // Hämta preview-rutan
 
     function populateThemeDropdowns() {
         const current = themeSelect.value || (currentSettings?.theme || 'light');
         themeSelect.innerHTML = `<option value="light">Ljus (Standard)</option>` + 
                                 globalCustomThemes.map(t => `<option value="${t.id}">✨ ${t.name}</option>`).join('');
         themeSelect.value = current;
+        updatePreviewBox(current); // Uppdatera preview direkt
+
         if(editSelect) {
             editSelect.innerHTML = '<option value="">-- Välj tema att redigera --</option>' + 
                 globalCustomThemes.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
         }
     }
+
+    // FUNKTION FÖR ATT UPPDATERA PREVIEW-RUTAN
+    function updatePreviewBox(themeId) {
+        if (!previewBox) return;
+        
+        // Standardvärden (Ljus)
+        let bg = '#f4f4f9';
+        let text = '#333333';
+        
+        if (themeId && themeId !== 'light') {
+            const t = globalCustomThemes.find(x => x.id === themeId);
+            if (t && t.css) {
+                // Enkel regex för att hitta färger i CSS-strängen
+                const bgMatch = t.css.match(/--bg-color:\s*([^;]+)/);
+                const textMatch = t.css.match(/--text-color:\s*([^;]+)/);
+                
+                if (bgMatch) bg = bgMatch[1].trim();
+                if (textMatch) text = textMatch[1].trim();
+            }
+        }
+        
+        previewBox.style.backgroundColor = bg;
+        previewBox.style.color = text;
+    }
+
+    // Lyssnare för ändring av tema
+    themeSelect.onchange = (e) => {
+        updatePreviewBox(e.target.value);
+    };
+
     populateThemeDropdowns();
 
     document.getElementById('saveThemeBtn').onclick = async () => {
@@ -245,6 +306,10 @@ async function initSettings(currentSettings) {
     };
 
     if(editSelect) {
+        const themeNameIn = document.getElementById('customThemeName');
+        const themeCssIn = document.getElementById('customThemeCSS');
+        const themeIdIn = document.getElementById('customThemeId');
+
         editSelect.onchange = () => {
             const t = globalCustomThemes.find(x => x.id === editSelect.value);
             if (t) { themeNameIn.value = t.name; themeCssIn.value = t.css; themeIdIn.value = t.id; }
@@ -609,7 +674,11 @@ async function initAdmin() {
     globalScheduleData = draft || {};
 
     document.getElementById('publishBtn').onclick = async () => {
-        if(confirm("Publicera?")) { await saveData('schedule_published', globalScheduleData); showToast("Schemat är publicerat!", "success"); }
+        // HÄR ANVÄNDS DEN NYA MODALEN
+        if(await showConfirm("Vill du publicera schemat till displayen?")) { 
+            await saveData('schedule_published', globalScheduleData); 
+            showToast("Schemat är publicerat!", "success"); 
+        }
     };
     const picker = document.getElementById('adminDatePicker');
     picker.value = new Date().toISOString().split('T')[0];
@@ -772,89 +841,6 @@ async function removeUser(u) {
 }
 
 /* =========================================
-   6. DISPLAY (MED FELHANTERING)
-   ========================================= */
-let lastSnap="";
-function initDisplay() {
-    // Starta klockan direkt
-    setInterval(() => {
-        const el = document.getElementById('clock');
-        if(el) el.innerText = new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
-    }, 1000);
-
-    const refresh = async () => {
-        try {
-            let pub = await fetchData('schedule_published');
-            if(!pub || !Object.keys(pub).length) pub = await fetchData('schedule');
-            
-            const [sets, msg, themes] = await Promise.all([fetchData('settings'), fetchData('message'), fetchData('custom_themes')]);
-            
-            globalCustomThemes = themes || [];
-            
-            // Kolla ändringar
-            const snap = JSON.stringify({s:pub, t:sets?.theme, m:msg});
-            if(snap === lastSnap) return; 
-            lastSnap = snap;
-            
-            globalScheduleData = pub || {};
-
-            if(sets?.theme) applyTheme(sets.theme);
-            const mq = document.getElementById('marqueeContainer');
-            if(mq) { 
-                mq.style.display = (msg?.show && msg?.text) ? 'block' : 'none'; 
-                if(msg?.text) document.getElementById('marqueeText').innerText = msg.text; 
-            }
-
-            const now = new Date();
-            const iso = getISOWeek(now);
-            const today = days[now.getDay()===0?6:now.getDay()-1];
-            
-            const titleEl = document.getElementById('mainTitle');
-            if(titleEl) titleEl.innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
-            
-            const cont = document.getElementById('mainContainer');
-            if(!cont) return;
-
-            // SÄKERSTÄLL ATT DATA FINNS
-            if(!Array.isArray(globalShifts) || !globalShifts.length) globalShifts = DEFAULT_SHIFTS;
-            if(!Array.isArray(globalStations) || !globalStations.length) globalStations = DEFAULT_STATIONS;
-
-            // RITA UT
-            const gridStyle = `style="display:grid; grid-template-columns: 220px repeat(${globalShifts.length}, 1fr); gap:1.5vw;"`;
-
-            let html = `<div class="time-header-row" ${gridStyle}><div></div>${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}</div>`;
-            
-            globalStations.forEach(st => {
-                if(st.isSpacer) { 
-                    html += `<div class="display-row" style="grid-column:1/-1; height:4vh;"></div>`; 
-                    return; 
-                }
-                const contrast = isLight(st.color) ? '#000' : '#fff';
-                const vars = `style="--station-color:${st.color}; --contrast-color:${contrast};"`;
-                
-                html += `<div class="display-row" ${gridStyle}><div class="station-label" ${vars}>${st.name}</div>`;
-                
-                globalShifts.forEach(sh => {
-                    const key = `y${iso.year}w${iso.week}-${today}-${st.name}-${sh.time}`;
-                    const val = globalScheduleData[key] || "";
-                    html += `<div class="shift-card ${val?'':'empty'}">${val}</div>`;
-                });
-                
-                html += `</div>`;
-            });
-            cont.innerHTML = html;
-
-        } catch (e) {
-            console.error("Display Error:", e);
-            showToast("Fel vid laddning av schema: " + e.message, "error");
-        }
-    };
-    
-    refresh(); 
-    setInterval(refresh, 15000);
-}
-
-/* =========================================
    VÄDER-WIDGET (BODEN)
    ========================================= */
 async function initWeatherBoden() {
@@ -877,6 +863,8 @@ async function initWeatherBoden() {
     fetchWeather();
     setInterval(fetchWeather, 900000); 
 }
+if (document.body.id === 'page-display') setTimeout(initWeatherBoden, 1000);
+
 
 /* =========================================
    FLIK-HANTERARE
