@@ -10,57 +10,65 @@ let selectedWeek = 0;
 let selectedYear = 0;
 let currentAdminDayIndex = 0;
 
+/* =========================================
+   5. ADMIN PLANERING
+   ========================================= */
 export async function initAdmin() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
-    document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
+    
+    // ... (Din kod för att hämta data: draft, published, old osv) ...
+    let draft = await fetchData('schedule_draft');
+    const published = await fetchData('schedule_published');
+    const old = await fetchData('schedule');
+    if(!draft || !Object.keys(draft).length) draft = (published && Object.keys(published).length) ? published : old;
+    globalScheduleData = draft || {};
 
-    try {
-        const [users, draft, published, old, stations, shifts] = await Promise.all([
-            fetchData('users'),
-            fetchData('schedule_draft'),
-            fetchData('schedule_published'),
-            fetchData('schedule'),
-            fetchData('config_stations'),
-            fetchData('config_shifts')
-        ]);
-
-        globalUserList = Array.isArray(users) ? users : [];
-        globalStations = (Array.isArray(stations) && stations.length) ? stations : DEFAULT_STATIONS;
-        globalShifts = (Array.isArray(shifts) && shifts.length) ? shifts : DEFAULT_SHIFTS;
-        
-        if(!draft || !Object.keys(draft).length) {
-            globalScheduleData = (published && Object.keys(published).length) ? published : (old || {});
-        } else {
-            globalScheduleData = draft;
+    // Publicera-knapp
+    document.getElementById('publishBtn').onclick = async () => {
+        if(await showConfirm("Vill du publicera schemat till displayen?")) { 
+            await saveData('schedule_published', globalScheduleData); 
+            showToast("Schemat är publicerat!", "success"); 
         }
+    };
 
-        const picker = document.getElementById('adminDatePicker');
-        picker.value = new Date().toISOString().split('T')[0];
-        picker.onchange = (e) => updateGrid(e.target.value);
+    // Datumväljare
+    const picker = document.getElementById('adminDatePicker');
+    picker.value = new Date().toISOString().split('T')[0];
+    
+    // När datumet ändras manuellt i kalendern
+    picker.onchange = (e) => updateGrid(e.target.value);
+    
+    // --- NYTT: Koppla pilarna till funktion ---
+    document.getElementById('prevDayBtn').onclick = () => changeDate(-1);
+    document.getElementById('nextDayBtn').onclick = () => changeDate(1);
+
+    function changeDate(days) {
+        const currentVal = picker.value;
+        if(!currentVal) return;
         
-        updateGrid(picker.value);
-
-        document.getElementById('publishBtn').onclick = async () => {
-            if(await showConfirm("Vill du publicera schemat till displayen?")) { 
-                await saveData('schedule_published', globalScheduleData); 
-                showToast("Schemat är publicerat!", "success"); 
-            }
-        };
-
-        setupSidebarAddUser();
+        // Skapa datumobjekt
+        const d = new Date(currentVal);
+        // Lägg till/dra ifrån dagar
+        d.setDate(d.getDate() + days);
         
-        // Gör funktioner globala så HTML-attribut (onclick) hittar dem
-        window.removeUser = removeUser;
-        window.saveShift = saveShift;
-        window.manualAdd = manualAdd;
-        window.handleDrop = handleDrop;
-        window.selectUser = selectUser;
-        window.selectUserManual = selectUserManual;
-
-    } catch(e) {
-        console.error(e);
-        showToast("Kunde inte ladda admin-data.", "error");
+        // Formatera till YYYY-MM-DD (hanterar tidszoner säkert)
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const newDateStr = `${yyyy}-${mm}-${dd}`;
+        
+        // Uppdatera input-fältet och kör uppdatering
+        picker.value = newDateStr;
+        updateGrid(newDateStr);
     }
+    // ------------------------------------------
+
+    // Kör en första uppdatering
+    updateGrid(picker.value);
+
+    document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
+    
+    setupSidebarAddUser();
 }
 
 function updateGrid(dateStr) {
