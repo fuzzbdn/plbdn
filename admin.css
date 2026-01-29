@@ -11,88 +11,59 @@
     box-sizing: border-box;
     border-bottom: 1px solid var(--border-color);
 }
-
 .header-content {
-    width: 100%;
-    max-width: 1600px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    width: 100%; max-width: 1600px; margin: 0 auto;
+    display: flex; justify-content: space-between; align-items: center;
 }
-
-.admin-header h1 {
-    margin: 0;
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--header-text);
-}
-
+.admin-header h1 { margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--header-text); }
 .admin-header input[type="date"] {
-    padding: 5px 10px;
-    border: 1px solid var(--input-border);
-    border-radius: 4px;
-    font-size: 1rem;
-    color: var(--text-color);
-    background: var(--input-bg);
+    padding: 5px 10px; border: 1px solid var(--input-border);
+    border-radius: 4px; font-size: 1rem; color: var(--text-color); background: var(--input-bg);
 }
-
-#currentUserDisplay {
-    font-weight: 500;
-    color: var(--text-color);
-    margin-right: 15px;
-    opacity: 0.8;
-}
-
+#currentUserDisplay { font-weight: 500; color: var(--text-color); margin-right: 15px; opacity: 0.8; }
 .logout-btn {
-    background-color: #ffebee; color: #c62828; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: background 0.2s;
+    background-color: #ffebee; color: #c62828; border: none; padding: 8px 16px; border-radius: 4px;
+    cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: background 0.2s;
 }
 .logout-btn:hover { background-color: #ffcdd2; }
-
 .back-link {
-    color: var(--text-color); text-decoration: none; background: var(--bg-color); padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; border: 1px solid var(--border-color); font-weight: 600; margin-left: 15px;
+    color: var(--text-color); text-decoration: none; background: var(--bg-color); padding: 8px 12px;
+    border-radius: 4px; font-size: 0.9rem; border: 1px solid var(--border-color); font-weight: 600; margin-left: 15px;
 }
 .back-link:hover { background: var(--border-color); }
 
-
 /* =========================================
-   2. LAYOUTS (ADMIN & SETTINGS)
+   2. LAYOUTS
    ========================================= */
-body {
-    background-color: var(--bg-color); color: var(--text-color); padding: 20px;
-}
-
-/* ADMIN-VY */
-.admin-layout {
-    display: flex; gap: 20px; max-width: 1800px; margin: 0 auto; align-items: flex-start;
-}
+.admin-layout { display: flex; gap: 20px; max-width: 1800px; margin: 0 auto; align-items: flex-start; }
 .sidebar-roster { width: 280px; flex-shrink: 0; }
 
-/* SETTINGS-VY */
 .settings-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
 .settings-layout { display: flex; gap: 30px; align-items: flex-start; }
 .settings-sidebar { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 20px; }
 .settings-content { flex-grow: 1; min-width: 0; }
 
-
 /* =========================================
    3. KOMPONENTER
    ========================================= */
 .roster-card, .schedule-card, .setting-card {
-    background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow); color: var(--card-text);
+    background: var(--card-bg); border: 1px solid var(--border-color);
+    border-radius: 8px; box-shadow: var(--shadow); color: var(--card-text);
 }
 .roster-card { padding: 20px; max-height: 85vh; overflow-y: auto; position: sticky; top: 20px; }
 .schedule-card { padding: 20px; overflow-x: auto; }
 .setting-card { padding: 30px; margin-bottom: 20px; }
-
 .roster-card h3, .setting-card h3 {
-    margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; color: var(--header-text); text-align: center;
+    margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid var(--border-color);
+    padding-bottom: 15px; color: var(--header-text); text-align: center;
 }
 .setting-card h3 { text-align: left; }
 
-/* Flik-knappar */
 .tab-btn {
-    text-align: left; padding: 15px 20px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; color: var(--text-color); display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s;
+    text-align: left; padding: 15px 20px; background: var(--card-bg);
+    border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer;
+    font-size: 1rem; font-weight: 600; color: var(--text-color);
+    display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s;
 }
 .tab-btn:hover { background: var(--input-bg); transform: translateX(5px); }
 .tab-btn.active { border-left: 5px solid var(--btn-primary); background: #e3f2fd; color: #0277bd; }
@@ -101,112 +72,55 @@ body {
 .tab-pane.active { display: block; animation: fadeIn 0.3s; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-
 /* =========================================
    4. FORMULÄR & KNAPPAR
    ========================================= */
 .form-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
 .form-group label { font-weight: 600; font-size: 0.9rem; opacity: 0.9; }
 
-/* TEXTFÄLT */
-.setting-card input[type="text"], 
-.setting-card input[type="password"], 
-.setting-card input[type="email"],
-.setting-card input[type="date"],
-.setting-card select {
-    height: 42px;
-    padding: 0 12px;
-    border-radius: 4px;
-    border: 1px solid var(--input-border);
-    background: var(--input-bg);
-    color: var(--text-color);
-    font-size: 1rem;
-    box-sizing: border-box;
-    width: 100%;
-    vertical-align: middle;
+.setting-card input[type="text"], .setting-card input[type="password"], 
+.setting-card input[type="email"], .setting-card input[type="date"], .setting-card select {
+    height: 42px; padding: 0 12px; border-radius: 4px;
+    border: 1px solid var(--input-border); background: var(--input-bg);
+    color: var(--text-color); font-size: 1rem; box-sizing: border-box; width: 100%;
 }
-
-/* KNAPPAR */
-.setting-card .save-btn, 
-.setting-card .cancel-edit-btn,
-.setting-card button.save-btn,
-.setting-card .list-btn {
-    height: 42px;
-    padding: 0 12px;
-    border-radius: 4px;
-    font-size: 1rem;
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: normal;
+.setting-card .save-btn, .setting-card .cancel-edit-btn, 
+.setting-card button.save-btn, .setting-card .list-btn {
+    height: 42px; padding: 0 12px; border-radius: 4px; font-size: 1rem;
+    box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; line-height: normal;
 }
-
 .setting-card input[type="color"] { height: 42px; padding: 2px; width: 50px; cursor: pointer; border: 1px solid var(--input-border); }
 .setting-card textarea { height: auto; padding: 10px; border: 1px solid var(--input-border); border-radius: 4px; background: var(--input-bg); color: var(--text-color); width: 100%; box-sizing: border-box; }
 
-.save-btn { 
-    background-color: var(--btn-primary); color: white; border: none; cursor: pointer; font-weight: bold; 
-}
+.save-btn { background-color: var(--btn-primary); color: white; border: none; cursor: pointer; font-weight: bold; }
 .save-btn:hover { opacity: 0.9; }
-
-.cancel-edit-btn { 
-    background: #999; color: white; border: none; cursor: pointer; display: none; 
-}
+.cancel-edit-btn { background: #999; color: white; border: none; cursor: pointer; display: none; }
 
 .sidebar-input { flex: 1; padding: 8px 10px; border: 1px solid var(--input-border); border-radius: 4px; background: var(--input-bg); color: var(--text-color); }
 .sidebar-add-row { display: flex; gap: 8px; margin-bottom: 15px; }
 .sidebar-add-btn { width: 36px; height: 36px; background-color: var(--btn-primary); color: white; border: 1px solid var(--border-color); border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
 
-
 /* =========================================
    5. LISTOR
    ========================================= */
 .list-container { max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); }
-
 .draggable-station, .shift-list-item, .draggable-item, .admin-list-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border-color);
-    background-color: var(--bg-color);
-    min-height: 45px;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; border-bottom: 1px solid var(--border-color); background-color: var(--bg-color); min-height: 45px;
 }
-
 .draggable-station { cursor: grab; }
 .draggable-station.dragging { opacity: 0.5; background: #e3f2fd; border: 1px dashed #2196F3; }
-
-.draggable-item.assigned {
-    background-color: #f5f5f5 !important;
-    color: #aaa !important;
-    border-color: #eee;
-    font-style: italic;
-    opacity: 0.8;
-}
-.draggable-item.assigned:hover {
-    background-color: #f5f5f5 !important;
-    transform: none;
-    box-shadow: none;
-    cursor: default;
-}
-
+.draggable-item.assigned { background-color: #f5f5f5 !important; color: #aaa !important; border-color: #eee; font-style: italic; opacity: 0.8; }
+.draggable-item.assigned:hover { transform: none; box-shadow: none; cursor: default; }
 .list-info-left { display: flex; align-items: center; gap: 12px; flex: 1; overflow: hidden; }
 .list-actions-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .drag-handle { cursor: grab; font-size: 1.2rem; color: #999; user-select: none; }
-
-.list-btn { 
-    border: none; background: none; cursor: pointer; 
-    font-size: 1.2rem; padding: 4px; 
-    color: var(--text-color); 
-    display: flex; align-items: center; justify-content: center;
-}
+.list-btn { border: none; background: none; cursor: pointer; font-size: 1.2rem; padding: 4px; color: var(--text-color); display: flex; align-items: center; justify-content: center; }
 .list-btn:hover { background-color: rgba(0,0,0,0.05); border-radius: 4px; }
 .remove-user-btn { background: none; border: none; color: #ff6b6b; cursor: pointer; font-weight: bold; font-size: 1.2rem; }
 
-
 /* =========================================
-   6. ADMIN SCHEMAT & ÖVRIGT
+   6. ADMIN SCHEMA
    ========================================= */
 .schedule-card-wrapper { flex-grow: 1; min-width: 0; }
 .header-row, .station-row { display: grid; grid-template-columns: 150px 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
@@ -221,26 +135,12 @@ body {
 .add-user-btn { color: #4CAF50; font-size: 1.4rem; background: none; border: none; cursor: pointer; font-weight: bold; }
 .clear-btn { color: #e53935; font-size: 1.4rem; background: none; border: none; cursor: pointer; font-weight: bold; }
 
-/* Manual & Toast */
-.manual-content { line-height: 1.6; max-width: 900px; }
-.manual-content h2 { border-bottom: 2px solid var(--btn-primary); padding-bottom: 10px; margin-top: 40px; color: var(--btn-primary); }
-.manual-content h3 { margin-top: 30px; color: var(--header-text); }
-.info-box { background: #ebf8ff; border-left: 4px solid var(--btn-primary); padding: 15px; margin: 20px 0; border-radius: 0 4px 4px 0; }
-.warning-box { background: #fff5f5; border-left: 4px solid #fc8181; padding: 15px; margin: 20px 0; border-radius: 0 4px 4px 0; }
-.step { display: flex; gap: 15px; margin-bottom: 20px; }
-.step-num { background: var(--btn-primary); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
-.step-content { flex: 1; padding-top: 4px; }
-
-.export-container { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); }
-.export-button { background: #333; color: white; border: none; padding: 10px 18px; cursor: pointer; border-radius: 4px; font-weight: bold; text-decoration: none; margin-left: 10px; }
-
-/* --- FIX: STYLING FÖR POPUP-NOTISER (TOAST) --- */
+/* --- TOAST NOTIFICATIONS (Detta fixar problemet!) --- */
 #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; pointer-events: none; }
 .toast {
     background-color: #333; color: #fff; padding: 12px 24px; border-radius: 4px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.2); opacity: 0; transform: translateY(20px);
-    transition: opacity 0.3s, transform 0.3s; font-weight: 500; margin-top: 10px;
-    pointer-events: auto;
+    transition: opacity 0.3s, transform 0.3s; font-weight: 500; margin-top: 10px; pointer-events: auto;
     display: flex; align-items: center; gap: 10px;
 }
 .toast.show { opacity: 1; transform: translateY(0); }
@@ -248,6 +148,8 @@ body {
 .toast.error   { background-color: #f44336; border-left: 5px solid #c62828; }
 .toast.info    { background-color: #2196F3; border-left: 5px solid #1565C0; }
 
+.export-container { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+.export-button { background: #333; color: white; border: none; padding: 10px 18px; cursor: pointer; border-radius: 4px; font-weight: bold; text-decoration: none; margin-left: 10px; }
 .dropdown-menu { position: absolute; background: white; min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid #ccc; z-index: 10000; }
 .dropdown-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
 .dropdown-item:hover { background: #f0f0f0; }
