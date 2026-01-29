@@ -7,6 +7,10 @@ let globalStations = [];
 let globalShifts = [];
 let globalScheduleData = {};
 
+// Variabler för att hantera väder-caching
+let lastWeatherFetch = 0;
+let lastWeatherConfig = ""; 
+
 export function initDisplay() {
     // Starta klockan direkt
     setInterval(() => {
@@ -14,44 +18,101 @@ export function initDisplay() {
         if(el) el.innerText = new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
     }, 1000);
 
-    // Initialisera väder (dynamiskt)
-    initWeather();
-
+    // Starta huvudloopen direkt
     refreshLoop();
 }
 
 async function refreshLoop() {
     await refresh();
-    setInterval(refresh, 15000);
+    setInterval(refresh, 15000); // Uppdatera allt var 15:e sekund
 }
 
 async function refresh() {
     try {
+        // 1. Hämta all data parallellt (inklusive väder-config)
         let pub = await fetchData('schedule_published');
         if(!pub || !Object.keys(pub).length) pub = await fetchData('schedule');
-        const [sets, msg, themes, stations, shifts] = await Promise.all([fetchData('settings'), fetchData('message'), fetchData('custom_themes'), fetchData('config_stations'), fetchData('config_shifts')]);
         
+        const [sets, msg, themes, stations, shifts, weatherConf] = await Promise.all([
+            fetchData('settings'), 
+            fetchData('message'), 
+            fetchData('custom_themes'), 
+            fetchData('config_stations'), 
+            fetchData('config_shifts'),
+            fetchData('weather_config') // Hämta väderinställningar varje gång
+        ]);
+        
+        // 2. Kolla om schemat eller inställningar ändrats
         const snap = JSON.stringify({s:pub, t:sets?.theme, m:msg, st:stations, sh:shifts});
-        if(snap === lastSnap) return; lastSnap = snap;
         
+        // Uppdatera globala variabler om data finns
         globalScheduleData = pub || {};
         globalStations = (Array.isArray(stations) && stations.length) ? stations : DEFAULT_STATIONS;
         globalShifts = (Array.isArray(shifts) && shifts.length) ? shifts : DEFAULT_SHIFTS;
 
-        if (sets?.theme && sets.theme !== 'light') {
-            const theme = (themes||[]).find(t => t.id === sets.theme);
-            if(theme) { const style = document.createElement('style'); style.innerHTML = theme.css; document.head.appendChild(style); }
+        // Rita om schemat om något ändrats
+        if(snap !== lastSnap) {
+            lastSnap = snap;
+            
+            if (sets?.theme && sets.theme !== 'light') {
+                const theme = (themes||[]).find(t => t.id === sets.theme);
+                if(theme) { const style = document.createElement('style'); style.innerHTML = theme.css; document.head.appendChild(style); }
+            }
+
+            const mq = document.getElementById('marqueeContainer');
+            if(mq) { mq.style.display = (msg?.show && msg?.text) ? 'block' : 'none'; if(msg?.text) document.getElementById('marqueeText').innerText = msg.text; }
+
+            const now = new Date(), iso = getISOWeek(now), today = DAYS[now.getDay()===0 ? 6 : now.getDay()-1];
+            const titleEl = document.getElementById('mainTitle');
+            if(titleEl) titleEl.innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
+            
+            renderGrid(today, iso);
         }
 
-        const mq = document.getElementById('marqueeContainer');
-        if(mq) { mq.style.display = (msg?.show && msg?.text) ? 'block' : 'none'; if(msg?.text) document.getElementById('marqueeText').innerText = msg.text; }
+        // 3. Hantera VÄDER (Separerad logik för att inte överbelasta API)
+        await handleWeatherUpdate(weatherConf);
 
-        const now = new Date(), iso = getISOWeek(now), today = DAYS[now.getDay()===0 ? 6 : now.getDay()-1];
-        const titleEl = document.getElementById('mainTitle');
-        if(titleEl) titleEl.innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
-        
-        renderGrid(today, iso);
     } catch (e) { console.error("Display Error", e); }
+}
+
+async function handleWeatherUpdate(config) {
+    let wDiv = document.getElementById('weatherWidget');
+    if (!wDiv) {
+        wDiv = document.createElement('div');
+        wDiv.id = 'weatherWidget';
+        const clock = document.getElementById('clock');
+        if (clock && clock.parentNode) clock.parentNode.insertBefore(wDiv, clock);
+    }
+
+    // Default-värden om inget är sparat
+    const city = config?.name || "BODEN";
+    const lat = config?.latitude || "65.82";
+    const long = config?.longitude || "21.69";
+    
+    // Skapa en "signatur" för inställningarna för att se om de ändrats
+    const currentConfigStr = `${city}-${lat}-${long}`;
+    const now = Date.now();
+
+    // Uppdatera vädret OM:
+    // A) Vi har bytt stad (config ändrad)
+    // B) Det har gått mer än 15 minuter (900000 ms) sedan sist
+    if (currentConfigStr !== lastWeatherConfig || (now - lastWeatherFetch) > 900000) {
+        console.log("Uppdaterar väder för:", city);
+        try {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${long}&current_weather=true`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            const temp = Math.round(data.current_weather.temperature);
+            wDiv.innerHTML = `${city.toUpperCase()}: ${temp}°C`; 
+            
+            // Spara tidpunkten och konfigurationen
+            lastWeatherFetch = now;
+            lastWeatherConfig = currentConfigStr;
+        } catch (e) { 
+            console.error("Väderfel:", e); 
+        }
+    }
 }
 
 function renderGrid(today, iso) {
@@ -73,36 +134,4 @@ function renderGrid(today, iso) {
         html += `</div>`;
     });
     cont.innerHTML = html;
-}
-
-// NY: DYNAMISK VÄDERFUNKTION
-async function initWeather() {
-    let wDiv = document.getElementById('weatherWidget');
-    if (!wDiv) {
-        // Skapa elementet om det saknas (för säkerhets skull)
-        wDiv = document.createElement('div');
-        wDiv.id = 'weatherWidget';
-        const clock = document.getElementById('clock');
-        if (clock && clock.parentNode) clock.parentNode.insertBefore(wDiv, clock);
-    }
-
-    const fetchW = async () => {
-        try {
-            // Hämta sparad config eller kör default
-            let config = await fetchData('weather_config');
-            if (!config || !config.latitude) {
-                config = { latitude: "65.82", longitude: "21.69", name: "BODEN" };
-            }
-
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.latitude}&longitude=${config.longitude}&current_weather=true`;
-            const res = await fetch(url);
-            const data = await res.json();
-            
-            const temp = Math.round(data.current_weather.temperature);
-            const cityName = config.name.toUpperCase();
-            
-            wDiv.innerHTML = `${cityName}: ${temp}°C`; 
-        } catch (e) { console.error("Ingen väderdata", e); }
-    };
-    fetchW(); setInterval(fetchW, 900000); 
 }
