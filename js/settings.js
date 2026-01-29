@@ -57,55 +57,34 @@ function initGeneralTab() {
 }
 
 /* =========================================
-   2. TEMA & FÖRHANDSGRANSKNING
+   2. TEMA & FÖRHANDSGRANSKNING (IFRAME)
    ========================================= */
 function initThemeTab(settings) {
     const themeSelect = document.getElementById('themeSelect');
     const editSelect = document.getElementById('editThemeSelect');
-    const previewBox = document.getElementById('themePreviewBox');
+    const iframe = document.getElementById('themePreviewIframe');
 
-    // Funktion som uppdaterar miniatyren baserat på valt tema
+    // Funktion som injicerar CSS i iframen
     function updatePreview(themeId) {
-        if (!previewBox) return;
+        if (!iframe || !iframe.contentDocument) return;
 
-        // Standardvärden (Ljust tema)
-        let vars = {
-            '--bg-color': '#f0f2f5',
-            '--text-color': '#1a1a1a',
-            '--header-bg': '#ffffff',
-            '--header-text': '#2c3e50',
-            '--card-bg': '#ffffff',
-            '--card-text': '#2c3e50'
-        };
-
-        // Om ett custom tema är valt, extrahera CSS-variabler
+        // Hitta temat
+        let cssToInject = "";
         if (themeId && themeId !== 'light') {
             const t = globalCustomThemes.find(x => x.id === themeId);
-            if (t && t.css) {
-                for (const key in vars) {
-                    // Regex för att hitta t.ex: --bg-color: #000;
-                    const regex = new RegExp(`${key}\\s*:\\s*([^;}]+)`);
-                    const match = t.css.match(regex);
-                    if (match) vars[key] = match[1].trim();
-                }
-            }
+            if (t) cssToInject = t.css;
         }
 
-        // Applicera färgerna på miniatyr-elementen
-        previewBox.style.backgroundColor = vars['--bg-color'];
-        previewBox.style.color = vars['--text-color'];
-
-        const header = previewBox.querySelector('.preview-header');
-        if (header) {
-            header.style.backgroundColor = vars['--header-bg'];
-            header.style.color = vars['--header-text'];
+        // Hitta eller skapa <style> taggen inuti iframen
+        let styleTag = iframe.contentDocument.getElementById('injected-preview-style');
+        if (!styleTag) {
+            styleTag = iframe.contentDocument.createElement('style');
+            styleTag.id = 'injected-preview-style';
+            iframe.contentDocument.head.appendChild(styleTag);
         }
 
-        const cards = previewBox.querySelectorAll('.preview-card');
-        cards.forEach(c => {
-            c.style.backgroundColor = vars['--card-bg'];
-            c.style.color = vars['--card-text'];
-        });
+        // Sätt CSS
+        styleTag.innerHTML = cssToInject;
     }
 
     function populate() {
@@ -113,23 +92,29 @@ function initThemeTab(settings) {
         themeSelect.innerHTML = `<option value="light">Ljus (Standard)</option>` + 
                                 globalCustomThemes.map(t => `<option value="${t.id}">✨ ${t.name}</option>`).join('');
         themeSelect.value = cur;
-        updatePreview(cur); // Uppdatera direkt vid laddning
+        
+        // Uppdatera preview (vänta lite om iframen inte laddat än)
+        setTimeout(() => updatePreview(cur), 100);
 
         if(editSelect) {
-            editSelect.innerHTML = '<option value="">-- Välj tema --</option>' + 
+            editSelect.innerHTML = '<option value="">-- Välj tema att redigera --</option>' + 
                                    globalCustomThemes.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
         }
     }
 
-    // Event listeners
+    // Uppdatera när iframen laddat klart (första gången)
+    iframe.onload = () => updatePreview(themeSelect.value);
+
+    // Uppdatera när man väljer i listan
     themeSelect.onchange = (e) => updatePreview(e.target.value);
-    
+
+    // Spara-knapp
     document.getElementById('saveThemeBtn').onclick = async () => { 
         await saveData('settings', { theme: themeSelect.value }); 
         showToast("Tema aktiverat!", "success"); 
     };
     
-    // Editor-logik
+    // --- Editor Logik ---
     if(editSelect) {
         const tName = document.getElementById('customThemeName');
         const tCss = document.getElementById('customThemeCSS');
@@ -148,6 +133,7 @@ function initThemeTab(settings) {
             if(!tName.value || !tCss.value) return showToast("Fyll i namn och CSS", "error");
             const id = tId.value || 'theme_' + Date.now();
             const newTheme = { id, name: tName.value, css: tCss.value };
+            
             const idx = globalCustomThemes.findIndex(t => t.id === id);
             if(idx >= 0) globalCustomThemes[idx] = newTheme; else globalCustomThemes.push(newTheme);
             
