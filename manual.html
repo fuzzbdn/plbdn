@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Användarmanual STRUL 1.1</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="base.css">
+    <link rel="stylesheet" href="admin.css">
+    
+    <style>
+        /* Specifik styling för manual-sidan för bättre läsbarhet */
+        body {
+            background-color: #ffffff;
+            padding: 40px;
+            margin: 0;
+            overflow-y: auto;
+            color: #333;
+        }
+        .manual-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h3 {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-top: 40px;
+            color: #2c3e50;
+        }
+        h4 {
+            margin-top: 25px;
+            margin-bottom: 10px;
+            color: #0277bd;
+        }
+        p, li {
+            line-height: 1.6;
+            font-size: 1rem;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #d32f2f;
+        }
+        .img-placeholder {
+            background: #f9f9f9;
+            border: 1px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            color: #888;
+            margin: 10px 0;
+            border-radius: 6px;
+        }
+        /* Dölj scrollbar men tillåt scroll */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="manual-wrapper manual-content">
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+        <h1 style="margin:0; color:var(--btn-primary); font-size: 2.2rem;">Användarmanual</h1>
+        <button onclick="window.print()" class="save-btn" style="width:auto; background-color:#455a64;">🖨️ Skriv ut</button>
+    </div>
+
+    <p class="intro-text">
+        Detta är manualen för <strong>STRUL v1.1</strong> (Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen). 
+        Här hittar du instruktioner för hur du planerar, hanterar inställningar och visar informationen på storskärm.
+    </p>
+
+    <nav style="background:#f0f2f5; padding:20px; border-radius:8px; margin-bottom:40px; border:1px solid #ddd;">
+        <p style="margin-top:0; font-weight:800; text-transform:uppercase; font-size:0.85rem; color:#666; letter-spacing:1px;">Innehållsförteckning</p>
+        <ul style="margin:0; padding-left:20px;">
+            <li><a href="#planning" style="color:#0277bd; text-decoration:none; font-weight:600;">1. Planering & Admin</a></li>
+            <li><a href="#display" style="color:#0277bd; text-decoration:none; font-weight:600;">2. Display-vyn</a></li>
+            <li><a href="#settings" style="color:#0277bd; text-decoration:none; font-weight:600;">3. Inställningar & Väder</a></li>
+            <li><a href="#themes" style="color:#0277bd; text-decoration:none; font-weight:600;">4. Teman & Utseende</a></li>
+            <li><a href="#troubleshoot" style="color:#0277bd; text-decoration:none; font-weight:600;">5. Felsökning</a></li>
+        </ul>
+    </nav>
+
+    <div id="planning">
+        <h3>1. Planering & Admin</h3>
+        <p>I admin-vyn sköter du den dagliga bemanningen. Du ser stationerna till vänster och arbetspassen som kolumner.</p>
+        
+        <h4>Navigera i kalendern</h4>
+        <p>Du kan byta dag på två sätt:</p>
+        <ul>
+            <li><strong>Kalendern:</strong> Klicka på datumfältet för att välja ett specifikt datum.</li>
+            <li><strong>Pilarna (◀ ▶):</strong> Använd pilarna bredvid datumet för att snabbt hoppa till föregående eller nästa dag.</li>
+        </ul>
+
+        <h4>Lägga till personal</h4>
+        <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-content">Klicka på det gröna <strong>+</strong> tecknet i rutan där du vill lägga till någon.</div>
+        </div>
+        <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-content">Välj en person från listan i menyn som dyker upp, eller klicka på <em>"Skriv in eget namn..."</em> för att skriva manuellt.</div>
+        </div>
+        <p>Du kan också <strong>dra och släppa</strong> namn från listan till vänster ("Personal") direkt in i schemat.</p>
+
+        <h4>Publicera ändringar</h4>
+        <div class="warning-box">
+            <strong>Viktigt:</strong> Ändringar du gör sparas automatiskt som ett "utkast". För att de ska synas på storskärmen måste du klicka på den gröna knappen <strong>📡 Publicera</strong> nere till höger.
+        </div>
+    </div>
+
+    <div id="display">
+        <h3>2. Display-vyn</h3>
+        <p>Display-vyn är den sida som visas på TV-skärmarna. Den uppdateras automatiskt var 15:e sekund för att hämta nya publiceringar.</p>
+        <p>Sidan visar:</p>
+        <ul>
+            <li><strong>Datum & Vecka:</strong> Visas högst upp.</li>
+            <li><strong>Väder:</strong> Live-väder för den stad som är vald i inställningarna.</li>
+            <li><strong>Klocka:</strong> Digital klocka.</li>
+            <li><strong>Schema:</strong> Dagens bemanning för alla stationer.</li>
+            <li><strong>Rullande text:</strong> Ett meddelande i nederkant (om aktiverat).</li>
+        </ul>
+    </div>
+
+    <div id="settings">
+        <h3>3. Inställningar & Väder</h3>
+        <p>Under knappen <strong>⚙️ Inställningar</strong> kan du anpassa systemet.</p>
+
+        <h4>🌤️ Väder & Plats</h4>
+        <p>För att visa rätt väder på displayen:</p>
+        <ol>
+            <li>Gå till fliken <strong>Väder & Plats</strong>.</li>
+            <li>Skriv in namnet på din stad (t.ex. "Kiruna") i sökfältet och tryck <strong>Sök</strong>.</li>
+            <li>Välj rätt alternativ i listan som dyker upp.</li>
+            <li>Klicka på <strong>Spara Inställningar</strong>.</li>
+        </ol>
+        <p>Displayen kommer nu automatiskt att hämta temperatur och väderdata för den valda platsen.</p>
+
+        <h4>🚉 Stationer & Pass</h4>
+        <p>Här kan du lägga till nya stationer (platser) eller ändra namnet på dem. Du kan också ändra färgerna på stationerna för att göra schemat tydligare. Under "Arbetspass" ställer du in vilka tider som gäller (t.ex. Förmiddag, Eftermiddag, Natt).</p>
+    </div>
+
+    <div id="themes">
+        <h3>4. Teman & Utseende</h3>
+        <p>Du kan ändra utseendet på både admin- och displaysidan.</p>
+        <ul>
+            <li>Gå till fliken <strong>Utseende & Tema</strong>.</li>
+            <li>Välj ett tema i listan "Aktivt tema".</li>
+            <li>Du ser direkt en <strong>förhandsgranskning</strong> till höger om hur det kommer se ut.</li>
+            <li>Klicka på <strong>Aktivera Tema</strong> för att spara.</li>
+        </ul>
+        <p>Du kan även skapa egna teman genom att skriva CSS-kod i editorn längst ner på sidan.</p>
+    </div>
+
+    <div id="troubleshoot">
+        <h3>5. Felsökning</h3>
+        
+        <p><strong>Skärmen visar inte mina ändringar?</strong><br>
+        Kontrollera att du har klickat på <strong>Publicera</strong> i admin-vyn. Displayen uppdateras med ca 15 sekunders fördröjning.</p>
+
+        <p><strong>Vädret visar fel stad?</strong><br>
+        Gå till Inställningar > Väder & Plats och gör en ny sökning. Se till att välja rätt stad i listan och klicka på Spara.</p>
+
+        <p><strong>Jag kan inte logga in?</strong><br>
+        Kontrollera lösenordet. Om du glömt det, använd funktionen "Glömt lösenord" på inloggningssidan (kräver att e-post är konfigurerad).</p>
+    </div>
+
+    <div style="margin-top:50px; text-align:center; color:#999; font-size:0.8rem;">
+        STRUL Bemanningssystem v2.0 • Manual uppdaterad 2025
+    </div>
+
+</div>
+
+</body>
+</html>

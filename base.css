@@ -1,5 +1,5 @@
 /* =========================================
-   BASE.CSS - GEMENSAMT & STANDARD (LJUST)
+   BASE.CSS - GEMENSAMT & STANDARD
    ========================================= */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
 
@@ -9,14 +9,14 @@ body {
     font-family: 'Inter', 'Segoe UI', sans-serif;
     margin: 0;
     padding: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
     transition: background-color 0.3s, color 0.3s;
 }
 
 .hidden { display: none !important; }
 
-/* =========================================
-   STANDARDTEMA (LJUST)
-   ========================================= */
+/* STANDARDTEMA (LJUST) */
 :root {
     --bg-color: #f4f4f9;
     --text-color: #333333;
@@ -30,4 +30,151 @@ body {
     --shadow: 0 2px 10px rgba(0,0,0,0.1);
     --btn-primary: #4CAF50;
     --btn-text: #ffffff;
+}
+
+/* CUSTOM MODAL (Bekräfta-ruta) */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    z-index: 20000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.modal-overlay.show { display: flex; opacity: 1; }
+
+.modal-box {
+    background: var(--card-bg);
+    color: var(--card-text);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    transform: scale(0.9);
+    transition: transform 0.2s;
+    border: 1px solid var(--border-color);
+}
+.modal-overlay.show .modal-box { transform: scale(1); }
+
+.modal-buttons { display: flex; gap: 15px; margin-top: 25px; justify-content: center; }
+
+.modal-btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1rem;
+    flex: 1;
+}
+.modal-btn.confirm { background-color: var(--btn-primary); color: #fff; }
+.modal-btn.cancel { background-color: #e0e0e0; color: #333; }
+.modal-btn.cancel:hover { background-color: #d5d5d5; }
+
+/* =========================================
+   STANDARD LAYOUT (Återställer Grid)
+   ========================================= */
+
+/* 1. Huvudbehållaren - En lista uppifrån och ner */
+#mainContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+}
+
+/* 2. RUTNÄTET - Detta återställer kolumnerna! */
+/* Sätter layout för både tidsrubrikerna och stationsraderna */
+.time-header-row, .display-row {
+    display: grid;
+    /* Stationen (220px) + 3 st Pass (delar på resten) */
+    grid-template-columns: 220px 1fr 1fr 1fr; 
+    gap: 1.5vw;
+    align-items: stretch; /* Gör alla boxar lika höga */
+}
+
+/* 3. Tidsrubrikerna */
+.time-header-row {
+    margin-bottom: 5px;
+}
+.time-header {
+    text-align: center;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    background: rgba(255,255,255,0.5);
+    padding: 5px;
+    border-radius: 4px;
+}
+
+/* 4. Stationen (Vänster box) */
+.station-label {
+    background-color: #ffffff;
+    color: #333;
+    padding: 0 15px; /* Padding på sidorna */
+    font-weight: 800;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center; /* Centrera text vertikalt */
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    min-height: 60px;
+    
+    /* Färgstrecket på sidan (Använder variabeln från JS) */
+    border-left: 8px solid var(--station-color, #ccc);
+    border-top: none;     /* Ta bort toppen från andra teman */
+    border-bottom: none;  /* Ta bort botten från andra teman */
+}
+
+/* 5. Arbetspassen (Höger boxar) */
+.shift-card {
+    background-color: #ffffff;
+    color: #333;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin: 0; /* Nollställ marginaler */
+    border: none;
+}
+
+/* Tomma rutor (för att de inte ska synas för mycket) */
+.shift-card.empty {
+    background-color: rgba(255,255,255,0.2);
+    box-shadow: none;
+    border: 2px dashed #e0e0e0;
+}
+
+/* 6. Mellanrum (Spacers) */
+.spacer-row {
+    height: 30px;
+    display: block !important; /* Tvinga fram spacern i standardläget */
+}
+
+/* 7. Dölj "etiketter" (FM/EM) från standardläget */
+/* Dessa ska bara synas i "Modern"-temat */
+.shift-card::before {
+    content: none;
+}
+/* Minska höjden på varje rad */
+.display-row, .station-label, .shift-card {
+    min-height: 50px !important; /* Minskar från standard 60-70px */
+}
+
+/* Minska marginalerna mellan raderna */
+#mainContainer {
+    gap: 5px !important; /* Tätare mellan raderna */
 }

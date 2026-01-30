@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="admin.css">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="script.js" defer></script>
+    <script type="module" src="js/main.js"></script>
 </head>
 <body class="admin-view" id="page-admin">
 
@@ -27,7 +27,11 @@
                 </div>
             </div>
 
-            <div id="currentDateDisplay" style="font-size: 1.2rem; font-weight: 800; color: var(--text-color);"></div>
+            <div class="date-navigation">
+                <button id="prevDayBtn" class="nav-arrow" title="Föregående dag">◀</button>
+                <div id="currentDateDisplay"></div>
+                <button id="nextDayBtn" class="nav-arrow" title="Nästa dag">▶</button>
+            </div>
             
             <div style="display:flex; align-items:center; gap:15px;">
                 <span id="currentUserDisplay" style="font-weight:500; opacity:0.8;"></span>
@@ -69,9 +73,20 @@
 </div>
 
 <div id="print-container"></div>
-<div id="toast">Meddelande</div>
+
+<div id="toast-container"></div> 
+
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3 style="margin-top:0;">Bekräfta</h3>
+        <p id="confirmMessage" style="font-size:1.1rem;">Är du säker?</p>
+        <div class="modal-buttons">
+            <button id="btnConfirmNo" class="modal-btn cancel">Avbryt</button>
+            <button id="btnConfirmYes" class="modal-btn confirm">Ja, kör!</button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
-
 
