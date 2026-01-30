@@ -135,7 +135,7 @@
 .add-user-btn { color: #4CAF50; font-size: 1.4rem; background: none; border: none; cursor: pointer; font-weight: bold; }
 .clear-btn { color: #e53935; font-size: 1.4rem; background: none; border: none; cursor: pointer; font-weight: bold; }
 
-/* --- TOAST NOTIFICATIONS (Detta fixar problemet!) --- */
+/* --- TOAST NOTIFICATIONS --- */
 #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; pointer-events: none; }
 .toast {
     background-color: #333; color: #fff; padding: 12px 24px; border-radius: 4px;
@@ -162,90 +162,66 @@
     .print-page:last-child { page-break-after: auto; break-after: auto; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
-/* =========================================
-   THEME PREVIEW (Miniatyr av Display)
-   ========================================= */
-.preview-container {
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 15px;
-    height: 180px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    transition: all 0.3s ease;
-    overflow: hidden;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
-    background-color: #f0f2f5; /* Default background */
-    color: #333;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
-}
 
-.preview-header {
-    padding: 8px 12px;
-    border-radius: 6px;
+/* =========================================
+   7. PUBLISH BANNER (NY)
+   ========================================= */
+.publish-banner {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px; /* Separerar bannern från schemat */
     display: flex;
     justify-content: space-between;
-    font-weight: 800;
-    background-color: #fff; /* Default header bg */
-    color: #2c3e50; /* Default header text */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.preview-content {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.preview-row {
-    display: grid;
-    grid-template-columns: 70px 1fr 1fr;
-    gap: 5px;
     align-items: center;
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    animation: slideDown 0.3s ease-out;
 }
 
-.preview-station {
-    padding: 6px;
+.publish-banner.hidden {
+    display: none !important;
+}
+
+.banner-btn {
+    background-color: #856404;
+    color: white;
+    border: none;
+    padding: 8px 16px;
     border-radius: 4px;
+    cursor: pointer;
     font-weight: bold;
-    text-align: center;
-    font-size: 0.7rem;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
 }
 
-.preview-card {
-    padding: 6px;
-    border-radius: 4px;
-    text-align: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    font-weight: 500;
-    background-color: #fff; /* Default card bg */
-    color: #333; /* Default card text */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.banner-btn:hover {
+    background-color: #533f03;
 }
 
-/* --- DATUM-NAVIGERING (NY) --- */
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- DATUM-NAVIGERING --- */
 .date-navigation {
     display: flex;
     align-items: center;
-    gap: 15px; /* Avstånd mellan pilar och text */
-    background: rgba(0,0,0,0.03); /* Lätt bakgrund för att hålla ihop gruppen */
+    gap: 15px;
+    background: rgba(0,0,0,0.03);
     padding: 5px 15px;
     border-radius: 20px;
 }
-
 #currentDateDisplay {
     font-size: 1.2rem;
     font-weight: 800;
     color: var(--text-color);
-    min-width: 200px; /* Förhindrar att layouten hoppar när textlängden ändras */
+    min-width: 200px;
     text-align: center;
 }
-
 .nav-arrow {
     background: none;
     border: none;
@@ -256,12 +232,10 @@
     transition: color 0.2s, transform 0.2s;
     line-height: 1;
 }
-
 .nav-arrow:hover {
     color: #000;
-    transform: scale(1.2); /* Gör pilen lite större vid hovring */
+    transform: scale(1.2);
 }
-
 .nav-arrow:active {
     transform: scale(0.9);
 }
