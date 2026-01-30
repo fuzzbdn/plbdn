@@ -265,3 +265,64 @@
 .nav-arrow:active {
     transform: scale(0.9);
 }
+/* --- MOBILANPASSNING ADMIN --- */
+@media screen and (max-width: 1024px) { /* Gäller surfplattor och mobiler */
+    
+    /* 1. Byt layout från Sida-vid-Sida till Uppifrån-och-Ner */
+    .admin-layout {
+        flex-direction: column !important;
+    }
+
+    /* 2. Gör personal-listan (sidebar) liggande överst */
+    .sidebar-roster {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        margin-bottom: 20px;
+        border-right: none;
+        border-bottom: 1px solid #ccc;
+    }
+
+    /* Gör listan inuti scrollbar i sidled istället för höjdled om man vill */
+    .roster-list {
+        display: flex;
+        flex-wrap: wrap; /* Låt namnen flöda */
+        gap: 10px;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    
+    .draggable-item {
+        width: auto !important; /* Låt dem bli så breda som namnet kräver */
+        flex-grow: 1;
+    }
+
+    /* 3. Gör schemat scrollbart i sidled (Viktigt!) */
+    .schedule-card-wrapper {
+        width: 100%;
+        overflow-x: hidden; /* Förhindra dubbla scrollbars */
+    }
+    
+    .schedule-card {
+        overflow-x: auto; /* Tillåt scrollning höger/vänster */
+        padding-bottom: 10px;
+    }
+
+    /* Se till att rutnätet inte krymper ihop */
+    .grid-container {
+        min-width: 800px; /* Tvinga rutnätet att vara brett */
+    }
+    
+    /* 4. Justera headern */
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    /* Datum-navigeringen */
+    .date-navigation {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
