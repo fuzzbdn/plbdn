@@ -326,3 +326,45 @@
         justify-content: space-between;
     }
 }
+
+/* --- MOBILANPASSNING SETTINGS --- */
+@media screen and (max-width: 768px) {
+    
+    /* 1. Stapla layouten */
+    .settings-layout {
+        flex-direction: column !important;
+    }
+
+    /* 2. Menyn (Sidebar) */
+    .settings-sidebar {
+        width: 100% !important;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        margin-bottom: 20px;
+        
+        /* Gör knapparna horisontella och scrollbara */
+        display: flex;
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+
+    .settings-sidebar .tab-btn {
+        white-space: nowrap; /* Förhindra radbrytning på text */
+        flex-shrink: 0;
+        border-bottom: none;
+        border-right: 1px solid #eee;
+    }
+
+    /* 3. Innehåll */
+    .settings-content {
+        padding: 10px !important;
+    }
+
+    /* Fixa Temaväljaren som ligger sida-vid-sida */
+    #tab-theme .setting-card > div {
+        flex-direction: column !important;
+    }
+    #tab-theme .setting-card > div > div {
+        width: 100% !important;
+    }
+}
