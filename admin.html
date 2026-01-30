@@ -55,6 +55,15 @@
         </aside>
 
         <main class="schedule-card-wrapper">
+            
+            <div id="publishReminderBanner" class="publish-banner hidden">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:1.2rem;">⚠️</span>
+                    <span>Det finns ändringar i utkastet som inte har publicerats till displayen än.</span>
+                </div>
+                <button onclick="document.getElementById('publishBtn').click()" class="banner-btn">Publicera nu</button>
+            </div>
+
             <div class="schedule-card">
                 <div class="grid-container" id="scheduleContainer"></div>
             </div>
@@ -89,4 +98,3 @@
 
 </body>
 </html>
-
