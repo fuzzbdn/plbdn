@@ -178,3 +178,34 @@ body {
 #mainContainer {
     gap: 5px !important; /* Tätare mellan raderna */
 }
+
+/* --- MOBILANPASSNING DISPLAY --- */
+@media screen and (max-width: 600px) {
+    
+    /* 1. Tvinga rutnätet till 1 kolumn */
+    #mainContainer {
+        grid-template-columns: 1fr !important; /* Bara 1 kolumn */
+        padding: 10px;
+    }
+
+    /* 2. Dölj onödig info för att spara plats */
+    .top-bar {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    #mainTitle { font-size: 1.2rem !important; }
+    #weatherWidget { font-size: 0.9rem !important; margin: 0 !important; }
+    
+    /* 3. Justera korten */
+    .display-row {
+        min-height: auto !important; /* Låt dem bli mindre */
+    }
+    
+    .station-label {
+        font-size: 1rem !important;
+        padding: 10px 0 !important;
+    }
+}
