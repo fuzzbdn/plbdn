@@ -3,7 +3,7 @@ import { showToast, showConfirm, getISOWeek, isLight } from './utils.js';
 import { DEFAULT_STATIONS, DEFAULT_SHIFTS, DAYS } from './config.js';
 
 let globalScheduleData = {};
-let publishedDataSnapshot = {}; // NY: Håller koll på vad som är publicerat
+let publishedDataSnapshot = {}; // Håller koll på vad som är publicerat
 let globalUserList = [];
 let globalStations = [];
 let globalShifts = [];
@@ -33,7 +33,7 @@ export async function initAdmin() {
         globalStations = (Array.isArray(stations) && stations.length) ? stations : DEFAULT_STATIONS;
         globalShifts = (Array.isArray(shifts) && shifts.length) ? shifts : DEFAULT_SHIFTS;
         
-        // NY: Spara snapshot av publicerad data för jämförelse
+        // Spara snapshot av publicerad data för jämförelse
         publishedDataSnapshot = published || {}; 
 
         // Välj vilken data som ska visas (utkast prioriteras)
@@ -43,8 +43,7 @@ export async function initAdmin() {
             globalScheduleData = draft;
         }
 
-        // NY: Kontrollera status direkt vid laddning
-        checkPublishStatus();
+        // Vi kör updateGrid nedan, så checkPublishStatus kommer anropas där.
 
     } catch (e) {
         console.error("Kunde inte hämta data:", e);
@@ -56,8 +55,10 @@ export async function initAdmin() {
         if(await showConfirm("Vill du publicera schemat till displayen?")) { 
             await saveData('schedule_published', globalScheduleData); 
             
-            // NY: Uppdatera snapshot eftersom vi precis publicerade
+            // Uppdatera snapshot eftersom vi precis publicerade
             publishedDataSnapshot = JSON.parse(JSON.stringify(globalScheduleData));
+            
+            // Kontrollera status igen (bannern ska försvinna)
             checkPublishStatus();
             
             showToast("Schemat är publicerat!", "success"); 
@@ -128,6 +129,9 @@ function updateGrid(dateStr) {
     
     renderAdminGrid();
     renderRoster();
+    
+    // VIKTIGT: Kontrollera publiceringsstatus varje gång vi byter dag
+    checkPublishStatus();
 }
 
 function renderAdminGrid() {
@@ -194,16 +198,39 @@ function renderRoster() {
     }).join('');
 }
 
-// NY: Funktion för att kontrollera om det finns osparade ändringar
+// NY LOGIK: Kontrollera ENDAST den aktuella dagen
 function checkPublishStatus() {
     const banner = document.getElementById('publishReminderBanner');
     if (!banner) return;
 
-    // Jämför JSON-strängar för att se om objektet har ändrats
-    const currentJson = JSON.stringify(globalScheduleData);
-    const publishedJson = JSON.stringify(publishedDataSnapshot);
+    const dayName = DAYS[currentAdminDayIndex];
+    // Prefixet filtrerar så vi bara kollar aktuell dag (År+Vecka+Dag)
+    const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
 
-    if (currentJson !== publishedJson) {
+    let currentViewChanged = false;
+
+    // Helper för att hantera undefined/null som tomma strängar
+    const val = (v) => (v || "").trim();
+
+    // Samla alla nycklar som är relevanta för DENNA dag (från både utkast och publicerat)
+    const relevantKeys = new Set();
+    
+    Object.keys(globalScheduleData).forEach(k => {
+        if(k.startsWith(prefix)) relevantKeys.add(k);
+    });
+    Object.keys(publishedDataSnapshot).forEach(k => {
+        if(k.startsWith(prefix)) relevantKeys.add(k);
+    });
+
+    // Jämför värdena
+    for (const key of relevantKeys) {
+        if (val(globalScheduleData[key]) !== val(publishedDataSnapshot[key])) {
+            currentViewChanged = true;
+            break;
+        }
+    }
+
+    if (currentViewChanged) {
         banner.classList.remove('hidden');
     } else {
         banner.classList.add('hidden');
@@ -214,7 +241,7 @@ async function saveShift(k, v) {
     globalScheduleData[k] = v.trim(); 
     await saveData('schedule_draft', globalScheduleData); 
     
-    // NY: Kontrollera status efter varje sparning
+    // Kontrollera status efter varje sparning
     checkPublishStatus();
     
     renderAdminGrid(); 
