@@ -3,6 +3,7 @@ import { showToast, showConfirm, getISOWeek, isLight } from './utils.js';
 import { DEFAULT_STATIONS, DEFAULT_SHIFTS, DAYS } from './config.js';
 
 let globalScheduleData = {};
+let publishedDataSnapshot = {}; // NY: Håller koll på vad som är publicerat
 let globalUserList = [];
 let globalStations = [];
 let globalShifts = [];
@@ -16,7 +17,7 @@ let currentAdminDayIndex = 0;
 export async function initAdmin() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     
-    // 1. HÄMTA ALL DATA (Här var felet - detta måste vara med!)
+    // 1. HÄMTA ALL DATA
     try {
         const [users, draft, published, old, stations, shifts] = await Promise.all([
             fetchData('users'),
@@ -32,12 +33,18 @@ export async function initAdmin() {
         globalStations = (Array.isArray(stations) && stations.length) ? stations : DEFAULT_STATIONS;
         globalShifts = (Array.isArray(shifts) && shifts.length) ? shifts : DEFAULT_SHIFTS;
         
+        // NY: Spara snapshot av publicerad data för jämförelse
+        publishedDataSnapshot = published || {}; 
+
         // Välj vilken data som ska visas (utkast prioriteras)
         if(!draft || !Object.keys(draft).length) {
             globalScheduleData = (published && Object.keys(published).length) ? published : (old || {});
         } else {
             globalScheduleData = draft;
         }
+
+        // NY: Kontrollera status direkt vid laddning
+        checkPublishStatus();
 
     } catch (e) {
         console.error("Kunde inte hämta data:", e);
@@ -48,6 +55,11 @@ export async function initAdmin() {
     document.getElementById('publishBtn').onclick = async () => {
         if(await showConfirm("Vill du publicera schemat till displayen?")) { 
             await saveData('schedule_published', globalScheduleData); 
+            
+            // NY: Uppdatera snapshot eftersom vi precis publicerade
+            publishedDataSnapshot = JSON.parse(JSON.stringify(globalScheduleData));
+            checkPublishStatus();
+            
             showToast("Schemat är publicerat!", "success"); 
         }
     };
@@ -60,7 +72,6 @@ export async function initAdmin() {
     picker.onchange = (e) => updateGrid(e.target.value);
     
     // --- PIL-NAVIGERING ---
-    // Kontrollera att knapparna finns (om du inte uppdaterat HTML än)
     const prevBtn = document.getElementById('prevDayBtn');
     const nextBtn = document.getElementById('nextDayBtn');
     
@@ -183,9 +194,29 @@ function renderRoster() {
     }).join('');
 }
 
+// NY: Funktion för att kontrollera om det finns osparade ändringar
+function checkPublishStatus() {
+    const banner = document.getElementById('publishReminderBanner');
+    if (!banner) return;
+
+    // Jämför JSON-strängar för att se om objektet har ändrats
+    const currentJson = JSON.stringify(globalScheduleData);
+    const publishedJson = JSON.stringify(publishedDataSnapshot);
+
+    if (currentJson !== publishedJson) {
+        banner.classList.remove('hidden');
+    } else {
+        banner.classList.add('hidden');
+    }
+}
+
 async function saveShift(k, v) { 
     globalScheduleData[k] = v.trim(); 
     await saveData('schedule_draft', globalScheduleData); 
+    
+    // NY: Kontrollera status efter varje sparning
+    checkPublishStatus();
+    
     renderAdminGrid(); 
     renderRoster(); 
 }
