@@ -499,26 +499,36 @@ function initExportTab() {
                         <link rel="stylesheet" href="display.css">
                         <style>
                             ${customCss}
+                            /* TVINGA BORT ALLA ANIMATIONER: 
+                               Förhindrar att bilden tas mitt i en fade-in */
+                            * { transition: none !important; animation: none !important; }
+                            
                             body { margin: 0; overflow: hidden; background-color: var(--bg-color, #f0f2f5); }
                             ::-webkit-scrollbar { display: none; }
                         </style>
                     </head>
-                    <body class="display-view">
+                    <body class="display-view" id="page-display">
                         ${generateDisplayHtmlForImage(new Date(loopDate))}
                     </body>
                     </html>
                 `);
                 doc.close();
 
-                // Vänta lite så att webbläsaren hinner ladda in CSS och typsnitt
-                await new Promise(r => setTimeout(r, 800));
+                // Väntar lite så att webbläsaren hinner ladda in CSS och typsnitt
+                await new Promise(r => setTimeout(r, 1000));
 
                 try {
-                    // Rendera iframens body till en canvas (scale 1 räcker då originalet är 1920x1080)
-                    const canvas = await html2canvas(doc.body, { scale: 1, useCORS: true });
+                    // Höjde scale till 2 för maximal skärpa och satte explicit bakgrundsfärg
+                    const canvas = await html2canvas(doc.body, { 
+                        scale: 2, 
+                        useCORS: true,
+                        backgroundColor: doc.body.style.backgroundColor || '#f0f2f5' 
+                    });
+                    
                     const link = document.createElement('a');
-                    link.download = `Schema-${loopDate.toLocaleDateString('sv-SE')}.jpg`;
-                    link.href = canvas.toDataURL('image/jpeg', 0.9);
+                    // BYTT TILL PNG: Förstör inte färgerna som JPEG gör
+                    link.download = `Schema-${loopDate.toLocaleDateString('sv-SE')}.png`;
+                    link.href = canvas.toDataURL('image/png');
                     link.click();
                     count++;
                 } catch (e) { console.error("Kunde inte skapa bild:", e); }
