@@ -469,28 +469,64 @@ function initExportTab() {
             const txt = btn.innerText;
             btn.innerText = "Genererar...";
             
-            const temp = document.createElement('div');
-            temp.style.cssText = "position:absolute; top:-9999px; left:0; width:1200px; background:#fff;";
-            document.body.appendChild(temp);
+            // Hämta eventuellt anpassat tema så bilden får rätt färger
+            let customCss = "";
+            const themeSelect = document.getElementById('themeSelect');
+            if (themeSelect && themeSelect.value && themeSelect.value !== 'light') {
+                const t = globalCustomThemes.find(x => x.id === themeSelect.value);
+                if (t) customCss = t.css;
+            }
+
+            // Skapa en iframe med Full-HD upplösning (dold för användaren)
+            const iframe = document.createElement('iframe');
+            iframe.style.cssText = "position:absolute; top:-9999px; left:0; width:1920px; height:1080px; border:none;";
+            document.body.appendChild(iframe);
             
             let loopDate = new Date(sDate);
             let count = 0;
             
             while (loopDate <= eDate) {
-                temp.innerHTML = generateSingleDayPrintHtml(new Date(loopDate), true);
-                await new Promise(r => setTimeout(r, 100));
+                const doc = iframe.contentDocument;
+                doc.open();
+                // Bygg upp en komplett sida i vår iframe som speglar display.html
+                doc.write(`
+                    <!DOCTYPE html>
+                    <html lang="sv">
+                    <head>
+                        <base href="${window.location.href}">
+                        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+                        <link rel="stylesheet" href="base.css">
+                        <link rel="stylesheet" href="display.css">
+                        <style>
+                            ${customCss}
+                            body { margin: 0; overflow: hidden; background-color: var(--bg-color, #f0f2f5); }
+                            ::-webkit-scrollbar { display: none; }
+                        </style>
+                    </head>
+                    <body class="display-view">
+                        ${generateDisplayHtmlForImage(new Date(loopDate))}
+                    </body>
+                    </html>
+                `);
+                doc.close();
+
+                // Vänta lite så att webbläsaren hinner ladda in CSS och typsnitt
+                await new Promise(r => setTimeout(r, 800));
+
                 try {
-                    const canvas = await html2canvas(temp, { scale: 2 });
+                    // Rendera iframens body till en canvas (scale 1 räcker då originalet är 1920x1080)
+                    const canvas = await html2canvas(doc.body, { scale: 1, useCORS: true });
                     const link = document.createElement('a');
                     link.download = `Schema-${loopDate.toLocaleDateString('sv-SE')}.jpg`;
                     link.href = canvas.toDataURL('image/jpeg', 0.9);
                     link.click();
                     count++;
-                    await new Promise(r => setTimeout(r, 500));
-                } catch (e) { console.error(e); }
+                } catch (e) { console.error("Kunde inte skapa bild:", e); }
+                
                 loopDate.setDate(loopDate.getDate() + 1);
             }
-            document.body.removeChild(temp);
+            
+            document.body.removeChild(iframe);
             btn.innerText = txt;
             showToast(`Klar! ${count} bild(er).`, "success");
         }
@@ -525,4 +561,54 @@ function generateSingleDayPrintHtml(dateObj, forImage = false) {
         html += `</div>`;
     });
     return html + `</div></div>`;
+}
+
+// Hjälpfunktion för att bygga upp Display-gränssnittet till bildexporten
+function generateDisplayHtmlForImage(dateObj) {
+    const iso = getISOWeek(dateObj);
+    const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1; 
+    const dayName = DAYS[dayIndex];
+    const dateStr = `${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
+    const prefix = `y${iso.year}w${iso.week}-${dayName}-`;
+    
+    // Vi skapar Top-bar men medvetet UTAN väder och klocka
+    let html = `
+    <div class="display-wrapper">
+        <div class="top-bar">
+            <h1 id="mainTitle">Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
+        </div>
+        
+        <div id="mainContainer">
+            <div class="time-header-row">
+                <div></div>
+                ${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}
+            </div>
+    `;
+    
+    // Loopa över stationer och pass, precis som live-displayen gör
+    globalStations.forEach(st => {
+        if (st.isSpacer) { 
+            html += `<div class="display-row spacer-row"></div>`; 
+            return; 
+        }
+        
+        const contrast = isLight(st.color) ? '#000' : '#fff';
+        const vars = `style="--station-color:${st.color}; --contrast-color:${contrast};"`;
+        
+        html += `<div class="display-row" ${vars}><div class="station-label">${st.name}</div>`;
+        
+        globalShifts.forEach(sh => {
+            const key = `${prefix}${st.name}-${sh.time}`;
+            const val = globalScheduleData[key] || "";
+            html += `<div class="shift-card ${val ? '' : 'empty'}" data-label="${sh.label}">${val}</div>`;
+        });
+        
+        html += `</div>`;
+    });
+    
+    html += `
+        </div>
+    </div>`;
+    
+    return html;
 }
