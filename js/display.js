@@ -13,6 +13,7 @@ let lastWeatherConfig = "";
 export function initDisplay() {
     setInterval(() => {
         const el = document.getElementById('clock');
+        // FIX: innerText = inget behov av escapeHTML
         if(el) el.innerText = new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
     }, 1000);
 
@@ -64,10 +65,15 @@ async function refresh() {
             }
 
             const mq = document.getElementById('marqueeContainer');
-            if(mq) { mq.style.display = (msg?.show && msg?.text) ? 'block' : 'none'; if(msg?.text) document.getElementById('marqueeText').innerText = msg.text; }
+            if(mq) { 
+                mq.style.display = (msg?.show && msg?.text) ? 'block' : 'none'; 
+                // FIX: innerText = inget behov av escapeHTML
+                if(msg?.text) document.getElementById('marqueeText').innerText = msg.text; 
+            }
 
             const now = new Date(), iso = getISOWeek(now), today = DAYS[now.getDay()===0 ? 6 : now.getDay()-1];
             const titleEl = document.getElementById('mainTitle');
+            // FIX: innerText = inget behov av escapeHTML
             if(titleEl) titleEl.innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
             
             renderGrid(today, iso);
