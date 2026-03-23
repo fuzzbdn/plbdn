@@ -1,17 +1,14 @@
-// VIKTIGT: Importen matchar nu din filstruktur (service.js)
 import { fetchData, saveData } from './service.js';
-import { showToast, showConfirm, isLight, getISOWeek } from './utils.js';
+import { showToast, showConfirm, isLight, getISOWeek, escapeHTML } from './utils.js';
 import { DEFAULT_STATIONS, DEFAULT_SHIFTS, DAYS } from './config.js';
 
 let globalStations = [], globalShifts = [], globalCustomThemes = [], globalScheduleData = {};
 let editingStationIndex = null, editingShiftIndex = null, editingAdminId = null, dragSrcStationEl = null;
 
-// Huvudfunktion som anropas från main.js
 export async function initSettings() {
-    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
+    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + escapeHTML(sessionStorage.getItem('adminName')||'Admin');
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
 
-    // Ladda all data parallellt
     const [draft, published, old, settings, themes, stations, shifts] = await Promise.all([
         fetchData('schedule_draft'), 
         fetchData('schedule_published'), 
@@ -22,13 +19,11 @@ export async function initSettings() {
         fetchData('config_shifts')
     ]);
     
-    // Sätt globala variabler
     globalScheduleData = (draft && Object.keys(draft).length) ? draft : (published || old || {});
     globalCustomThemes = themes || [];
     globalStations = (Array.isArray(stations) && stations.length) ? stations : DEFAULT_STATIONS;
     globalShifts = (Array.isArray(shifts) && shifts.length) ? shifts : DEFAULT_SHIFTS;
 
-    // Initiera alla flikar
     initGeneralTab();
     initWeatherTab(); 
     initThemeTab(settings);
@@ -48,7 +43,6 @@ function initGeneralTab() {
     };
 }
 
-// NY: VÄDERINSTÄLLNINGAR (MED SÖK)
 function initWeatherTab() {
     const searchIn = document.getElementById('weatherSearchInput');
     const searchBtn = document.getElementById('searchLocationBtn');
@@ -60,24 +54,21 @@ function initWeatherTab() {
     const hiddenLong = document.getElementById('weatherLong');
     const hiddenName = document.getElementById('weatherCityName');
 
-    // 1. Ladda nuvarande inställning
     fetchData('weather_config').then(data => {
         if (data && data.name) {
             updateCurrentDisplay(data.name, data.latitude, data.longitude);
         } else {
-            // Default till Boden om inget är sparat
             updateCurrentDisplay("BODEN", "65.82", "21.69");
         }
     });
 
     function updateCurrentDisplay(name, lat, long) {
-        currentDisplay.innerHTML = `📍 <strong>${name}</strong> <span style="font-size:0.9em; color:#666;">(${lat}, ${long})</span>`;
+        currentDisplay.innerHTML = `📍 <strong>${escapeHTML(name)}</strong> <span style="font-size:0.9em; color:#666;">(${escapeHTML(lat)}, ${escapeHTML(long)})</span>`;
         hiddenName.value = name;
         hiddenLat.value = lat;
         hiddenLong.value = long;
     }
 
-    // 2. Sökfunktion
     if(searchBtn) {
         searchBtn.onclick = async () => {
             const query = searchIn.value.trim();
@@ -85,26 +76,23 @@ function initWeatherTab() {
 
             searchBtn.innerText = "Söker...";
             try {
-                // Anropa Open-Meteo Geocoding API
                 const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=sv&format=json`;
                 const res = await fetch(url);
                 const data = await res.json();
 
-                resultsSelect.innerHTML = ""; // Rensa gamla svar
+                resultsSelect.innerHTML = ""; 
 
                 if (!data.results || data.results.length === 0) {
                     showToast("Inga platser hittades", "info");
                     resultsDiv.style.display = "none";
                 } else {
-                    // Fyll rullistan
                     data.results.forEach(place => {
                         const country = place.country || "";
-                        const admin1 = place.admin1 || ""; // Region/Län
+                        const admin1 = place.admin1 || ""; 
                         const label = `${place.name}, ${admin1} ${country}`;
                         
                         const option = document.createElement('option');
                         option.text = label;
-                        // Spara data direkt i värdet som JSON för enkelhetens skull
                         option.value = JSON.stringify({
                             name: place.name,
                             lat: place.latitude,
@@ -115,7 +103,6 @@ function initWeatherTab() {
                     
                     resultsDiv.style.display = "block";
                     
-                    // Välj första alternativet automatiskt
                     if (data.results.length > 0) {
                         const first = data.results[0];
                         updateCurrentDisplay(first.name, first.latitude, first.longitude);
@@ -130,7 +117,6 @@ function initWeatherTab() {
         };
     }
 
-    // 3. När man väljer i listan
     if(resultsSelect) {
         resultsSelect.onchange = () => {
             const selectedData = JSON.parse(resultsSelect.value);
@@ -138,7 +124,6 @@ function initWeatherTab() {
         };
     }
 
-    // 4. Spara knapp
     const saveBtn = document.getElementById('saveWeatherBtn');
     if(saveBtn) {
         saveBtn.onclick = async () => {
@@ -151,13 +136,11 @@ function initWeatherTab() {
             await saveData('weather_config', config);
             showToast("Plats sparad! Displayen uppdateras strax.", "success");
             
-            // Dölj sökresultaten efter sparande
             if(resultsDiv) resultsDiv.style.display = "none";
             if(searchIn) searchIn.value = "";
         };
     }
     
-    // Låt Enter-tangenten söka
     if(searchIn) {
         searchIn.onkeydown = (e) => {
             if(e.key === 'Enter' && searchBtn) searchBtn.click();
@@ -165,7 +148,6 @@ function initWeatherTab() {
     }
 }
 
-// TEMA FUNKTIONER (IFRAME)
 function initThemeTab(currentSettings) {
     const themeSelect = document.getElementById('themeSelect');
     const editSelect = document.getElementById('editThemeSelect');
@@ -190,12 +172,12 @@ function initThemeTab(currentSettings) {
     function populate() {
         const cur = themeSelect.value || (currentSettings?.theme || 'light');
         themeSelect.innerHTML = `<option value="light">Ljus (Standard)</option>` + 
-                                globalCustomThemes.map(t => `<option value="${t.id}">✨ ${t.name}</option>`).join('');
+                                globalCustomThemes.map(t => `<option value="${escapeHTML(t.id)}">✨ ${escapeHTML(t.name)}</option>`).join('');
         themeSelect.value = cur;
         setTimeout(() => updatePreview(cur), 100);
         if(editSelect) {
             editSelect.innerHTML = '<option value="">-- Välj tema att redigera --</option>' + 
-                                   globalCustomThemes.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+                                   globalCustomThemes.map(t => `<option value="${escapeHTML(t.id)}">${escapeHTML(t.name)}</option>`).join('');
         }
     }
 
@@ -278,7 +260,7 @@ function initStationsSettings() {
         cont.innerHTML = globalStations.map((st, i) => {
             const dragAttr = `draggable="true" ondragstart="handleStationDragStart(event)" ondragover="handleStationDragOver(event)" ondrop="handleStationDrop(event)" data-index="${i}"`;
             if(st.isSpacer) return `<div class="draggable-station" ${dragAttr} style="background:#f9f9f9; color:#888;"><div class="list-info-left"><span class="drag-handle">☰</span><i>--- Mellanrum ---</i></div><div class="list-actions-right"><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div></div>`;
-            return `<div class="draggable-station" ${dragAttr}><div class="list-info-left"><span class="drag-handle">☰</span><div style="width:20px; height:20px; background:${st.color}; border-radius:50%; border:1px solid #ccc; flex-shrink:0;"></div><strong>${st.name}</strong></div><div class="list-actions-right"><button class="list-btn" onclick="startEditStation(${i})">✏️</button><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div></div>`;
+            return `<div class="draggable-station" ${dragAttr}><div class="list-info-left"><span class="drag-handle">☰</span><div style="width:20px; height:20px; background:${escapeHTML(st.color)}; border-radius:50%; border:1px solid #ccc; flex-shrink:0;"></div><strong>${escapeHTML(st.name)}</strong></div><div class="list-actions-right"><button class="list-btn" onclick="startEditStation(${i})">✏️</button><button class="list-btn" onclick="deleteStation(${i})">🗑️</button></div></div>`;
         }).join('');
     };
 
@@ -311,8 +293,8 @@ function initShiftsSettings() {
         cont.innerHTML = globalShifts.map((sh, i) => `
         <div class="shift-list-item">
             <div class="list-info-left">
-                <strong>${sh.label}</strong> 
-                <span style="color:#666; margin-left:5px;">(${sh.time})</span>
+                <strong>${escapeHTML(sh.label)}</strong> 
+                <span style="color:#666; margin-left:5px;">(${escapeHTML(sh.time)})</span>
             </div>
             <div class="list-actions-right">
                 <button class="list-btn" onclick="startEditShift(${i})">✏️</button>
@@ -343,14 +325,14 @@ function initAdminSettings() {
         document.getElementById('adminListContainer').innerHTML = admins.map(a => `
             <div class="admin-list-item">
                 <div class="list-info-left">
-                    <strong>${a.username}</strong>
+                    <strong>${escapeHTML(a.username)}</strong>
                     <span style="color:#666; margin-left:5px; font-size:0.9em;">
-                        (${a.first_name||''} ${a.last_name||''})
+                        (${escapeHTML(a.first_name||'')} ${escapeHTML(a.last_name||'')})
                     </span>
                 </div>
                 <div class="list-actions-right">
                     <button class="list-btn" onclick='startEditAdmin(${JSON.stringify(a).replace(/'/g,"'")})'>✏️</button>
-                    <button class="list-btn" onclick="deleteAdmin('${a.username}')">🗑️</button>
+                    <button class="list-btn" onclick="deleteAdmin('${escapeHTML(a.username)}')">🗑️</button>
                 </div>
             </div>`).join('');
     };
@@ -469,7 +451,6 @@ function initExportTab() {
             const txt = btn.innerText;
             btn.innerText = "Genererar...";
             
-            // Hämta eventuellt anpassat tema så bilden får rätt färger
             let customCss = "";
             const themeSelect = document.getElementById('themeSelect');
             if (themeSelect && themeSelect.value && themeSelect.value !== 'light') {
@@ -477,7 +458,6 @@ function initExportTab() {
                 if (t) customCss = t.css;
             }
 
-            // Skapa en iframe med Full-HD upplösning (dold för användaren)
             const iframe = document.createElement('iframe');
             iframe.style.cssText = "position:absolute; top:-9999px; left:0; width:1920px; height:1080px; border:none;";
             document.body.appendChild(iframe);
@@ -488,7 +468,6 @@ function initExportTab() {
             while (loopDate <= eDate) {
                 const doc = iframe.contentDocument;
                 doc.open();
-                // Bygg upp en komplett sida i vår iframe som speglar display.html
                 doc.write(`
                     <!DOCTYPE html>
                     <html lang="sv">
@@ -499,10 +478,7 @@ function initExportTab() {
                         <link rel="stylesheet" href="display.css">
                         <style>
                             ${customCss}
-                            /* TVINGA BORT ALLA ANIMATIONER: 
-                               Förhindrar att bilden tas mitt i en fade-in */
                             * { transition: none !important; animation: none !important; }
-                            
                             body { margin: 0; overflow: hidden; background-color: var(--bg-color, #f0f2f5); }
                             ::-webkit-scrollbar { display: none; }
                         </style>
@@ -514,11 +490,9 @@ function initExportTab() {
                 `);
                 doc.close();
 
-                // Väntar lite så att webbläsaren hinner ladda in CSS och typsnitt
                 await new Promise(r => setTimeout(r, 1000));
 
                 try {
-                    // Höjde scale till 2 för maximal skärpa och satte explicit bakgrundsfärg
                     const canvas = await html2canvas(doc.body, { 
                         scale: 2, 
                         useCORS: true,
@@ -526,7 +500,6 @@ function initExportTab() {
                     });
                     
                     const link = document.createElement('a');
-                    // BYTT TILL PNG: Förstör inte färgerna som JPEG gör
                     link.download = `Schema-${loopDate.toLocaleDateString('sv-SE')}.png`;
                     link.href = canvas.toDataURL('image/png');
                     link.click();
@@ -564,7 +537,7 @@ function generateSingleDayPrintHtml(dateObj) {
                 <div></div>
                 ${globalShifts.map(s => `
                     <div style="text-align:center; font-weight:800; text-transform:uppercase; color:#555; font-size:0.85rem;">
-                        ${s.label}<br><small style="font-weight:400;">${s.time}</small>
+                        ${escapeHTML(s.label)}<br><small style="font-weight:400;">${escapeHTML(s.time)}</small>
                     </div>`).join('')}
             </div>`;
 
@@ -579,15 +552,15 @@ function generateSingleDayPrintHtml(dateObj) {
         
         html += `
         <div style="display:grid; grid-template-columns: 200px repeat(${globalShifts.length}, 1fr); gap: 10px; flex: 1;">
-            <div style="background:${bg}; color:${fg}; padding:10px; border-radius:6px; font-weight:800; font-size:1.1rem; display:flex; align-items:center; border: 1px solid #ddd; justify-content: center;">
-                ${st.name}
+            <div style="background:${escapeHTML(bg)}; color:${fg}; padding:10px; border-radius:6px; font-weight:800; font-size:1.1rem; display:flex; align-items:center; border: 1px solid #ddd; justify-content: center;">
+                ${escapeHTML(st.name)}
             </div>`;
             
         globalShifts.forEach(sh => {
             const val = globalScheduleData[`${prefix}${st.name}-${sh.time}`] || "";
             html += `
             <div style="background:#fff; border: 1px solid #ccc; border-radius:6px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:700; font-size:1.2rem;">
-                ${val}
+                ${escapeHTML(val)}
             </div>`;
         });
         html += `</div>`;
@@ -597,7 +570,6 @@ function generateSingleDayPrintHtml(dateObj) {
     return html;
 }
 
-// Hjälpfunktion för att bygga upp Display-gränssnittet till bildexporten
 function generateDisplayHtmlForImage(dateObj) {
     const iso = getISOWeek(dateObj);
     const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1; 
@@ -605,7 +577,6 @@ function generateDisplayHtmlForImage(dateObj) {
     const dateStr = `${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
     const prefix = `y${iso.year}w${iso.week}-${dayName}-`;
     
-    // Vi skapar Top-bar men medvetet UTAN väder och klocka
     let html = `
     <div class="display-wrapper">
         <div class="top-bar">
@@ -615,11 +586,10 @@ function generateDisplayHtmlForImage(dateObj) {
         <div id="mainContainer">
             <div class="time-header-row">
                 <div></div>
-                ${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}
+                ${globalShifts.map(s => `<div class="time-header">${escapeHTML(s.label)}</div>`).join('')}
             </div>
     `;
     
-    // Loopa över stationer och pass, precis som live-displayen gör
     globalStations.forEach(st => {
         if (st.isSpacer) { 
             html += `<div class="display-row spacer-row"></div>`; 
@@ -627,14 +597,14 @@ function generateDisplayHtmlForImage(dateObj) {
         }
         
         const contrast = isLight(st.color) ? '#000' : '#fff';
-        const vars = `style="--station-color:${st.color}; --contrast-color:${contrast};"`;
+        const vars = `style="--station-color:${escapeHTML(st.color)}; --contrast-color:${contrast};"`;
         
-        html += `<div class="display-row" ${vars}><div class="station-label">${st.name}</div>`;
+        html += `<div class="display-row" ${vars}><div class="station-label">${escapeHTML(st.name)}</div>`;
         
         globalShifts.forEach(sh => {
             const key = `${prefix}${st.name}-${sh.time}`;
             const val = globalScheduleData[key] || "";
-            html += `<div class="shift-card ${val ? '' : 'empty'}" data-label="${sh.label}">${val}</div>`;
+            html += `<div class="shift-card ${val ? '' : 'empty'}" data-label="${escapeHTML(sh.label)}">${escapeHTML(val)}</div>`;
         });
         
         html += `</div>`;
