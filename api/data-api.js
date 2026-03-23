@@ -60,6 +60,24 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const { action, username, password, type, data } = req.body;
 
+      // 0. AUKTORISERING (Kräv token för allt utom inlogg och lösenordsåterställning)
+      const isPublicAction = ['login', 'request_reset', 'perform_reset'].includes(action);
+      
+      if (!isPublicAction) {
+          const authHeader = req.headers.authorization;
+          const token = authHeader && authHeader.split(' ')[1];
+          
+          if (!token) {
+              return res.status(401).json({ error: "Åtkomst nekad: Token saknas" });
+          }
+          
+          try {
+              jwt.verify(token, JWT_SECRET);
+          } catch (err) { 
+              return res.status(403).json({ error: "Åtkomst nekad: Ogiltig token" }); 
+          }
+      }
+
       // 1. LOGGA IN
       if (action === 'login') {
         const result = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username]);
@@ -82,7 +100,7 @@ export default async function handler(req, res) {
          return res.status(200).json({ success: true });
       }
 
-      // 3. ADMIN HANTERING (Återanvänder logik från tidigare versioner)
+      // 3. ADMIN HANTERING
       
       // Lägg till Admin
       if (action === 'add_admin') {
@@ -130,10 +148,12 @@ export default async function handler(req, res) {
           const { email } = req.body;
           const result = await pool.query('SELECT * FROM admin_users WHERE email = $1', [email]);
           const user = result.rows[0];
-          if (!user) return res.status(200).json({ success: true, message: "Kolla loggen" });
+          
+          // Förhindra "User Enumeration" genom att alltid svara samma sak oavsett om mailen finns
+          if (!user) return res.status(200).json({ success: true, message: "Länk skickad (om e-posten finns)." });
 
           const resetToken = crypto.randomBytes(20).toString('hex');
-          const expires = Date.now() + 3600000;
+          const expires = Date.now() + 3600000; // Giltig i 1 timme
           await pool.query('UPDATE admin_users SET reset_token=$1, reset_expires=$2 WHERE id=$3', [resetToken, expires, user.id]);
           
           console.log(`ÅTERSTÄLLNINGSLÄNK: https://${req.headers.host}/reset.html?token=${resetToken}`);
@@ -145,7 +165,7 @@ export default async function handler(req, res) {
           const { token, newPassword } = req.body;
           const result = await pool.query('SELECT * FROM admin_users WHERE reset_token = $1 AND reset_expires > $2', [token, Date.now()]);
           const user = result.rows[0];
-          if (!user) return res.status(400).json({ success: false, error: "Ogiltig länk" });
+          if (!user) return res.status(400).json({ success: false, error: "Ogiltig eller utgången länk" });
 
           const salt = await bcrypt.genSalt(10);
           const hashedPassword = await bcrypt.hash(newPassword, salt);

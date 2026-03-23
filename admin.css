@@ -10,7 +10,7 @@
     justify-content: space-between;
     align-items: center;
     box-sizing: border-box;
-    border-bottom: 1px solid var(--border-color); /* Använder variabel för kantfärg */
+    border-bottom: 1px solid var(--border-color);
 }
 .header-content {
     width: 100%; max-width: 1600px; margin: 0 auto;
@@ -190,16 +190,6 @@
 .dropdown-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
 .dropdown-item:hover { background: #f0f0f0; }
 
-/* Utskriftsformatering: Döljer allt utom själva schemat när man skriver ut */
-@media print {
-    .admin-header, .settings-sidebar, .sidebar-roster, .export-container, .logout-btn, .settings-container, .toast { display: none !important; }
-    body, #print-container { visibility: visible !important; background: white !important; margin: 0 !important; padding: 0 !important; width: 100% !important; height: auto !important; overflow: visible !important; }
-    #print-container { position: absolute; left: 0; top: 0; }
-    .print-page { page-break-after: always; break-after: page; min-height: 95vh; width: 100%; }
-    .print-page:last-child { page-break-after: auto; break-after: auto; }
-    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-}
-
 /* =========================================
    7. PUBLISH BANNER
    Informationslist som visar om ändringar inte publicerats.
@@ -305,3 +295,67 @@
 }
 .nav-arrow:hover { color: #000; transform: scale(1.2); }
 .nav-arrow:active { transform: scale(0.9); }
+
+
+/* =========================================
+   UTSKRIFTSFORMATERING (A4 Liggande)
+   ========================================= */
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 0.5cm;
+    }
+
+    /* Dölj allt utom själva utskriftscontainern */
+    .admin-header, 
+    .settings-sidebar, 
+    .sidebar-roster, 
+    .export-container, 
+    .logout-btn, 
+    .settings-container, 
+    .toast,
+    #confirmModal,
+    .publish-banner { 
+        display: none !important; 
+    }
+
+    body, #print-container { 
+        visibility: visible !important; 
+        background: white !important; 
+        margin: 0 !important; 
+        padding: 0 !important; 
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    #print-container { 
+        position: absolute; 
+        left: 0; 
+        top: 0; 
+        width: 100%;
+    }
+
+    /* Varje dag blir en egen sida som fyller ut skärmen */
+    .print-page { 
+        page-break-after: always; 
+        break-after: page; 
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+    }
+
+    .print-page:last-child { 
+        page-break-after: auto; 
+        break-after: auto;
+    }
+
+    /* Tvinga webbläsaren att skriva ut bakgrundsfärger */
+    * { 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+    }
+}
