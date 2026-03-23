@@ -6,7 +6,8 @@ let globalStations = [], globalShifts = [], globalCustomThemes = [], globalSched
 let editingStationIndex = null, editingShiftIndex = null, editingAdminId = null, dragSrcStationEl = null;
 
 export async function initSettings() {
-    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + escapeHTML(sessionStorage.getItem('adminName')||'Admin');
+    // FIX: Tog bort escapeHTML för innerText
+    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
 
     const [draft, published, old, settings, themes, stations, shifts] = await Promise.all([
@@ -319,10 +320,24 @@ function initAdminSettings() {
     const admLast = document.getElementById('newAdminLastName');
     const admEmail = document.getElementById('newAdminEmail');
 
+    // FIX: Lyssnare för edit och delete kopplat till list-containern
+    const adminListContainer = document.getElementById('adminListContainer');
+    adminListContainer.addEventListener('click', (e) => {
+        const editBtn = e.target.closest('.edit-admin-btn');
+        const delBtn = e.target.closest('.delete-admin-btn');
+        if (editBtn) {
+            const adminData = JSON.parse(editBtn.getAttribute('data-admin'));
+            startEditAdmin(adminData);
+        } else if (delBtn) {
+            deleteAdmin(delBtn.getAttribute('data-username'));
+        }
+    });
+
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
         if(!Array.isArray(admins)) admins = [];
-        document.getElementById('adminListContainer').innerHTML = admins.map(a => `
+        // FIX: Dat-attribut för att slippa O'Brian krascher i admin listan
+        adminListContainer.innerHTML = admins.map(a => `
             <div class="admin-list-item">
                 <div class="list-info-left">
                     <strong>${escapeHTML(a.username)}</strong>
@@ -331,8 +346,8 @@ function initAdminSettings() {
                     </span>
                 </div>
                 <div class="list-actions-right">
-                    <button class="list-btn" onclick='startEditAdmin(${JSON.stringify(a).replace(/'/g,"'")})'>✏️</button>
-                    <button class="list-btn" onclick="deleteAdmin('${escapeHTML(a.username)}')">🗑️</button>
+                    <button class="list-btn edit-admin-btn" data-admin='${escapeHTML(JSON.stringify(a))}'>✏️</button>
+                    <button class="list-btn delete-admin-btn" data-username="${escapeHTML(a.username)}">🗑️</button>
                 </div>
             </div>`).join('');
     };
