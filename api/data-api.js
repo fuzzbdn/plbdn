@@ -10,8 +10,13 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || "hemlig_nyckel_byt_i_prod";
+const JWT_SECRET = process.env.JWT_SECRET;
 
+// Fail-safe: Stoppa appen direkt om nyckeln saknas
+if (!JWT_SECRET) {
+  console.error("KRITISKT FEL: JWT_SECRET saknas i miljövariablerna.");
+  throw new Error("Serverkonfiguration saknas. Kontakta systemadministratören.");
+}
 export default async function handler(req, res) {
   // CORS och Headers
   res.setHeader('Access-Control-Allow-Credentials', true);
