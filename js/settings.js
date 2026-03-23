@@ -547,30 +547,57 @@ function initExportTab() {
     if(imgBtn) imgBtn.onclick = () => runExport('image');
 }
 
-function generateSingleDayPrintHtml(dateObj, forImage = false) {
+function generateSingleDayPrintHtml(dateObj) {
     const iso = getISOWeek(dateObj);
     const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1; 
     const dayName = DAYS[dayIndex];
     const dateStr = dateObj.toLocaleDateString('sv-SE');
     const prefix = `y${iso.year}w${iso.week}-${dayName}-`;
-    const style = forImage ? 'padding:20px; font-family:sans-serif; background:#fff;' : 'page-break-after: always; padding: 20px; font-family: sans-serif;';
     
-    let html = `<div class="print-page" style="${style}"><div style="text-align:center; margin-bottom:20px;"><h2 style="margin:0;">${dayName} ${dateStr}</h2><span style="font-size:0.9em; color:#666;">Vecka ${iso.week}, ${iso.year}</span></div>`;
-    html += `<div style="display:grid; grid-template-columns:150px repeat(${globalShifts.length}, 1fr); gap:0; border:1px solid #000; border-bottom:none;"><div style="background:#ddd; border-right:1px solid #000; padding:5px;"></div>${globalShifts.map(s => `<div style="background:#ddd; border-right:1px solid #000; padding:5px; text-align:center; font-weight:bold;">${s.time}<br><span style="font-size:0.8em; font-weight:normal;">${s.label}</span></div>`).join('')}</div><div style="border:1px solid #000; border-top:none;">`;
-    
+    // Header för utskriftssidan
+    let html = `
+    <div class="print-page" style="padding: 20px; font-family: 'Inter', sans-serif;">
+        <div style="text-align:center; margin-bottom:20px;">
+            <h1 style="margin:0; font-size: 2rem;">Vi som jobbar ${dayName} ${dateStr}</h1>
+            <span style="font-size:1rem; color:#666;">Vecka ${iso.week}, ${iso.year}</span>
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display:grid; grid-template-columns: 220px repeat(${globalShifts.length}, 1fr); gap: 10px;">
+                <div></div>
+                ${globalShifts.map(s => `
+                    <div style="text-align:center; font-weight:800; text-transform:uppercase; color:#555; font-size:0.9rem;">
+                        ${s.label}<br><small style="font-weight:400;">${s.time}</small>
+                    </div>`).join('')}
+            </div>`;
+
     globalStations.forEach(st => {
-        if (st.isSpacer) { html += `<div style="height:15px; background:#f0f0f0; border-top:1px solid #000;"></div>`; return; }
+        if (st.isSpacer) { 
+            html += `<div style="height:20px;"></div>`; 
+            return; 
+        }
+        
         const bg = st.color;
         const fg = isLight(bg) ? '#000' : '#fff';
-        html += `<div style="display:grid; grid-template-columns:150px repeat(${globalShifts.length}, 1fr); border-top:1px solid #000;"><div style="background:${bg}; color:${fg}; padding:10px; font-weight:bold; border-right:1px solid #000; display:flex; align-items:center;">${st.name}</div>`;
-        globalShifts.forEach((sh, index) => {
+        
+        // Rad-layout som speglar displayens utseende
+        html += `
+        <div style="display:grid; grid-template-columns: 220px repeat(${globalShifts.length}, 1fr); gap: 10px; flex-grow:1;">
+            <div style="background:${bg}; color:${fg}; padding:15px; border-radius:8px; font-weight:800; font-size:1.2rem; display:flex; align-items:center; border: 1px solid #ddd;">
+                ${st.name}
+            </div>`;
+            
+        globalShifts.forEach(sh => {
             const val = globalScheduleData[`${prefix}${st.name}-${sh.time}`] || "";
-            const borderRight = index === globalShifts.length - 1 ? '' : 'border-right:1px solid #000;';
-            html += `<div style="padding:5px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:bold; font-size:0.9rem; ${borderRight}">${val}</div>`;
+            html += `
+            <div style="background:#fff; border: 2px solid #eee; border-radius:8px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:700; font-size:1.3rem; min-height:60px;">
+                ${val}
+            </div>`;
         });
         html += `</div>`;
     });
-    return html + `</div></div>`;
+    
+    html += `</div></div>`;
+    return html;
 }
 
 // Hjälpfunktion för att bygga upp Display-gränssnittet till bildexporten
