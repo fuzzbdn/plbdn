@@ -12,7 +12,8 @@ let selectedYear = 0;
 let currentAdminDayIndex = 0;
 
 export async function initAdmin() {
-    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + escapeHTML(sessionStorage.getItem('adminName')||'Admin');
+    // FIX: Tog bort escapeHTML här eftersom .innerText används
+    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     
     try {
         const [users, draft, published, old, stations, shifts] = await Promise.all([
@@ -79,12 +80,38 @@ export async function initAdmin() {
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     setupSidebarAddUser();
     
-    window.removeUser = removeUser;
-    window.saveShift = saveShift;
-    window.manualAdd = manualAdd;
+    // FIX: Event Delegation för att slippa inline JavaScript (onclick)
+    const scheduleContainer = document.getElementById('scheduleContainer');
+    if (scheduleContainer) {
+        // Lyssnar efter när man klickar utanför en redigerad textruta (Sparar passet)
+        scheduleContainer.addEventListener('focusout', (e) => {
+            if (e.target.classList.contains('shift-text')) {
+                saveShift(e.target.getAttribute('data-key'), e.target.innerText);
+            }
+        });
+
+        // Lyssnar efter klick på Plus-knappen och Kryss-knappen i rutnätet
+        scheduleContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('add-user-btn')) {
+                manualAdd(e, e.target.getAttribute('data-key'));
+            } else if (e.target.classList.contains('clear-btn')) {
+                saveShift(e.target.getAttribute('data-key'), '');
+            }
+        });
+    }
+
+    // Lyssnar efter klick på Ta-bort-kryss i personalistan
+    const userListEl = document.getElementById('draggableUserList');
+    if(userListEl) {
+        userListEl.addEventListener('click', (e) => {
+            if(e.target.classList.contains('remove-user-btn')) {
+                removeUser(e.target.getAttribute('data-user'));
+            }
+        });
+    }
+    
+    // Gör handleDrop tillgänglig globalt då den triggas från ondrop
     window.handleDrop = handleDrop;
-    window.selectUser = selectUser;
-    window.selectUserManual = selectUserManual;
 }
 
 function updateGrid(dateStr) {
@@ -127,14 +154,16 @@ function renderAdminGrid() {
         globalShifts.forEach(sh => {
             const key = `${prefix}${st.name}-${sh.time}`;
             const val = globalScheduleData[key] || "";
-            const safeVal = escapeHTML(val); // XSS Skydd!
+            const safeVal = escapeHTML(val);
+            const safeKey = escapeHTML(key);
             
+            // FIX: Bara data-attribut istället för onclick/onblur
             html += `
-            <div class="shift-block ${safeVal?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event,'${key}')">
-                <span class="shift-text" contenteditable="true" onblur="saveShift('${key}', this.innerText)">${safeVal}</span>
+            <div class="shift-block ${safeVal?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-key="${safeKey}">
+                <span class="shift-text" contenteditable="true" data-key="${safeKey}">${safeVal}</span>
                 <div class="shift-controls">
-                    <button class="add-user-btn" onclick="manualAdd(event, '${key}')" title="Lägg till">+</button>
-                    ${safeVal ? `<button class="clear-btn" onclick="saveShift('${key}', '')">×</button>`:''}
+                    <button class="add-user-btn" data-key="${safeKey}" title="Lägg till">+</button>
+                    ${safeVal ? `<button class="clear-btn" data-key="${safeKey}">×</button>`:''}
                 </div>
             </div>`;
         });
@@ -167,8 +196,9 @@ function renderRoster() {
     list.innerHTML = sortedUsers.map(u => {
         const isAssigned = work.has(u);
         const assignedClass = isAssigned ? 'assigned' : '';
-        const safeU = escapeHTML(u); // XSS Skydd!
-        return `<div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('text','${safeU}')">${safeU} <button class="remove-user-btn" onclick="removeUser('${safeU}')">×</button></div>`;
+        const safeU = escapeHTML(u);
+        // FIX: Data-attribut för removeUser
+        return `<div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('text','${safeU}')">${safeU} <button class="remove-user-btn" data-user="${safeU}">×</button></div>`;
     }).join('');
 }
 
@@ -201,8 +231,10 @@ async function saveShift(k, v) {
     renderRoster(); 
 }
 
-async function handleDrop(e, k) { 
+// FIX: Använder currentTarget och läser från data-key
+async function handleDrop(e) { 
     e.preventDefault(); 
+    const k = e.currentTarget.getAttribute('data-key');
     const n = e.dataTransfer.getData("text"); 
     let c = globalScheduleData[k] || ""; 
     if(!c.includes(n)) await saveShift(k, c ? c + " / " + n : n); 
@@ -230,14 +262,23 @@ function manualAdd(e, key) {
     menu.style.left = `${e.pageX}px`;
     menu.style.top = `${e.pageY + 10}px`;
 
-    // XSS Skydd på dropdown!
+    // FIX: Data-attribut för att undvika "O'Brian"-kraschen
     let html = availableUsers.length > 0 
-        ? availableUsers.map(u => `<div class="dropdown-item" onclick="selectUser('${key}', '${escapeHTML(u)}')">${escapeHTML(u)}</div>`).join('') 
+        ? availableUsers.map(u => `<div class="dropdown-item user-select-btn" data-key="${escapeHTML(key)}" data-user="${escapeHTML(u)}">${escapeHTML(u)}</div>`).join('') 
         : `<div class="dropdown-item disabled">Ingen ledig</div>`;
     
-    html += `<div class="dropdown-item manual" onclick="selectUserManual('${key}')">+ Skriv in eget namn...</div>`;
+    html += `<div class="dropdown-item manual-btn" data-key="${escapeHTML(key)}">+ Skriv in eget namn...</div>`;
     menu.innerHTML = html;
     document.body.appendChild(menu);
+
+    // FIX: Händelselyssnare för klick i menyn
+    menu.addEventListener('click', (evt) => {
+        if (evt.target.classList.contains('user-select-btn')) {
+            selectUser(evt.target.getAttribute('data-key'), evt.target.getAttribute('data-user'));
+        } else if (evt.target.classList.contains('manual-btn')) {
+            selectUserManual(evt.target.getAttribute('data-key'));
+        }
+    });
     
     document.addEventListener('click', function closeMenu(evt) { 
         if (!menu.contains(evt.target)) menu.remove(); 
