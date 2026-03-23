@@ -554,42 +554,39 @@ function generateSingleDayPrintHtml(dateObj) {
     const dateStr = dateObj.toLocaleDateString('sv-SE');
     const prefix = `y${iso.year}w${iso.week}-${dayName}-`;
     
-    // Header för utskriftssidan
     let html = `
-    <div class="print-page" style="padding: 20px; font-family: 'Inter', sans-serif;">
-        <div style="text-align:center; margin-bottom:20px;">
-            <h1 style="margin:0; font-size: 2rem;">Vi som jobbar ${dayName} ${dateStr}</h1>
-            <span style="font-size:1rem; color:#666;">Vecka ${iso.week}, ${iso.year}</span>
+    <div class="print-page" style="padding: 10px; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box;">
+        <div style="text-align:center; margin-bottom:15px;">
+            <h1 style="margin:0; font-size: 1.8rem;">Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
         </div>
-        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 8px;">
-            <div style="display:grid; grid-template-columns: 220px repeat(${globalShifts.length}, 1fr); gap: 10px;">
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px; justify-content: space-between;">
+            <div style="display:grid; grid-template-columns: 200px repeat(${globalShifts.length}, 1fr); gap: 10px;">
                 <div></div>
                 ${globalShifts.map(s => `
-                    <div style="text-align:center; font-weight:800; text-transform:uppercase; color:#555; font-size:0.9rem;">
+                    <div style="text-align:center; font-weight:800; text-transform:uppercase; color:#555; font-size:0.85rem;">
                         ${s.label}<br><small style="font-weight:400;">${s.time}</small>
                     </div>`).join('')}
             </div>`;
 
     globalStations.forEach(st => {
         if (st.isSpacer) { 
-            html += `<div style="height:20px;"></div>`; 
+            html += `<div style="flex-grow: 0.2;"></div>`; 
             return; 
         }
         
         const bg = st.color;
         const fg = isLight(bg) ? '#000' : '#fff';
         
-        // Rad-layout som speglar displayens utseende
         html += `
-        <div style="display:grid; grid-template-columns: 220px repeat(${globalShifts.length}, 1fr); gap: 10px; flex-grow:1;">
-            <div style="background:${bg}; color:${fg}; padding:15px; border-radius:8px; font-weight:800; font-size:1.2rem; display:flex; align-items:center; border: 1px solid #ddd;">
+        <div style="display:grid; grid-template-columns: 200px repeat(${globalShifts.length}, 1fr); gap: 10px; flex: 1;">
+            <div style="background:${bg}; color:${fg}; padding:10px; border-radius:6px; font-weight:800; font-size:1.1rem; display:flex; align-items:center; border: 1px solid #ddd; justify-content: center;">
                 ${st.name}
             </div>`;
             
         globalShifts.forEach(sh => {
             const val = globalScheduleData[`${prefix}${st.name}-${sh.time}`] || "";
             html += `
-            <div style="background:#fff; border: 2px solid #eee; border-radius:8px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:700; font-size:1.3rem; min-height:60px;">
+            <div style="background:#fff; border: 1px solid #ccc; border-radius:6px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:700; font-size:1.2rem;">
                 ${val}
             </div>`;
         });
