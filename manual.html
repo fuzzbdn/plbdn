@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Användarmanual STRUL 1.1</title>
+    <title>Användarmanual STRUL 1.2</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="base.css">
@@ -68,8 +68,8 @@
     </div>
 
     <p class="intro-text">
-        Detta är manualen för <strong>STRUL v1.1</strong> (Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen). 
-        Här hittar du instruktioner för hur du planerar, hanterar inställningar och visar informationen på storskärm.
+        Detta är manualen för <strong>STRUL v1.2</strong> (Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen). 
+        Här hittar du instruktioner för hur du planerar, hanterar inställningar och sparar schemat.
     </p>
 
     <nav style="background:#f0f2f5; padding:20px; border-radius:8px; margin-bottom:40px; border:1px solid #ddd;">
@@ -78,8 +78,9 @@
             <li><a href="#planning" style="color:#0277bd; text-decoration:none; font-weight:600;">1. Planering & Admin</a></li>
             <li><a href="#display" style="color:#0277bd; text-decoration:none; font-weight:600;">2. Display-vyn</a></li>
             <li><a href="#settings" style="color:#0277bd; text-decoration:none; font-weight:600;">3. Inställningar & Väder</a></li>
-            <li><a href="#themes" style="color:#0277bd; text-decoration:none; font-weight:600;">4. Teman & Utseende</a></li>
-            <li><a href="#troubleshoot" style="color:#0277bd; text-decoration:none; font-weight:600;">5. Felsökning</a></li>
+            <li><a href="#export" style="color:#0277bd; text-decoration:none; font-weight:600;">4. Utskrift & Bildexport</a></li>
+            <li><a href="#themes" style="color:#0277bd; text-decoration:none; font-weight:600;">5. Teman & Utseende</a></li>
+            <li><a href="#troubleshoot" style="color:#0277bd; text-decoration:none; font-weight:600;">6. Felsökning</a></li>
         </ul>
     </nav>
 
@@ -103,11 +104,11 @@
             <div class="step-num">2</div>
             <div class="step-content">Välj en person från listan i menyn som dyker upp, eller klicka på <em>"Skriv in eget namn..."</em> för att skriva manuellt.</div>
         </div>
-        <p>Du kan också <strong>dra och släppa</strong> namn från listan till vänster ("Personal") direkt in i schemat.</p>
+        <p>Du kan också <strong>dra och släppa</strong> namn från listan till vänster ("Personal") direkt in i schemat. Personal som redan är inlagd på ett pass under dagen markeras i grått i listan.</p>
 
         <h4>Publicera ändringar</h4>
-        <div class="warning-box">
-            <strong>Viktigt:</strong> Ändringar du gör sparas automatiskt som ett "utkast". För att de ska synas på storskärmen måste du klicka på den gröna knappen <strong>📡 Publicera</strong> nere till höger.
+        <div class="warning-box" style="background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; margin-top: 15px;">
+            <strong>Viktigt:</strong> Ändringar du gör sparas automatiskt som ett "utkast". Om du gör ändringar som inte syns live, visas en gul varningsbanner. För att ändringarna ska synas på storskärmen måste du klicka på den gröna knappen <strong>📡 Publicera</strong> nere till höger.
         </div>
     </div>
 
@@ -120,7 +121,7 @@
             <li><strong>Väder:</strong> Live-väder för den stad som är vald i inställningarna.</li>
             <li><strong>Klocka:</strong> Digital klocka.</li>
             <li><strong>Schema:</strong> Dagens bemanning för alla stationer.</li>
-            <li><strong>Rullande text:</strong> Ett meddelande i nederkant (om aktiverat).</li>
+            <li><strong>Rullande text:</strong> Ett informationsmeddelande i nederkant (om aktiverat i inställningarna).</li>
         </ul>
     </div>
 
@@ -132,18 +133,36 @@
         <p>För att visa rätt väder på displayen:</p>
         <ol>
             <li>Gå till fliken <strong>Väder & Plats</strong>.</li>
-            <li>Skriv in namnet på din stad (t.ex. "Kiruna") i sökfältet och tryck <strong>Sök</strong>.</li>
+            <li>Skriv in namnet på din stad (t.ex. "Boden" eller "Kiruna") i sökfältet och tryck <strong>Sök</strong>.</li>
             <li>Välj rätt alternativ i listan som dyker upp.</li>
             <li>Klicka på <strong>Spara Inställningar</strong>.</li>
         </ol>
-        <p>Displayen kommer nu automatiskt att hämta temperatur och väderdata för den valda platsen.</p>
+        <p>Displayen kommer nu automatiskt att hämta temperatur för den valda platsen.</p>
 
         <h4>🚉 Stationer & Pass</h4>
-        <p>Här kan du lägga till nya stationer (platser) eller ändra namnet på dem. Du kan också ändra färgerna på stationerna för att göra schemat tydligare. Under "Arbetspass" ställer du in vilka tider som gäller (t.ex. Förmiddag, Eftermiddag, Natt).</p>
+        <p>Här kan du lägga till nya stationer (platser) eller ändra namnet på dem. Du kan också ändra färgerna på stationerna för att göra schemat tydligare. Du kan dra och släppa stationerna för att ändra ordningen, eller lägga till ett "mellanrum" för att gruppera stationer. Under "Arbetspass" ställer du in vilka tider som gäller (t.ex. Förmiddag, Eftermiddag, Natt).</p>
+    </div>
+
+    <div id="export">
+        <h3>4. Utskrift & Bildexport</h3>
+        <p>Ibland behöver man schemat på papper eller som en digital bild. Gå till fliken <strong>🖨️ Utskrift & Export</strong> i inställningarna.</p>
+        
+        <h4>Välj period</h4>
+        <p>Börja med att välja vilka dagar du vill exportera. Du kan välja "Idag", "Denna vecka" eller ett valfritt datumintervall i kalendrarna.</p>
+
+        <h4>🖨️ Skriv ut på papper</h4>
+        <p>Klickar du på "Skriv ut" genereras en speciell utskriftsversion av schemat som sparar bläck men behåller tydligheten.</p>
+        <div style="background: #e1f5fe; border: 1px solid #81d4fa; padding: 15px; border-radius: 6px; margin-top: 10px;">
+            <strong>Pro-tip för utskrift:</strong><br>
+            Systemet är skapat för att skrivas ut i <strong>A4 Liggande (Landscape)</strong>. En dag fyller exakt en A4-sida. Se till att din webbläsare är inställd på att <em>skriva ut bakgrundsgrafik/färger</em> så att stationernas färger kommer med!
+        </div>
+
+        <h4>📷 Spara som bild(er)</h4>
+        <p>Klickar du på "Spara som bild" laddar systemet ner schemat som högupplösta bilder (PNG). Du får en bildfil för varje vald dag. Dessa är perfekta att maila ut eller spara i ett gemensamt filsystem.</p>
     </div>
 
     <div id="themes">
-        <h3>4. Teman & Utseende</h3>
+        <h3>5. Teman & Utseende</h3>
         <p>Du kan ändra utseendet på både admin- och displaysidan.</p>
         <ul>
             <li>Gå till fliken <strong>Utseende & Tema</strong>.</li>
@@ -151,24 +170,24 @@
             <li>Du ser direkt en <strong>förhandsgranskning</strong> till höger om hur det kommer se ut.</li>
             <li>Klicka på <strong>Aktivera Tema</strong> för att spara.</li>
         </ul>
-        <p>Du kan även skapa egna teman genom att skriva CSS-kod i editorn längst ner på sidan.</p>
+        <p>Du kan även skapa egna teman genom att skriva CSS-kod i editorn längst ner på sidan. Observera att ändring av tema påverkar display-skärmarna live.</p>
     </div>
 
     <div id="troubleshoot">
-        <h3>5. Felsökning</h3>
+        <h3>6. Felsökning</h3>
         
         <p><strong>Skärmen visar inte mina ändringar?</strong><br>
-        Kontrollera att du har klickat på <strong>Publicera</strong> i admin-vyn. Displayen uppdateras med ca 15 sekunders fördröjning.</p>
+        Kontrollera att du har klickat på den gröna knappen <strong>Publicera</strong> i admin-vyn. Har du en gul banner över schemat betyder det att du har osparade ändringar. Displayen uppdateras därefter med ca 15 sekunders fördröjning.</p>
 
-        <p><strong>Vädret visar fel stad?</strong><br>
+        <p><strong>Vädret visar fel stad eller uppdateras inte?</strong><br>
         Gå till Inställningar > Väder & Plats och gör en ny sökning. Se till att välja rätt stad i listan och klicka på Spara.</p>
 
         <p><strong>Jag kan inte logga in?</strong><br>
-        Kontrollera lösenordet. Om du glömt det, använd funktionen "Glömt lösenord" på inloggningssidan (kräver att e-post är konfigurerad).</p>
+        Kontrollera lösenordet. Om du glömt det, använd funktionen "Glömt lösenord" på inloggningssidan. En annan admin kan också byta ditt lösenord under fliken "Administratörer".</p>
     </div>
 
     <div style="margin-top:50px; text-align:center; color:#999; font-size:0.8rem;">
-        STRUL Bemanningssystem v2.0 • Manual uppdaterad 2025
+        STRUL Bemanningssystem v1.2 • Uppdaterad manual
     </div>
 
 </div>
