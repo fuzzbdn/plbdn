@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Användarmanual STRUL 1.2</title>
+    <title>Användarmanual STRUL 1.3</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="base.css">
@@ -68,15 +68,15 @@
     </div>
 
     <p class="intro-text">
-        Detta är manualen för <strong>STRUL v1.2</strong> (Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen). 
+        Detta är manualen för <strong>STRUL v1.3</strong> (Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen). 
         Här hittar du instruktioner för hur du planerar, hanterar inställningar och sparar schemat.
     </p>
 
     <nav style="background:#f0f2f5; padding:20px; border-radius:8px; margin-bottom:40px; border:1px solid #ddd;">
         <p style="margin-top:0; font-weight:800; text-transform:uppercase; font-size:0.85rem; color:#666; letter-spacing:1px;">Innehållsförteckning</p>
         <ul style="margin:0; padding-left:20px;">
-            <li><a href="#planning" style="color:#0277bd; text-decoration:none; font-weight:600;">1. Planering & Admin</a></li>
-            <li><a href="#display" style="color:#0277bd; text-decoration:none; font-weight:600;">2. Display-vyn</a></li>
+            <li><a href="#planning" style="color:#0277bd; text-decoration:none; font-weight:600;">1. Planering, Dagsvy & Veckovy</a></li>
+            <li><a href="#display" style="color:#0277bd; text-decoration:none; font-weight:600;">2. Display-vyn (Storskärm & Mobil)</a></li>
             <li><a href="#settings" style="color:#0277bd; text-decoration:none; font-weight:600;">3. Inställningar & Väder</a></li>
             <li><a href="#export" style="color:#0277bd; text-decoration:none; font-weight:600;">4. Utskrift & Bildexport</a></li>
             <li><a href="#themes" style="color:#0277bd; text-decoration:none; font-weight:600;">5. Teman & Utseende</a></li>
@@ -85,8 +85,8 @@
     </nav>
 
     <div id="planning">
-        <h3>1. Planering & Admin</h3>
-        <p>I admin-vyn sköter du den dagliga bemanningen. Du ser stationerna till vänster och arbetspassen som kolumner.</p>
+        <h3>1. Planering, Dagsvy & Veckovy</h3>
+        <p>I admin-vyn sköter du den dagliga bemanningen. Du kan nu växla mellan att planera dag för dag (Dagsvy) och att se en överblick för personalen (Veckovy).</p>
         
         <h4>Navigera i kalendern</h4>
         <p>Du kan byta dag på två sätt:</p>
@@ -95,7 +95,7 @@
             <li><strong>Pilarna (◀ ▶):</strong> Använd pilarna bredvid datumet för att snabbt hoppa till föregående eller nästa dag.</li>
         </ul>
 
-        <h4>Lägga till personal</h4>
+        <h4>Lägga till personal (Endast i Dagsvy)</h4>
         <div class="step">
             <div class="step-num">1</div>
             <div class="step-content">Klicka på det gröna <strong>+</strong> tecknet i rutan där du vill lägga till någon.</div>
@@ -106,6 +106,13 @@
         </div>
         <p>Du kan också <strong>dra och släppa</strong> namn från listan till vänster ("Personal") direkt in i schemat. Personal som redan är inlagd på ett pass under dagen markeras i grått i listan.</p>
 
+        <h4>📅 Byt till Veckovy (Personalschema)</h4>
+        <p>Om du vill få en överblick över hur mycket personalen jobbar under den valda veckan, klicka på den blå knappen <strong>"📅 Byt till Veckovy"</strong> högst upp bredvid datumväljaren.</p>
+        <div style="background: #e1f5fe; border: 1px solid #81d4fa; padding: 15px; border-radius: 6px; margin-top: 10px;">
+            <strong>Pro-tip för Veckovyn:</strong><br>
+            Veckovyn är <strong>skrivskyddad</strong> för att undvika att man råkar dra och släppa personal på fel dag av misstag. För att flytta ett pass klickar du helt enkelt på "📆 Byt till Dagsvy", gör din ändring med drag-and-drop, och växlar sedan tillbaka för att se resultatet!
+        </div>
+
         <h4>Publicera ändringar</h4>
         <div class="warning-box" style="background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; margin-top: 15px;">
             <strong>Viktigt:</strong> Ändringar du gör sparas automatiskt som ett "utkast". Om du gör ändringar som inte syns live, visas en gul varningsbanner. För att ändringarna ska synas på storskärmen måste du klicka på den gröna knappen <strong>📡 Publicera</strong> nere till höger.
@@ -113,21 +120,24 @@
     </div>
 
     <div id="display">
-        <h3>2. Display-vyn</h3>
-        <p>Display-vyn är den sida som visas på TV-skärmarna. Den uppdateras automatiskt var 15:e sekund för att hämta nya publiceringar.</p>
+        <h3>2. Display-vyn (Storskärm & Mobil)</h3>
+        <p>Display-vyn är den sida som primärt visas på TV-skärmarna i ledningscentralen. Den uppdateras automatiskt var 15:e sekund för att hämta nya publiceringar.</p>
         <p>Sidan visar:</p>
         <ul>
-            <li><strong>Datum & Vecka:</strong> Visas högst upp.</li>
+            <li><strong>Datum & Vecka:</strong> Visas högst upp. Slår automatiskt om till nästa dag vid midnatt.</li>
             <li><strong>Väder:</strong> Live-väder för den stad som är vald i inställningarna.</li>
             <li><strong>Klocka:</strong> Digital klocka.</li>
             <li><strong>Schema:</strong> Dagens bemanning för alla stationer.</li>
             <li><strong>Rullande text:</strong> Ett informationsmeddelande i nederkant (om aktiverat i inställningarna).</li>
         </ul>
+        
+        <h4>📱 Mobilanpassning</h4>
+        <p>Display-vyn är numera fullt mobilanpassad. Om personalen surfar in på Display-vyn via sina smartphones kommer schemat automatiskt att göras om till "smarta kort" som staplas på varandra, vilket gör det väldigt lättläst även på små skärmar.</p>
     </div>
 
     <div id="settings">
         <h3>3. Inställningar & Väder</h3>
-        <p>Under knappen <strong>⚙️ Inställningar</strong> kan du anpassa systemet.</p>
+        <p>Under knappen <strong>⚙️ Inställningar</strong> kan du anpassa systemet. Även inställningssidan fungerar nu utmärkt att hantera direkt från mobilen.</p>
 
         <h4>🌤️ Väder & Plats</h4>
         <p>För att visa rätt väder på displayen:</p>
@@ -181,13 +191,16 @@
 
         <p><strong>Vädret visar fel stad eller uppdateras inte?</strong><br>
         Gå till Inställningar > Väder & Plats och gör en ny sökning. Se till att välja rätt stad i listan och klicka på Spara.</p>
+        
+        <p><strong>Schemat ser konstigt ut på mobilen?</strong><br>
+        Både displayen och inställningarna har numera en anpassad mobilvy. Om det mot förmodan ser konstigt ut, testa att ladda om sidan (dra neråt på skärmen) eller töm webbläsarens cache.</p>
 
         <p><strong>Jag kan inte logga in?</strong><br>
         Kontrollera lösenordet. Om du glömt det, använd funktionen "Glömt lösenord" på inloggningssidan. En annan admin kan också byta ditt lösenord under fliken "Administratörer".</p>
     </div>
 
     <div style="margin-top:50px; text-align:center; color:#999; font-size:0.8rem;">
-        STRUL Bemanningssystem v1.2 • Uppdaterad manual
+        STRUL Bemanningssystem v1.3 • Uppdaterad manual
     </div>
 
 </div>
