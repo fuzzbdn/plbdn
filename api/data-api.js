@@ -186,3 +186,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message });
   }
 }
+RESEND_API_KEY=re_H1Gw8Ppy_JpVEqAM8VA4DQ6uJJuppHjdP
