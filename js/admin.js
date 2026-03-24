@@ -10,9 +10,9 @@ let globalShifts = [];
 let selectedWeek = 0;
 let selectedYear = 0;
 let currentAdminDayIndex = 0;
+let isWeeklyView = false; // Status för veckovyn
 
 export async function initAdmin() {
-    // FIX: Tog bort escapeHTML här eftersom .innerText används
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     
     try {
@@ -80,17 +80,14 @@ export async function initAdmin() {
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     setupSidebarAddUser();
     
-    // FIX: Event Delegation för att slippa inline JavaScript (onclick)
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
-        // Lyssnar efter när man klickar utanför en redigerad textruta (Sparar passet)
         scheduleContainer.addEventListener('focusout', (e) => {
             if (e.target.classList.contains('shift-text')) {
                 saveShift(e.target.getAttribute('data-key'), e.target.innerText);
             }
         });
 
-        // Lyssnar efter klick på Plus-knappen och Kryss-knappen i rutnätet
         scheduleContainer.addEventListener('click', (e) => {
             if (e.target.classList.contains('add-user-btn')) {
                 manualAdd(e, e.target.getAttribute('data-key'));
@@ -100,7 +97,6 @@ export async function initAdmin() {
         });
     }
 
-    // Lyssnar efter klick på Ta-bort-kryss i personalistan
     const userListEl = document.getElementById('draggableUserList');
     if(userListEl) {
         userListEl.addEventListener('click', (e) => {
@@ -110,8 +106,32 @@ export async function initAdmin() {
         });
     }
     
-    // Gör handleDrop tillgänglig globalt då den triggas från ondrop
     window.handleDrop = handleDrop;
+
+    // --- LOGIK FÖR KNAPPEN ATT BYTA VY ---
+    const toggleBtn = document.getElementById('toggleViewBtn');
+    if (toggleBtn) {
+        toggleBtn.onclick = () => {
+            isWeeklyView = !isWeeklyView;
+            
+            const dayCont = document.getElementById('scheduleContainer');
+            const weekCont = document.getElementById('weeklyContainer');
+            
+            if (isWeeklyView) {
+                dayCont.style.display = 'none';
+                weekCont.style.display = 'block';
+                toggleBtn.innerText = "📆 Byt till Dagsvy";
+                toggleBtn.style.backgroundColor = "#455a64";
+                renderWeeklyView();
+            } else {
+                dayCont.style.display = 'grid';
+                weekCont.style.display = 'none';
+                toggleBtn.innerText = "📅 Byt till Veckovy";
+                toggleBtn.style.backgroundColor = "#0277bd";
+                renderAdminGrid();
+            }
+        };
+    }
 }
 
 function updateGrid(dateStr) {
@@ -126,7 +146,13 @@ function updateGrid(dateStr) {
         dateDisplay.innerText = `${DAYS[currentAdminDayIndex]} v.${selectedWeek}, ${selectedYear}`;
     }
     
-    renderAdminGrid();
+    // Välj vilken vy som ska ritas om
+    if (isWeeklyView) {
+        renderWeeklyView();
+    } else {
+        renderAdminGrid();
+    }
+    
     renderRoster();
     checkPublishStatus();
 }
@@ -157,7 +183,6 @@ function renderAdminGrid() {
             const safeVal = escapeHTML(val);
             const safeKey = escapeHTML(key);
             
-            // FIX: Bara data-attribut istället för onclick/onblur
             html += `
             <div class="shift-block ${safeVal?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-key="${safeKey}">
                 <span class="shift-text" contenteditable="true" data-key="${safeKey}">${safeVal}</span>
@@ -169,6 +194,90 @@ function renderAdminGrid() {
         });
         html += `</div>`;
     });
+    cont.innerHTML = html;
+}
+
+// --- DEN NYA VECKOVYN ---
+function renderWeeklyView() {
+    const cont = document.getElementById('weeklyContainer');
+    if(!cont) return;
+
+    let html = '<div class="weekly-grid">';
+    
+    // Bygg tabellhuvudet (Personal + Dagar)
+    html += `<div class="weekly-header-row"><div class="weekly-user-name">Personal</div>`;
+    DAYS.forEach(day => {
+        html += `<div>${day}</div>`;
+    });
+    html += `</div>`;
+
+    // Sortera personal i bokstavsordning
+    const sortedUsers = [...globalUserList].sort();
+    
+    sortedUsers.forEach(user => {
+        html += `<div class="weekly-user-row">`;
+        html += `<div class="weekly-user-name">${escapeHTML(user)}</div>`;
+        
+        DAYS.forEach(day => {
+            const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+            let userAssignments = [];
+
+            // Gå igenom hela schemat efter denna persons pass för denna dag
+            Object.keys(globalScheduleData).forEach(key => {
+                if (key.startsWith(prefix)) {
+                    const cellValue = globalScheduleData[key] || "";
+                    const usersInCell = cellValue.split('/').map(n => n.trim());
+                    
+                    if (usersInCell.includes(user)) {
+                        const remainder = key.replace(prefix, ''); // "Boden-Förmiddag"
+                        let foundStation = null;
+                        let foundShift = null;
+                        
+                        globalStations.forEach(st => {
+                            if(st.isSpacer) return;
+                            globalShifts.forEach(sh => {
+                                if (`${st.name}-${sh.time}` === remainder) {
+                                    foundStation = st; foundShift = sh;
+                                }
+                            });
+                        });
+
+                        if (foundStation && foundShift) {
+                            userAssignments.push({
+                                station: foundStation.name,
+                                color: foundStation.color,
+                                shiftLabel: foundShift.label
+                            });
+                        }
+                    }
+                }
+            });
+
+            html += `<div class="weekly-cell">`;
+            if (userAssignments.length === 0) {
+                html += `<span class="free-text">Ledig</span>`;
+            } else {
+                userAssignments.forEach(a => {
+                    const bg = a.color;
+                    const fg = isLight(bg) ? '#000' : '#fff';
+                    
+                    // Korta ner FM/EM för att spara plats
+                    let shortLabel = a.shiftLabel;
+                    if(shortLabel.toLowerCase() === 'förmiddag') shortLabel = 'FM';
+                    if(shortLabel.toLowerCase() === 'eftermiddag') shortLabel = 'EM';
+                    
+                    html += `<div class="weekly-badge" style="background:${escapeHTML(bg)}; color:${fg};">
+                        ${escapeHTML(a.station)} <span style="opacity:0.8; font-weight:normal;">(${escapeHTML(shortLabel)})</span>
+                    </div>`;
+                });
+            }
+            html += `</div>`;
+        });
+        
+        html += `</div>`; // Stäng weekly-user-row
+    });
+
+    html += '</div>'; // Stäng weekly-grid
     cont.innerHTML = html;
 }
 
@@ -197,7 +306,6 @@ function renderRoster() {
         const isAssigned = work.has(u);
         const assignedClass = isAssigned ? 'assigned' : '';
         const safeU = escapeHTML(u);
-        // FIX: Data-attribut för removeUser
         return `<div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('text','${safeU}')">${safeU} <button class="remove-user-btn" data-user="${safeU}">×</button></div>`;
     }).join('');
 }
@@ -227,11 +335,10 @@ async function saveShift(k, v) {
     globalScheduleData[k] = v.trim(); 
     await saveData('schedule_draft', globalScheduleData); 
     checkPublishStatus();
-    renderAdminGrid(); 
+    if (isWeeklyView) renderWeeklyView(); else renderAdminGrid(); 
     renderRoster(); 
 }
 
-// FIX: Använder currentTarget och läser från data-key
 async function handleDrop(e) { 
     e.preventDefault(); 
     const k = e.currentTarget.getAttribute('data-key');
@@ -262,7 +369,6 @@ function manualAdd(e, key) {
     menu.style.left = `${e.pageX}px`;
     menu.style.top = `${e.pageY + 10}px`;
 
-    // FIX: Data-attribut för att undvika "O'Brian"-kraschen
     let html = availableUsers.length > 0 
         ? availableUsers.map(u => `<div class="dropdown-item user-select-btn" data-key="${escapeHTML(key)}" data-user="${escapeHTML(u)}">${escapeHTML(u)}</div>`).join('') 
         : `<div class="dropdown-item disabled">Ingen ledig</div>`;
@@ -271,7 +377,6 @@ function manualAdd(e, key) {
     menu.innerHTML = html;
     document.body.appendChild(menu);
 
-    // FIX: Händelselyssnare för klick i menyn
     menu.addEventListener('click', (evt) => {
         if (evt.target.classList.contains('user-select-btn')) {
             selectUser(evt.target.getAttribute('data-key'), evt.target.getAttribute('data-user'));
@@ -317,6 +422,7 @@ function setupSidebarAddUser() {
                 await saveData('users', globalUserList);
                 showToast("Personal tillagd", "success");
                 inp.value='';
+                if (isWeeklyView) renderWeeklyView();
                 renderRoster();
             }
         }; 
@@ -329,6 +435,7 @@ async function removeUser(u) {
         globalUserList = globalUserList.filter(user => user !== u);
         await saveData('users', globalUserList);
         showToast("Personal borttagen", "info");
+        if (isWeeklyView) renderWeeklyView();
         renderRoster();
     } 
 }
