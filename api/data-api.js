@@ -170,13 +170,13 @@ export default async function handler(req, res) {
           // --- SKICKA MAILET VIA RESEND ---
           try {
               await resend.emails.send({
-                  from: 'STRULIGT <onboarding@resend.dev>', // Låt denna vara kvar tills du verifierat en egen domän
+                  from: 'STRUL <onboarding@resend.dev>', // Låt denna vara kvar tills du verifierat en egen domän
                   to: email,
-                  subject: 'Återställ ditt lösenord - STRULIGT',
+                  subject: 'Återställ ditt lösenord - STRUL',
                   html: `
                       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
                           <h2 style="color: #0277bd;">Återställ ditt lösenord</h2>
-                          <p>Du har begärt att få återställa ditt lösenord för STRULIGT.</p>
+                          <p>Du har begärt att få återställa ditt lösenord för STRUL.</p>
                           <p>Klicka på knappen nedan för att välja ett nytt lösenord. Länken är giltig i 1 timme.</p>
                           <div style="margin: 30px 0;">
                               <a href="${resetLink}" style="background-color: #0277bd; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">Välj nytt lösenord</a>
