@@ -170,7 +170,7 @@ export default async function handler(req, res) {
           // --- SKICKA MAILET VIA RESEND ---
           try {
               await resend.emails.send({
-                  from: 'STRUL <onboarding@resend.dev>', // Låt denna vara kvar tills du verifierat en egen domän
+                  from: 'STRUL <no-reply@strulapp.se>', // Låt denna vara kvar tills du verifierat en egen domän
                   to: email,
                   subject: 'Återställ ditt lösenord - STRUL',
                   html: `
