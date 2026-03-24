@@ -3,7 +3,7 @@ const { Pool } = pg;
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { Resend } from 'resend'; // <-- NY IMPORTERING
+import { Resend } from 'resend'; 
 
 // Skapa poolen
 const pool = new Pool({
