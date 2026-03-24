@@ -24,6 +24,7 @@
                 <div class="header-datepicker" style="display:flex; align-items:center; gap:10px;">
                     <label for="adminDatePicker" style="font-size:0.9rem; opacity:0.7;">Planeringsdatum:</label>
                     <input type="date" id="adminDatePicker">
+                    <button id="toggleViewBtn" class="export-button" style="background-color: #0277bd; margin-left: 20px;">📅 Byt till Veckovy</button>
                 </div>
             </div>
 
@@ -63,6 +64,8 @@
 
             <div class="schedule-card">
                 <div class="grid-container" id="scheduleContainer"></div>
+                
+                <div id="weeklyContainer" style="display:none; overflow-x: auto;"></div>
             </div>
             
             <footer class="export-container">
