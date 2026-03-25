@@ -3,20 +3,23 @@ const { Pool } = pg;
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { Resend } from 'resend'; 
 
-// Skapa poolen (samma som förut)
+// Skapa poolen
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const resend = new Resend(process.env.RESEND_API_KEY); // <-- INITIERA RESEND
 
 // Fail-safe: Stoppa appen direkt om nyckeln saknas
 if (!JWT_SECRET) {
   console.error("KRITISKT FEL: JWT_SECRET saknas i miljövariablerna.");
   throw new Error("Serverkonfiguration saknas. Kontakta systemadministratören.");
 }
+
 export default async function handler(req, res) {
   // CORS och Headers
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -65,7 +68,7 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const { action, username, password, type, data } = req.body;
 
-      // 0. AUKTORISERING (Kräv token för allt utom inlogg och lösenordsåterställning)
+      // 0. AUKTORISERING
       const isPublicAction = ['login', 'request_reset', 'perform_reset'].includes(action);
       
       if (!isPublicAction) {
@@ -154,14 +157,42 @@ export default async function handler(req, res) {
           const result = await pool.query('SELECT * FROM admin_users WHERE email = $1', [email]);
           const user = result.rows[0];
           
-          // Förhindra "User Enumeration" genom att alltid svara samma sak oavsett om mailen finns
           if (!user) return res.status(200).json({ success: true, message: "Länk skickad (om e-posten finns)." });
 
           const resetToken = crypto.randomBytes(20).toString('hex');
           const expires = Date.now() + 3600000; // Giltig i 1 timme
           await pool.query('UPDATE admin_users SET reset_token=$1, reset_expires=$2 WHERE id=$3', [resetToken, expires, user.id]);
           
-          console.log(`ÅTERSTÄLLNINGSLÄNK: https://${req.headers.host}/reset.html?token=${resetToken}`);
+          // Bygg URL:en
+          const protocol = req.headers.host.includes('localhost') ? 'http' : 'https';
+          const resetLink = `${protocol}://${req.headers.host}/reset.html?token=${resetToken}`;
+          
+          // --- SKICKA MAILET VIA RESEND ---
+          try {
+              await resend.emails.send({
+                  from: 'STRUL <no-reply@info.strulapp.se>', // Låt denna vara kvar tills du verifierat en egen domän
+                  to: email,
+                  subject: 'Återställ ditt lösenord - STRUL',
+                  html: `
+                      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+                          <h2 style="color: #0277bd;">Återställ ditt lösenord</h2>
+                          <p>Du har begärt att få återställa ditt lösenord för STRUL.</p>
+                          <p>Klicka på knappen nedan för att välja ett nytt lösenord. Länken är giltig i 1 timme.</p>
+                          <div style="margin: 30px 0;">
+                              <a href="${resetLink}" style="background-color: #0277bd; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">Välj nytt lösenord</a>
+                          </div>
+                          <p style="font-size: 0.9em; color: #666;">Om knappen inte fungerar, klistra in denna länk i din webbläsare:<br>
+                          <a href="${resetLink}">${resetLink}</a></p>
+                          <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;">
+                          <p style="font-size: 0.8em; color: #999;">Om du inte har begärt en lösenordsåterställning kan du tryggt ignorera detta mail.</p>
+                      </div>
+                  `
+              });
+              console.log("Återställningsmail skickat via Resend till:", email);
+          } catch (mailError) {
+              console.error("Kunde inte skicka mail via Resend:", mailError);
+          }
+
           return res.status(200).json({ success: true });
       }
 

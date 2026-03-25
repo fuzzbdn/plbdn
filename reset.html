@@ -3,28 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Återställ Lösenord</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <title>STRUL - Återställ Lösenord</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="base.css">
     <link rel="stylesheet" href="login.css">
-    <script src="script.js" defer></script>
+    
+    <script type="module" src="js/main.js"></script>
 </head>
 <body class="login-view" id="page-reset">
-    <div class="login-container">
+    <div class="login-wrapper">
         <div class="login-card">
-            <h2 style="color:#00a8ff; font-family:'JetBrains Mono'; margin-bottom:20px;">NYTT LÖSENORD</h2>
-            <div class="form-section">
-                <div class="input-wrapper">
-                    <input type="password" id="newPassInput" placeholder="NYTT LÖSENORD" style="margin-bottom: 15px;">
-                    <input type="password" id="confirmPassInput" placeholder="BEKRÄFTA LÖSENORD">
+            
+            <div class="login-header">
+                <div class="logo-container">
+                    <svg class="strul-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3" fill="rgba(2, 119, 189, 0.1)"></circle>
+                        <path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"></path>
+                        <path d="M12 9V4"></path><circle cx="12" cy="3" r="2"></circle>
+                        <path d="M12 15v5"></path><circle cx="12" cy="21" r="2"></circle>
+                        <path d="M9 12H4"></path><circle cx="3" cy="12" r="2"></circle>
+                        <path d="M15 12h5"></path><circle cx="21" cy="12" r="2"></circle>
+                        <path d="M14.5 10.5l3 -3"></path><circle cx="18.5" cy="6.5" r="1.5"></circle>
+                        <path d="M9.5 13.5l-3 3"></path><circle cx="5.5" cy="17.5" r="1.5"></circle>
+                    </svg>
                 </div>
-                <button id="resetSubmitBtn" class="login-btn">SPARA</button>
-                <p id="resetMessage" style="color:#fff; margin-top:15px;"></p>
+                <h1 class="strul-title">Välj nytt lösenord</h1>
+                <p class="strul-desc">Skriv in ett nytt lösenord för ditt konto.</p>
             </div>
-            <div class="footer-links">
-                <a href="index.html" class="display-link">[ TILLBAKA TILL LOGIN ]</a>
+            
+            <div id="resetForm">
+                <div class="input-group">
+                    <input type="password" id="newPassInput" placeholder="Nytt lösenord">
+                </div>
+                <div class="input-group">
+                    <input type="password" id="confirmPassInput" placeholder="Bekräfta nytt lösenord">
+                </div>
+                
+                <button id="resetSubmitBtn" class="action-btn primary">Spara nytt lösenord</button>
+                
+                <div style="margin-top: 20px; text-align: center;">
+                    <a href="index.html" class="link-text">Avbryt och gå till inloggning</a>
+                </div>
             </div>
+
         </div>
     </div>
+
+    <div id="toast-container"></div>
 </body>
 </html>
