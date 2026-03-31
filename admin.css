@@ -134,8 +134,8 @@
     display: flex; justify-content: space-between; align-items: center;
     padding: 8px 12px; border-bottom: 1px solid var(--border-color); background-color: var(--bg-color); min-height: 45px;
 }
-.draggable-station { cursor: grab; }
-.draggable-station.dragging { opacity: 0.5; background: #e3f2fd; border: 1px dashed #2196F3; }
+.draggable-station, .draggable-shift { cursor: grab; }
+.draggable-station.dragging, .draggable-shift.dragging { opacity: 0.5; background: #e3f2fd; border: 1px dashed #2196F3; }
 
 /* Visar tydligt om en person redan är tilldelad ett pass */
 .draggable-item.assigned { background-color: #f5f5f5 !important; color: #aaa !important; border-color: #eee; font-style: italic; opacity: 0.8; }
