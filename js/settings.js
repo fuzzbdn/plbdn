@@ -155,7 +155,7 @@ function initThemeTab(currentSettings) {
     const iframe = document.getElementById('themePreviewIframe');
 
     // Tvinga iframen att bete sig som en 1080p TV-skärm och skala ner den
-    if (iframe) {
+if (iframe) {
         iframe.style.width = '1920px';
         iframe.style.height = '1080px';
         iframe.style.transformOrigin = 'top left';
@@ -163,11 +163,17 @@ function initThemeTab(currentSettings) {
         const resizeIframe = () => {
             const parent = iframe.parentElement;
             if (!parent) return;
-            const scale = Math.min(parent.clientWidth / 1920, parent.clientHeight / 1080);
+            
+            // 1. Räkna ut skalan enbart baserat på tillgänglig bredd
+            const scale = parent.clientWidth / 1920;
             iframe.style.transform = `scale(${scale})`;
+            
+            // 2. Tvinga rutan att bli exakt lika hög som den nedskalade TV-skärmen
+            parent.style.height = `${1080 * scale}px`;
         };
+        
         window.addEventListener('resize', resizeIframe);
-        setTimeout(resizeIframe, 50); // Kör direkt när fliken visas
+        setTimeout(resizeIframe, 50); 
     }
 
     function updatePreview(themeId) {
