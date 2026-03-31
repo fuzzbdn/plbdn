@@ -3,8 +3,7 @@ import { showToast, showConfirm, isLight, getISOWeek, escapeHTML } from './utils
 import { DEFAULT_STATIONS, DEFAULT_SHIFTS, DAYS } from './config.js';
 
 let globalStations = [], globalShifts = [], globalCustomThemes = [], globalScheduleData = {};
-let editingStationIndex = null, editingShiftIndex = null, editingAdminId = null, dragSrcStationEl = null;
-
+let editingStationIndex = null, editingShiftIndex = null, editingAdminId = null, dragSrcStationEl = null, dragSrcShiftEl = null;
 export async function initSettings() {
     // FIX: Tog bort escapeHTML för innerText
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
@@ -386,12 +385,35 @@ function initShiftsSettings() {
     const shLabel = document.getElementById('newShiftLabel'), shTime = document.getElementById('newShiftTime');
     const shBtn = document.getElementById('addShiftBtn'), shCancel = document.getElementById('cancelShiftEditBtn');
 
+    // DRA-OCH-SLÄPP LOGIK FÖR PASS
+    window.handleShiftDragStart = (e) => {
+        dragSrcShiftEl = e.target.closest('.draggable-shift');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', dragSrcShiftEl.innerHTML);
+        dragSrcShiftEl.classList.add('dragging');
+    };
+    window.handleShiftDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; };
+    window.handleShiftDrop = async (e) => {
+        e.stopPropagation();
+        const targetEl = e.target.closest('.draggable-shift');
+        if (dragSrcShiftEl && targetEl && dragSrcShiftEl !== targetEl) {
+            const oldIndex = parseInt(dragSrcShiftEl.dataset.index);
+            const newIndex = parseInt(targetEl.dataset.index);
+            const movedItem = globalShifts.splice(oldIndex, 1)[0];
+            globalShifts.splice(newIndex, 0, movedItem);
+            await saveData('config_shifts', globalShifts);
+            renderShifts(); 
+        }
+        return false;
+    };
+
     const renderShifts = () => {
         const cont = document.getElementById('shiftListContainer');
         if(!Array.isArray(globalShifts)) globalShifts = DEFAULT_SHIFTS;
         cont.innerHTML = globalShifts.map((sh, i) => `
-        <div class="shift-list-item">
+        <div class="shift-list-item draggable-shift" draggable="true" ondragstart="handleShiftDragStart(event)" ondragover="handleShiftDragOver(event)" ondrop="handleShiftDrop(event)" data-index="${i}">
             <div class="list-info-left">
+                <span class="drag-handle">☰</span>
                 <strong>${escapeHTML(sh.label)}</strong> 
                 <span style="color:#666; margin-left:5px;">(${escapeHTML(sh.time)})</span>
             </div>
@@ -401,6 +423,7 @@ function initShiftsSettings() {
             </div>
         </div>`).join('');
     };
+    
     window.startEditShift = (i) => { editingShiftIndex = i; shLabel.value = globalShifts[i].label; shTime.value = globalShifts[i].time; shBtn.innerText = "Spara"; shBtn.style.background = "#2196F3"; shCancel.style.display = "inline-flex"; };
     const resetSh = () => { editingShiftIndex = null; shLabel.value = ""; shTime.value = ""; shBtn.innerText = "Lägg till Pass"; shBtn.style.background = ""; shCancel.style.display = "none"; };
     shCancel.onclick = resetSh;
