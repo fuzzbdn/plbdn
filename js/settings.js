@@ -154,20 +154,102 @@ function initThemeTab(currentSettings) {
     const editSelect = document.getElementById('editThemeSelect');
     const iframe = document.getElementById('themePreviewIframe');
 
+    // Tvinga iframen att bete sig som en 1080p TV-skärm och skala ner den
+    if (iframe) {
+        iframe.style.width = '1920px';
+        iframe.style.height = '1080px';
+        iframe.style.transformOrigin = 'top left';
+        
+        const resizeIframe = () => {
+            const parent = iframe.parentElement;
+            if (!parent) return;
+            const scale = Math.min(parent.clientWidth / 1920, parent.clientHeight / 1080);
+            iframe.style.transform = `scale(${scale})`;
+        };
+        window.addEventListener('resize', resizeIframe);
+        setTimeout(resizeIframe, 50); // Kör direkt när fliken visas
+    }
+
     function updatePreview(themeId) {
         if (!iframe || !iframe.contentDocument) return;
-        let cssToInject = "";
+        
+        let customCss = "";
         if (themeId && themeId !== 'light') {
             const t = globalCustomThemes.find(x => x.id === themeId);
-            if (t) cssToInject = t.css;
+            if (t) customCss = t.css;
         }
-        let styleTag = iframe.contentDocument.getElementById('injected-preview-style');
-        if (!styleTag) {
-            styleTag = iframe.contentDocument.createElement('style');
-            styleTag.id = 'injected-preview-style';
-            iframe.contentDocument.head.appendChild(styleTag);
-        }
-        styleTag.innerHTML = cssToInject;
+
+        // Bygg äkta HTML med dagens datum och din riktiga schemadata!
+        const now = new Date();
+        const iso = getISOWeek(now);
+        const dayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1; 
+        const dayName = DAYS[dayIndex];
+        const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
+        const prefix = `y${iso.year}w${iso.week}-${dayName}-`;
+
+        let html = `
+        <div class="display-wrapper">
+            <div class="top-bar">
+                <h1 id="mainTitle">Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
+                <div style="display:flex; align-items:center;">
+                    <div id="weatherWidget" style="margin-right:20px; font-weight:700;">PREVIEW: 20°C</div>
+                    <div id="clock">12:00</div>
+                </div>
+            </div>
+            
+            <div id="mainContainer">
+                <div class="time-header-row">
+                    <div></div>
+                    ${globalShifts.map(s => `<div class="time-header">${escapeHTML(s.label)}</div>`).join('')}
+                </div>
+        `;
+        
+        globalStations.forEach(st => {
+            if (st.isSpacer) { 
+                html += `<div class="display-row spacer-row"></div>`; 
+                return; 
+            }
+            
+            const contrast = isLight(st.color) ? '#000' : '#fff';
+            const vars = `style="--station-color:${escapeHTML(st.color)}; --contrast-color:${contrast};"`;
+            
+            html += `<div class="display-row" ${vars}><div class="station-label">${escapeHTML(st.name)}</div>`;
+            
+            globalShifts.forEach(sh => {
+                const key = `${prefix}${st.name}-${sh.time}`;
+                const val = globalScheduleData[key] || "";
+                const safeVal = escapeHTML(val);
+                html += `<div class="shift-card ${safeVal?'':'empty'}" data-label="${escapeHTML(sh.label)}">${safeVal}</div>`;
+            });
+            
+            html += `</div>`;
+        });
+        
+        html += `</div></div>`;
+
+        // Skriv in allt i iframen som ett helt nytt dokument
+        const doc = iframe.contentDocument;
+        doc.open();
+        doc.write(`
+            <!DOCTYPE html>
+            <html lang="sv">
+            <head>
+                <base href="${window.location.href}">
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+                <link rel="stylesheet" href="base.css">
+                <link rel="stylesheet" href="display.css">
+                <style>
+                    body { margin: 0; background-color: var(--bg-color); }
+                    ::-webkit-scrollbar { display: none; }
+                    ${customCss}
+                </style>
+            </head>
+            <body class="display-view">
+                ${html}
+            </body>
+            </html>
+        `);
+        doc.close();
     }
 
     function populate() {
@@ -182,7 +264,6 @@ function initThemeTab(currentSettings) {
         }
     }
 
-    iframe.onload = () => updatePreview(themeSelect.value);
     themeSelect.onchange = (e) => updatePreview(e.target.value);
 
     document.getElementById('saveThemeBtn').onclick = async () => {
@@ -213,6 +294,9 @@ function initThemeTab(currentSettings) {
             await saveData('custom_themes', globalCustomThemes);
             showToast("Tema sparat!", "success");
             document.getElementById('clearThemeEditorBtn').click(); populate();
+            
+            // Ladda den nya CSS-koden direkt i previewen
+            if(themeSelect.value === id) updatePreview(id);
         };
         
         document.getElementById('deleteThemeBtn').onclick = async () => {
@@ -226,6 +310,14 @@ function initThemeTab(currentSettings) {
         };
     }
     populate();
+    
+    // Säkerställ att iframen skalas om när man klickar på fliken (eftersom den kan ha varit osynlig)
+    const tabBtn = document.querySelector('button[onclick="openTab(\'tab-theme\')"]');
+    if(tabBtn) {
+        tabBtn.addEventListener('click', () => {
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 10);
+        });
+    }
 }
 
 function initStationsSettings() {
