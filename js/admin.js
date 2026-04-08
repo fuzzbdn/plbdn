@@ -88,6 +88,13 @@ export async function initAdmin() {
             }
         });
 
+        // --- LYSNAR PÅ INMATNING FÖR AUTOCOMPLETE ---
+        scheduleContainer.addEventListener('input', (e) => {
+            if (e.target.classList.contains('shift-text')) {
+                showAutocomplete(e.target);
+            }
+        });
+
         scheduleContainer.addEventListener('click', (e) => {
             if (e.target.classList.contains('add-user-btn')) {
                 manualAdd(e, e.target.getAttribute('data-key'));
@@ -439,3 +446,76 @@ async function removeUser(u) {
         renderRoster();
     } 
 }
+
+// =========================================
+// AUTOCOMPLETE FUNKTIONER FÖR SCHEMAT
+// =========================================
+
+function showAutocomplete(element) {
+    closeAutocomplete(); // Stäng eventuell tidigare meny
+
+    const text = element.innerText;
+    
+    // Dela upp texten vid snedstreck (/) ifall flera personer redan är inlagda i samma pass
+    const parts = text.split('/');
+    const currentPart = parts[parts.length - 1].trim();
+
+    // Om rutan är tom eller vi inte har skrivit någon bokstav än, visa ingen meny
+    if (currentPart.length === 0) return;
+
+    // Leta efter personal vars namn börjar på bokstäverna vi skrivit (oberoende av versaler)
+    const matches = globalUserList.filter(u => u.toLowerCase().startsWith(currentPart.toLowerCase()));
+
+    // Om vi inte hittar någon matchning, avbryt
+    if (matches.length === 0) return;
+
+    // Skapa och positionera rullgardinsmenyn under textrutan
+    const rect = element.getBoundingClientRect();
+    const dropdown = document.createElement('div');
+    dropdown.id = 'autocomplete-dropdown';
+    dropdown.className = 'dropdown-menu'; 
+    dropdown.style.left = `${rect.left}px`;
+    dropdown.style.top = `${rect.bottom + window.scrollY}px`; 
+    dropdown.style.position = 'absolute';
+    dropdown.style.zIndex = '10000';
+    dropdown.style.maxHeight = '200px';
+    dropdown.style.overflowY = 'auto';
+
+    // Lägg till de matchande namnen i menyn
+    matches.forEach(match => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.innerText = match;
+        
+        // När man klickar på ett namn i menyn
+        item.onclick = (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            
+            // Ersätt den påbörjade texten med det valda namnet
+            parts[parts.length - 1] = parts.length > 1 ? " " + match : match;
+            const newText = parts.join(' / ').trim();
+            
+            element.innerText = newText;
+            
+            // Spara passet direkt
+            saveShift(element.getAttribute('data-key'), newText);
+            closeAutocomplete();
+        };
+        dropdown.appendChild(item);
+    });
+
+    document.body.appendChild(dropdown);
+}
+
+function closeAutocomplete() {
+    const existing = document.getElementById('autocomplete-dropdown');
+    if (existing) existing.remove();
+}
+
+// Stäng menyn automatiskt om användaren klickar någon annanstans på skärmen
+document.addEventListener('click', (e) => {
+    if (!e.target.classList.contains('shift-text')) {
+        closeAutocomplete();
+    }
+});
