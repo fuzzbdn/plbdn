@@ -1,5 +1,5 @@
 import { fetchData } from './service.js';
-import { getISOWeek, isLight } from './utils.js';
+import { getISOWeek, isLight, escapeHTML } from './utils.js';
 import { DEFAULT_STATIONS, DEFAULT_SHIFTS, DAYS } from './config.js';
 
 let lastSnap = "";
@@ -7,14 +7,13 @@ let globalStations = [];
 let globalShifts = [];
 let globalScheduleData = {};
 
-// Variabler för väder-caching
 let lastWeatherFetch = 0;
 let lastWeatherConfig = ""; 
 
 export function initDisplay() {
-    // Klocka
     setInterval(() => {
         const el = document.getElementById('clock');
+        // FIX: innerText = inget behov av escapeHTML
         if(el) el.innerText = new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
     }, 1000);
 
@@ -49,11 +48,9 @@ async function refresh() {
         if(snap !== lastSnap) {
             lastSnap = snap;
             
-            // Hantera CSS-tema
             if (sets?.theme && sets.theme !== 'light') {
                 const theme = (themes||[]).find(t => t.id === sets.theme);
                 if(theme) { 
-                    // Ta bort gammal stil om den finns
                     const oldStyle = document.getElementById('dynamic-theme-style');
                     if(oldStyle) oldStyle.remove();
                     
@@ -63,18 +60,20 @@ async function refresh() {
                     document.head.appendChild(style); 
                 }
             } else {
-                 // Om standardtema, ta bort custom CSS
                  const oldStyle = document.getElementById('dynamic-theme-style');
                  if(oldStyle) oldStyle.remove();
             }
 
-            // Hantera Rullande text
             const mq = document.getElementById('marqueeContainer');
-            if(mq) { mq.style.display = (msg?.show && msg?.text) ? 'block' : 'none'; if(msg?.text) document.getElementById('marqueeText').innerText = msg.text; }
+            if(mq) { 
+                mq.style.display = (msg?.show && msg?.text) ? 'block' : 'none'; 
+                // FIX: innerText = inget behov av escapeHTML
+                if(msg?.text) document.getElementById('marqueeText').innerText = msg.text; 
+            }
 
-            // Hantera Rubrik
             const now = new Date(), iso = getISOWeek(now), today = DAYS[now.getDay()===0 ? 6 : now.getDay()-1];
             const titleEl = document.getElementById('mainTitle');
+            // FIX: innerText = inget behov av escapeHTML
             if(titleEl) titleEl.innerText = `Vi som jobbar ${today} ${now.getDate()}/${now.getMonth()+1} (v.${iso.week})`;
             
             renderGrid(today, iso);
@@ -106,7 +105,7 @@ async function handleWeatherUpdate(config) {
             const res = await fetch(url);
             const data = await res.json();
             const temp = Math.round(data.current_weather.temperature);
-            wDiv.innerHTML = `${city.toUpperCase()}: ${temp}°C`; 
+            wDiv.innerHTML = `${escapeHTML(city).toUpperCase()}: ${temp}°C`; 
             lastWeatherFetch = now;
             lastWeatherConfig = currentConfigStr;
         } catch (e) { console.error("Väderfel:", e); }
@@ -116,31 +115,26 @@ async function handleWeatherUpdate(config) {
 function renderGrid(today, iso) {
     const cont = document.getElementById('mainContainer');
     if (!cont) return;
-
-    // --- HÄR ÄR ÄNDRINGEN: INGA "style=display:grid" HÄR! ---
-    // Vi låter CSS-filen bestämma layouten helt.
     
-    // Header-raden (som vi oftast döljer i modern design, men bra att ha kvar i koden)
-    let html = `<div class="time-header-row"><div></div>${globalShifts.map(s => `<div class="time-header">${s.label}</div>`).join('')}</div>`;
+    let html = `<div class="time-header-row"><div></div>${globalShifts.map(s => `<div class="time-header">${escapeHTML(s.label)}</div>`).join('')}</div>`;
     
     globalStations.forEach(st => {
         if(st.isSpacer) { 
-            // Spacer får en egen klass så vi kan dölja eller styla den
             html += `<div class="display-row spacer-row"></div>`; 
             return; 
         }
         
         const contrast = isLight(st.color) ? '#000' : '#fff';
-        // Vi sätter bara färg-variabler, ingen layout!
-        const vars = `style="--station-color:${st.color}; --contrast-color:${contrast};"`;
+        const vars = `style="--station-color:${escapeHTML(st.color)}; --contrast-color:${contrast};"`;
         
-        html += `<div class="display-row" ${vars}><div class="station-label">${st.name}</div>`;
+        html += `<div class="display-row" ${vars}><div class="station-label">${escapeHTML(st.name)}</div>`;
         
         globalShifts.forEach(sh => {
             const key = `y${iso.year}w${iso.week}-${today}-${st.name}-${sh.time}`;
             const val = globalScheduleData[key] || "";
-            // Lägg till data-label attribut så vi kan visa "Förmiddag" etc med CSS content
-            html += `<div class="shift-card ${val?'':'empty'}" data-label="${sh.label}">${val}</div>`;
+            const safeVal = escapeHTML(val); // XSS Skydd!
+            
+            html += `<div class="shift-card ${safeVal?'':'empty'}" data-label="${escapeHTML(sh.label)}">${safeVal}</div>`;
         });
         
         html += `</div>`;

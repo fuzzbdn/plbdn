@@ -139,3 +139,94 @@ body.display-view {
 .toast.success { background-color: #4CAF50; border-left: 5px solid #2E7D32; }
 .toast.error   { background-color: #f44336; border-left: 5px solid #c62828; }
 .toast.info    { background-color: #2196F3; border-left: 5px solid #1565C0; }
+
+
+
+/* =========================================
+   MOBILANPASSNING (SMARTPHONE)
+   ========================================= */
+@media (max-width: 850px) {
+    /* 1. Tillåt scroll på små skärmar */
+    body.display-view {
+        height: auto !important;
+        overflow-y: auto !important;
+        padding: 15px 10px;
+    }
+
+    /* 2. Anpassa top-bar så logga, väder och rubrik staplas */
+    .top-bar {
+        flex-direction: column;
+        gap: 10px;
+        padding: 15px;
+        text-align: center;
+    }
+
+    #mainTitle { font-size: 1.5rem; }
+    
+    #weatherWidget, #clock { 
+        font-size: 1.2rem; 
+        margin: 0;
+    }
+    
+    /* 3. Dölj de övre tidsrubrikerna och mellanrum */
+    .time-header-row, .spacer-row {
+        display: none !important;
+    }
+
+    /* 4. Gör om varje stations-rad till ett vertikalt kort */
+    .display-row {
+        display: flex !important;
+        flex-direction: column;
+        gap: 8px;
+        background: #fff;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        margin-bottom: 20px;
+    }
+
+    /* 5. Stations-rubriken lägger sig överst i kortet */
+    .station-label {
+        width: 100%;
+        height: auto;
+        min-height: 45px;
+        justify-content: center;
+        font-size: 1.3rem;
+        border-left: none;
+        border-bottom: 4px solid var(--station-color, #ccc);
+        box-shadow: none;
+        margin-bottom: 5px;
+    }
+
+    /* 6. Arbetspassen staplas under varandra */
+    .shift-card {
+        width: 100%;
+        min-height: 45px;
+        font-size: 1.1rem;
+        /* Detta trycker isär etiketten (vänster) och namnet (höger) */
+        justify-content: space-between; 
+        padding: 10px 15px;
+        box-sizing: border-box;
+        border-bottom: none;
+        border-left: 4px solid var(--station-color, #ccc);
+    }
+
+    /* 7. Visa etiketten (Förmiddag/Eftermiddag) inuti pass-kortet på mobilen */
+    .shift-card::before {
+        content: attr(data-label);
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: #666;
+        text-transform: uppercase;
+    }
+
+    /* 8. Hantera tomma pass så att etiketten fortfarande syns tydligt */
+    .shift-card.empty {
+        color: transparent !important; /* Gömmer eventuell tom text */
+        border-left: 4px dashed var(--empty-border, #ccc) !important;
+        background-color: #fafafa !important;
+    }
+    .shift-card.empty::before {
+        color: #aaa;
+    }
+}

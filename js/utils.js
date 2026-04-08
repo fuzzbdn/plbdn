@@ -7,9 +7,8 @@ export function showToast(message, type = 'success') {
     }
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    // Lägg till ikon baserat på typ
     let icon = type === 'error' ? '❌' : (type === 'info' ? 'ℹ️' : '✅');
-    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    toast.innerHTML = `<span>${icon}</span> <span>${escapeHTML(message)}</span>`;
     container.appendChild(toast);
     
     setTimeout(() => toast.classList.add('show'), 10);
@@ -22,7 +21,6 @@ export function showToast(message, type = 'success') {
 export function showConfirm(message) {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');
-        // Fallback om modalen saknas i HTML
         if(!modal) { resolve(confirm(message)); return; }
 
         const msgEl = document.getElementById('confirmMessage');
@@ -62,4 +60,16 @@ export function isLight(color) {
     const h = color.replace('#','');
     const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
     return ((r*299 + g*587 + b*114)/1000) >= 128;
+}
+
+// NY FUNKTION: Förhindrar XSS (Cross-Site Scripting)
+export function escapeHTML(str) {
+    if (typeof str !== 'string') return str;
+    return str.replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+    }[tag] || tag));
 }
