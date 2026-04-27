@@ -13,6 +13,13 @@ let currentAdminDayIndex = 0;
 let isWeeklyView = false; // Status för veckovyn
 
 export async function initAdmin() {
+    // --- SÄKERHETSFIX 1: Stoppa obehöriga från att nå admin-sidan ---
+    if (sessionStorage.getItem('userRole') !== 'admin') {
+        window.location.href = "user.html";
+        return;
+    }
+    // -----------------------------------------------------------------
+
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     
     try {
