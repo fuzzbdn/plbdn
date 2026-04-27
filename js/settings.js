@@ -6,6 +6,13 @@ let globalStations = [], globalShifts = [], globalCustomThemes = [], globalSched
 let editingStationIndex = null, editingShiftIndex = null, editingAdminId = null, dragSrcStationEl = null, dragSrcShiftEl = null;
 
 export async function initSettings() {
+    // --- SÄKERHETSFIX 1: Stoppa obehöriga från att nå inställningar ---
+    if (sessionStorage.getItem('userRole') !== 'admin') {
+        window.location.href = "user.html";
+        return;
+    }
+    // ------------------------------------------------------------------
+
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
 
@@ -430,7 +437,7 @@ function initAdminSettings() {
     const admFirst = document.getElementById('newAdminFirstName');
     const admLast = document.getElementById('newAdminLastName');
     const admEmail = document.getElementById('newAdminEmail');
-    const admRole = document.getElementById('newAdminRole'); // <-- NY KOPPLING TILL ROLL-DROPDOWN
+    const admRole = document.getElementById('newAdminRole'); 
 
     const adminListContainer = document.getElementById('adminListContainer');
     adminListContainer.addEventListener('click', (e) => {
@@ -448,7 +455,6 @@ function initAdminSettings() {
         let admins = await fetchData('admins');
         if(!Array.isArray(admins)) admins = [];
         adminListContainer.innerHTML = admins.map(a => {
-            // NYTT: Visa en snygg badge bredvid namnet beroende på roll
             const roleBadge = a.role === 'admin' 
                 ? '<span style="background:#ff9800; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">Admin</span>' 
                 : '<span style="background:#4CAF50; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">User</span>';
@@ -476,9 +482,9 @@ function initAdminSettings() {
         admLast.value = u.last_name||""; 
         admEmail.value = u.email||"";
         
-        // NYTT: Sätt rollen i dropdown-menyn när du redigerar (standard till 'user' om den saknas)
+        // --- SÄKERHETSFIX 2: Sätt rätt roll eller fallback till 'admin' för äldre konton ---
         if (admRole) {
-            admRole.value = u.role || 'user';
+            admRole.value = u.role || 'admin';
         }
         
         admPass.placeholder = "Nytt lösen (valfritt)"; 
@@ -496,7 +502,6 @@ function initAdminSettings() {
         admLast.value = ""; 
         admEmail.value = ""; 
         
-        // NYTT: Återställ rollen till användare
         if (admRole) admRole.value = 'user';
         
         admPass.placeholder = "Lösenord"; 
@@ -508,7 +513,7 @@ function initAdminSettings() {
 
     admBtn.onclick = async () => {
         const u = admUser.value, p = admPass.value;
-        const r = admRole ? admRole.value : 'user'; // Läs av den valda rollen
+        const r = admRole ? admRole.value : 'user';
 
         if(!u) return showToast("Användarnamn krävs", "error");
         
@@ -523,7 +528,7 @@ function initAdminSettings() {
                 firstName:admFirst.value, 
                 lastName:admLast.value, 
                 email:admEmail.value, 
-                role: r, // Skicka med rollen till servern
+                role: r, 
                 id:editingAdminId
             }) 
         });
