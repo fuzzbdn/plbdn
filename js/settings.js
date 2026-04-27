@@ -4,8 +4,8 @@ import { DEFAULT_STATIONS, DEFAULT_SHIFTS, DAYS } from './config.js';
 
 let globalStations = [], globalShifts = [], globalCustomThemes = [], globalScheduleData = {};
 let editingStationIndex = null, editingShiftIndex = null, editingAdminId = null, dragSrcStationEl = null, dragSrcShiftEl = null;
+
 export async function initSettings() {
-    // FIX: Tog bort escapeHTML för innerText
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
 
@@ -153,8 +153,7 @@ function initThemeTab(currentSettings) {
     const editSelect = document.getElementById('editThemeSelect');
     const iframe = document.getElementById('themePreviewIframe');
 
-    // Tvinga iframen att bete sig som en 1080p TV-skärm och skala ner den
-if (iframe) {
+    if (iframe) {
         iframe.style.width = '1920px';
         iframe.style.height = '1080px';
         iframe.style.transformOrigin = 'top left';
@@ -162,12 +161,8 @@ if (iframe) {
         const resizeIframe = () => {
             const parent = iframe.parentElement;
             if (!parent) return;
-            
-            // 1. Räkna ut skalan enbart baserat på tillgänglig bredd
             const scale = parent.clientWidth / 1920;
             iframe.style.transform = `scale(${scale})`;
-            
-            // 2. Tvinga rutan att bli exakt lika hög som den nedskalade TV-skärmen
             parent.style.height = `${1080 * scale}px`;
         };
         
@@ -184,7 +179,6 @@ if (iframe) {
             if (t) customCss = t.css;
         }
 
-        // Bygg äkta HTML med dagens datum och din riktiga schemadata!
         const now = new Date();
         const iso = getISOWeek(now);
         const dayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1; 
@@ -232,7 +226,6 @@ if (iframe) {
         
         html += `</div></div>`;
 
-        // Skriv in allt i iframen som ett helt nytt dokument
         const doc = iframe.contentDocument;
         doc.open();
         doc.write(`
@@ -300,7 +293,6 @@ if (iframe) {
             showToast("Tema sparat!", "success");
             document.getElementById('clearThemeEditorBtn').click(); populate();
             
-            // Ladda den nya CSS-koden direkt i previewen
             if(themeSelect.value === id) updatePreview(id);
         };
         
@@ -316,7 +308,6 @@ if (iframe) {
     }
     populate();
     
-    // Säkerställ att iframen skalas om när man klickar på fliken (eftersom den kan ha varit osynlig)
     const tabBtn = document.querySelector('button[onclick="openTab(\'tab-theme\')"]');
     if(tabBtn) {
         tabBtn.addEventListener('click', () => {
@@ -385,7 +376,6 @@ function initShiftsSettings() {
     const shLabel = document.getElementById('newShiftLabel'), shTime = document.getElementById('newShiftTime');
     const shBtn = document.getElementById('addShiftBtn'), shCancel = document.getElementById('cancelShiftEditBtn');
 
-    // DRA-OCH-SLÄPP LOGIK FÖR PASS
     window.handleShiftDragStart = (e) => {
         dragSrcShiftEl = e.target.closest('.draggable-shift');
         e.dataTransfer.effectAllowed = 'move';
@@ -440,8 +430,8 @@ function initAdminSettings() {
     const admFirst = document.getElementById('newAdminFirstName');
     const admLast = document.getElementById('newAdminLastName');
     const admEmail = document.getElementById('newAdminEmail');
+    const admRole = document.getElementById('newAdminRole'); // <-- NY KOPPLING TILL ROLL-DROPDOWN
 
-    // FIX: Lyssnare för edit och delete kopplat till list-containern
     const adminListContainer = document.getElementById('adminListContainer');
     adminListContainer.addEventListener('click', (e) => {
         const editBtn = e.target.closest('.edit-admin-btn');
@@ -457,11 +447,16 @@ function initAdminSettings() {
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
         if(!Array.isArray(admins)) admins = [];
-        // FIX: Dat-attribut för att slippa O'Brian krascher i admin listan
-        adminListContainer.innerHTML = admins.map(a => `
+        adminListContainer.innerHTML = admins.map(a => {
+            // NYTT: Visa en snygg badge bredvid namnet beroende på roll
+            const roleBadge = a.role === 'admin' 
+                ? '<span style="background:#ff9800; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">Admin</span>' 
+                : '<span style="background:#4CAF50; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">User</span>';
+                
+            return `
             <div class="admin-list-item">
                 <div class="list-info-left">
-                    <strong>${escapeHTML(a.username)}</strong>
+                    <strong>${escapeHTML(a.username)}</strong> ${roleBadge}
                     <span style="color:#666; margin-left:5px; font-size:0.9em;">
                         (${escapeHTML(a.first_name||'')} ${escapeHTML(a.last_name||'')})
                     </span>
@@ -470,7 +465,8 @@ function initAdminSettings() {
                     <button class="list-btn edit-admin-btn" data-admin='${escapeHTML(JSON.stringify(a))}'>✏️</button>
                     <button class="list-btn delete-admin-btn" data-username="${escapeHTML(a.username)}">🗑️</button>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     };
 
     window.startEditAdmin = (u) => {
@@ -479,6 +475,12 @@ function initAdminSettings() {
         admFirst.value = u.first_name||""; 
         admLast.value = u.last_name||""; 
         admEmail.value = u.email||"";
+        
+        // NYTT: Sätt rollen i dropdown-menyn när du redigerar (standard till 'user' om den saknas)
+        if (admRole) {
+            admRole.value = u.role || 'user';
+        }
+        
         admPass.placeholder = "Nytt lösen (valfritt)"; 
         admPass.value = "";
         admBtn.innerText = "Spara"; 
@@ -493,6 +495,10 @@ function initAdminSettings() {
         admFirst.value = ""; 
         admLast.value = ""; 
         admEmail.value = ""; 
+        
+        // NYTT: Återställ rollen till användare
+        if (admRole) admRole.value = 'user';
+        
         admPass.placeholder = "Lösenord"; 
         admBtn.innerText = "Spara / Skapa konto"; 
         admBtn.style.background = ""; 
@@ -502,6 +508,8 @@ function initAdminSettings() {
 
     admBtn.onclick = async () => {
         const u = admUser.value, p = admPass.value;
+        const r = admRole ? admRole.value : 'user'; // Läs av den valda rollen
+
         if(!u) return showToast("Användarnamn krävs", "error");
         
         const action = editingAdminId ? 'edit_admin' : 'add_admin';
@@ -515,17 +523,18 @@ function initAdminSettings() {
                 firstName:admFirst.value, 
                 lastName:admLast.value, 
                 email:admEmail.value, 
+                role: r, // Skicka med rollen till servern
                 id:editingAdminId
             }) 
         });
-        showToast(editingAdminId ? "Admin uppdaterad" : "Admin tillagd", "success");
+        showToast(editingAdminId ? "Användare uppdaterad" : "Användare tillagd", "success");
         resetAdm(); renderAdmins();
     };
 
     window.deleteAdmin = async(u) => { 
-        if(await showConfirm("Ta bort admin?")) {
+        if(await showConfirm("Ta bort användare?")) {
             await fetch('/api/data-api', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionStorage.getItem('jwtToken')}`}, body: JSON.stringify({action:'remove_admin', username:u}) }); 
-            showToast("Admin borttagen", "info");
+            showToast("Användare borttagen", "info");
             renderAdmins(); 
         }
     };
