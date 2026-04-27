@@ -4,10 +4,16 @@ export async function fetchData(type) {
     try {
         const headers = {};
         const token = sessionStorage.getItem('jwtToken');
-        if (token && type === 'admins') headers['Authorization'] = `Bearer ${token}`;
+        if (token) headers['Authorization'] = `Bearer ${token}`;
         
-        // Här anropas din existerande backend i 'api'-mappen
-        const res = await fetch(`/api/data-api?type=${type}`, { headers });
+        // Plockar upp token från URL:en om det är en display-skärm
+        const urlParams = new URLSearchParams(window.location.search);
+        const displayToken = urlParams.get('token');
+        
+        let url = `/api/data-api?type=${type}`;
+        if(displayToken) url += `&display_token=${displayToken}`;
+
+        const res = await fetch(url, { headers });
         if (!res.ok) throw new Error();
         return await res.json();
     } catch (e) { return null; }
