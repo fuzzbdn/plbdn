@@ -12,7 +12,8 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const resend = new Resend(process.env.RESEND_API_KEY); 
-// Hemlig nyckel för externa TV-skärmar (Du kan byta ut denna sträng mot vad du vill)
+
+// Nyckeln hämtas nu ENBART från Vercels miljövariabler för högsta säkerhet
 const SECRET_DISPLAY_KEY = process.env.DISPLAY_SECRET;
 
 if (!JWT_SECRET) {
@@ -47,8 +48,8 @@ export default async function handler(req, res) {
           } catch (err) { }
       }
 
-      // 2. Kolla Display-nyckel (Externa skärmar)
-      if (displayToken === SECRET_DISPLAY_KEY) {
+      // 2. Kolla Display-nyckel (Externa skärmar via Vercel)
+      if (displayToken && displayToken === SECRET_DISPLAY_KEY) {
           isAuthorized = true;
       }
 
@@ -86,12 +87,24 @@ export default async function handler(req, res) {
 
       const isPublicAction = ['login', 'request_reset', 'perform_reset'].includes(action);
       
+      // --- SÄKERHETSFIX: Läs av rollen i token ---
+      let currentUserRole = 'user'; // Standard är lägsta behörighet
+
       if (!isPublicAction) {
           const authHeader = req.headers.authorization;
           const token = authHeader && authHeader.split(' ')[1];
           if (!token) return res.status(401).json({ error: "Åtkomst nekad: Token saknas" });
-          try { jwt.verify(token, JWT_SECRET); } 
+          try { 
+              const decoded = jwt.verify(token, JWT_SECRET); 
+              currentUserRole = decoded.role || 'user'; // Sparar rollen från JWT
+          } 
           catch (err) { return res.status(403).json({ error: "Åtkomst nekad: Ogiltig token" }); }
+      }
+
+      // --- SÄKERHETSFIX: Spärra vanliga användare från att spara eller ändra admin-inställningar ---
+      const isAdminAction = ['add_admin', 'edit_admin', 'remove_admin'].includes(action) || (type && data);
+      if (isAdminAction && currentUserRole !== 'admin') {
+          return res.status(403).json({ error: "Behörighet saknas. Endast administratörer får göra ändringar." });
       }
 
       // 1. LOGGA IN
@@ -101,7 +114,8 @@ export default async function handler(req, res) {
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ success: false, error: "Fel uppgifter" });
         }
-        const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
+        // Baka in rollen i den nya tokenen när man loggar in
+        const token = jwt.sign({ id: user.id, username: user.username, role: user.role || 'admin' }, JWT_SECRET, { expiresIn: '24h' });
         const name = (user.first_name) ? `${user.first_name} ${user.last_name||''}` : user.username;
         return res.status(200).json({ success: true, token, user: user.username, name, role: user.role || 'admin' });
       }
