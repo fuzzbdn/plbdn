@@ -1,5 +1,6 @@
 import { initLogin, initReset } from './auth.js';
 import { initAdmin } from './admin.js';
+import { initUser } from './user.js'; // <-- NY
 import { initDisplay } from './display.js';
 import { initSettings } from './settings.js';
 
@@ -10,11 +11,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pageId === 'page-login') initLogin();
     else if (pageId === 'page-reset') initReset();
     else if (pageId === 'page-admin') initAdmin();
+    else if (pageId === 'page-user') initUser(); // <-- NY
     else if (pageId === 'page-display') initDisplay();
     else if (pageId === 'page-settings') initSettings(); 
 });
 
-// Global funktion för flikarna (behövs för onclick i HTML)
 window.openTab = function(tabId) {
     const allPanes = document.querySelectorAll('.tab-pane');
     allPanes.forEach(pane => {
