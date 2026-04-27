@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Användarmanual STRUL 1.3</title>
+    <title>Användarmanual STRUL 1.4</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="base.css">
     <link rel="stylesheet" href="admin.css">
     
     <style>
-        /* Specifik styling för manual-sidan för bättre läsbarhet */
         body {
             background-color: #ffffff;
             padding: 40px;
@@ -44,16 +43,20 @@
             font-family: monospace;
             color: #d32f2f;
         }
-        .img-placeholder {
-            background: #f9f9f9;
-            border: 1px dashed #ccc;
-            padding: 20px;
-            text-align: center;
-            color: #888;
-            margin: 10px 0;
-            border-radius: 6px;
+        .highlight-box {
+            background: #e1f5fe; 
+            border: 1px solid #81d4fa; 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin-top: 10px;
         }
-        /* Dölj scrollbar men tillåt scroll */
+        .warning-box {
+            background: #fff3cd; 
+            border: 1px solid #ffeeba; 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin-top: 15px;
+        }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
     </style>
@@ -68,139 +71,108 @@
     </div>
 
     <p class="intro-text">
-        Detta är manualen för <strong>STRUL v1.3</strong> (Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen). 
-        Här hittar du instruktioner för hur du planerar, hanterar inställningar och sparar schemat.
+        Detta är manualen för <strong>STRUL v1.4</strong> (Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen). 
+        Version 1.4 introducerar rollbaserade konton och högre säkerhet för externa skärmar.
     </p>
 
     <nav style="background:#f0f2f5; padding:20px; border-radius:8px; margin-bottom:40px; border:1px solid #ddd;">
         <p style="margin-top:0; font-weight:800; text-transform:uppercase; font-size:0.85rem; color:#666; letter-spacing:1px;">Innehållsförteckning</p>
         <ul style="margin:0; padding-left:20px;">
-            <li><a href="#planning" style="color:#0277bd; text-decoration:none; font-weight:600;">1. Planering, Dagsvy & Veckovy</a></li>
-            <li><a href="#display" style="color:#0277bd; text-decoration:none; font-weight:600;">2. Display-vyn (Storskärm & Mobil)</a></li>
-            <li><a href="#settings" style="color:#0277bd; text-decoration:none; font-weight:600;">3. Inställningar & Väder</a></li>
-            <li><a href="#export" style="color:#0277bd; text-decoration:none; font-weight:600;">4. Utskrift & Bildexport</a></li>
-            <li><a href="#themes" style="color:#0277bd; text-decoration:none; font-weight:600;">5. Teman & Utseende</a></li>
-            <li><a href="#troubleshoot" style="color:#0277bd; text-decoration:none; font-weight:600;">6. Felsökning</a></li>
+            <li><a href="#roles" style="color:#0277bd; text-decoration:none; font-weight:600;">1. Roller & Behörigheter (Nytt i v1.4)</a></li>
+            <li><a href="#planning" style="color:#0277bd; text-decoration:none; font-weight:600;">2. Planering, Dagsvy & Veckovy</a></li>
+            <li><a href="#display" style="color:#0277bd; text-decoration:none; font-weight:600;">3. Display-vyn & Externa Skärmar</a></li>
+            <li><a href="#settings" style="color:#0277bd; text-decoration:none; font-weight:600;">4. Inställningar & Väder</a></li>
+            <li><a href="#export" style="color:#0277bd; text-decoration:none; font-weight:600;">5. Utskrift & Bildexport</a></li>
+            <li><a href="#themes" style="color:#0277bd; text-decoration:none; font-weight:600;">6. Teman & Utseende</a></li>
+            <li><a href="#troubleshoot" style="color:#0277bd; text-decoration:none; font-weight:600;">7. Felsökning</a></li>
         </ul>
     </nav>
 
-    <div id="planning">
-        <h3>1. Planering, Dagsvy & Veckovy</h3>
-        <p>I admin-vyn sköter du den dagliga bemanningen. Du kan nu växla mellan att planera dag för dag (Dagsvy) och att se en överblick för personalen (Veckovy).</p>
-        
-        <h4>Navigera i kalendern</h4>
-        <p>Du kan byta dag på två sätt:</p>
+    <div id="roles">
+        <h3>1. Roller & Behörigheter (Nytt i v1.4)</h3>
+        <p>I version 1.4 är systemet stängt för obehöriga och inloggning krävs. Det finns nu två typer av konton:</p>
         <ul>
-            <li><strong>Kalendern:</strong> Klicka på datumfältet för att välja ett specifikt datum.</li>
-            <li><strong>Pilarna (◀ ▶):</strong> Använd pilarna bredvid datumet för att snabbt hoppa till föregående eller nästa dag.</li>
+            <li><strong>Administratör:</strong> Har full tillgång till att bygga scheman, ändra inställningar och skapa nya konton. Skickas till admin-panelen vid inloggning.</li>
+            <li><strong>Användare:</strong> Kan logga in för att se schemat (både dagsvy och veckovy) men kan <em>inte</em> redigera, publicera eller ändra inställningar. Perfekt för den vanliga personalen.</li>
         </ul>
+        <p>Du hanterar konton och roller under <strong>Inställningar -> Administratörer</strong>.</p>
+    </div>
 
+    <div id="planning">
+        <h3>2. Planering, Dagsvy & Veckovy (För Admins)</h3>
+        <p>Som administratör sköter du den dagliga bemanningen. Du kan växla mellan att planera dag för dag (Dagsvy) och att se en överblick för personalen (Veckovy).</p>
+        
         <h4>Lägga till personal (Endast i Dagsvy)</h4>
-        <div class="step">
-            <div class="step-num">1</div>
-            <div class="step-content">Klicka på det gröna <strong>+</strong> tecknet i rutan där du vill lägga till någon.</div>
-        </div>
-        <div class="step">
-            <div class="step-num">2</div>
-            <div class="step-content">Välj en person från listan i menyn som dyker upp, eller klicka på <em>"Skriv in eget namn..."</em> för att skriva manuellt.</div>
-        </div>
-        <p>Du kan också <strong>dra och släppa</strong> namn från listan till vänster ("Personal") direkt in i schemat. Personal som redan är inlagd på ett pass under dagen markeras i grått i listan.</p>
+        <ol>
+            <li>Klicka på det gröna <strong>+</strong> tecknet i rutan där du vill lägga till någon.</li>
+            <li>Välj en person från listan i menyn som dyker upp, eller börja skriva personens namn så dyker ett förslag upp (Autocomplete).</li>
+        </ol>
+        <p>Du kan också <strong>dra och släppa</strong> namn från listan till vänster ("Personal") direkt in i schemat. Personal som redan är inlagd markeras i grått.</p>
 
         <h4>📅 Byt till Veckovy (Personalschema)</h4>
-        <p>Om du vill få en överblick över hur mycket personalen jobbar under den valda veckan, klicka på den blå knappen <strong>"📅 Byt till Veckovy"</strong> högst upp bredvid datumväljaren.</p>
-        <div style="background: #e1f5fe; border: 1px solid #81d4fa; padding: 15px; border-radius: 6px; margin-top: 10px;">
-            <strong>Pro-tip för Veckovyn:</strong><br>
-            Veckovyn är <strong>skrivskyddad</strong> för att undvika att man råkar dra och släppa personal på fel dag av misstag. För att flytta ett pass klickar du helt enkelt på "📆 Byt till Dagsvy", gör din ändring med drag-and-drop, och växlar sedan tillbaka för att se resultatet!
-        </div>
+        <p>Klicka på knappen <strong>"📅 Byt till Veckovy"</strong> högst upp för att få en visuell överblick över hur personalen jobbar. Veckovyn är <strong>skrivskyddad</strong> för att undvika oavsiktliga ändringar.</p>
 
-        <h4>Publicera ändringar</h4>
-        <div class="warning-box" style="background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; margin-top: 15px;">
-            <strong>Viktigt:</strong> Ändringar du gör sparas automatiskt som ett "utkast". Om du gör ändringar som inte syns live, visas en gul varningsbanner. För att ändringarna ska synas på storskärmen måste du klicka på den gröna knappen <strong>📡 Publicera</strong> nere till höger.
+        <div class="warning-box">
+            <strong>Viktigt:</strong> Ändringar sparas automatiskt som "utkast". För att de ska synas live på skärmarna och för användarna måste du klicka på den gröna knappen <strong>📡 Publicera</strong>.
         </div>
     </div>
 
     <div id="display">
-        <h3>2. Display-vyn (Storskärm & Mobil)</h3>
-        <p>Display-vyn är den sida som primärt visas på TV-skärmarna i ledningscentralen. Den uppdateras automatiskt var 15:e sekund för att hämta nya publiceringar.</p>
-        <p>Sidan visar:</p>
-        <ul>
-            <li><strong>Datum & Vecka:</strong> Visas högst upp. Slår automatiskt om till nästa dag vid midnatt.</li>
-            <li><strong>Väder:</strong> Live-väder för den stad som är vald i inställningarna.</li>
-            <li><strong>Klocka:</strong> Digital klocka.</li>
-            <li><strong>Schema:</strong> Dagens bemanning för alla stationer.</li>
-            <li><strong>Rullande text:</strong> Ett informationsmeddelande i nederkant (om aktiverat i inställningarna).</li>
-        </ul>
+        <h3>3. Display-vyn & Externa Skärmar</h3>
+        <p>Display-vyn används på de stora TV-skärmarna. I version 1.4 är denna vy säkrad med en unik åtkomstnyckel (Token) så att ingen obehörig kan gissa sig till URL:en.</p>
         
+        <h4>Så ställer du in TV-skärmarna:</h4>
+        <p>Du kan inte längre bara surfa till <code>/display.html</code>. För att skärmen ska tillåtas hämta schemat måste du skicka med nyckeln i länken, så här:</p>
+        <code>https://din-sida.se/display.html?token=DIN_HEMLIGA_NYCKEL</code>
+        <p>Nyckeln hanteras av systemadministratören i Vercel (miljövariabeln <code>DISPLAY_SECRET</code>).</p>
+
         <h4>📱 Mobilanpassning</h4>
-        <p>Display-vyn är numera fullt mobilanpassad. Om personalen surfar in på Display-vyn via sina smartphones kommer schemat automatiskt att göras om till "smarta kort" som staplas på varandra, vilket gör det väldigt lättläst även på små skärmar.</p>
+        <p>Om "Användare" loggar in via mobilen möts de av en fullt mobilanpassad vy där passen staplas som "smarta kort".</p>
     </div>
 
     <div id="settings">
-        <h3>3. Inställningar & Väder</h3>
-        <p>Under knappen <strong>⚙️ Inställningar</strong> kan du anpassa systemet. Även inställningssidan fungerar nu utmärkt att hantera direkt från mobilen.</p>
-
-        <h4>🌤️ Väder & Plats</h4>
-        <p>För att visa rätt väder på displayen:</p>
-        <ol>
-            <li>Gå till fliken <strong>Väder & Plats</strong>.</li>
-            <li>Skriv in namnet på din stad (t.ex. "Boden" eller "Kiruna") i sökfältet och tryck <strong>Sök</strong>.</li>
-            <li>Välj rätt alternativ i listan som dyker upp.</li>
-            <li>Klicka på <strong>Spara Inställningar</strong>.</li>
-        </ol>
-        <p>Displayen kommer nu automatiskt att hämta temperatur för den valda platsen.</p>
-
-        <h4>🚉 Stationer & Pass</h4>
-        <p>Här kan du lägga till nya stationer (platser) eller ändra namnet på dem. Du kan också ändra färgerna på stationerna för att göra schemat tydligare. Du kan dra och släppa stationerna för att ändra ordningen, eller lägga till ett "mellanrum" för att gruppera stationer. Under "Arbetspass" ställer du in vilka tider som gäller (t.ex. Förmiddag, Eftermiddag, Natt).</p>
+        <h3>4. Inställningar & Väder</h3>
+        <p>Under <strong>⚙️ Inställningar</strong> kan du som Admin anpassa systemet.</p>
+        <ul>
+            <li><strong>🌤️ Väder & Plats:</strong> Sök upp din stad för att visa aktuellt väder på displayen.</li>
+            <li><strong>🚉 Platser & Pass:</strong> Skapa nya stationer, ändra färger, sortera ordningen (dra & släpp) eller lägg till "mellanrum". Du kan också anpassa arbetspassens tider (t.ex. 06:30-14:00).</li>
+        </ul>
     </div>
 
     <div id="export">
-        <h3>4. Utskrift & Bildexport</h3>
-        <p>Ibland behöver man schemat på papper eller som en digital bild. Gå till fliken <strong>🖨️ Utskrift & Export</strong> i inställningarna.</p>
-        
-        <h4>Välj period</h4>
-        <p>Börja med att välja vilka dagar du vill exportera. Du kan välja "Idag", "Denna vecka" eller ett valfritt datumintervall i kalendrarna.</p>
-
-        <h4>🖨️ Skriv ut på papper</h4>
-        <p>Klickar du på "Skriv ut" genereras en speciell utskriftsversion av schemat som sparar bläck men behåller tydligheten.</p>
-        <div style="background: #e1f5fe; border: 1px solid #81d4fa; padding: 15px; border-radius: 6px; margin-top: 10px;">
-            <strong>Pro-tip för utskrift:</strong><br>
-            Systemet är skapat för att skrivas ut i <strong>A4 Liggande (Landscape)</strong>. En dag fyller exakt en A4-sida. Se till att din webbläsare är inställd på att <em>skriva ut bakgrundsgrafik/färger</em> så att stationernas färger kommer med!
-        </div>
-
-        <h4>📷 Spara som bild(er)</h4>
-        <p>Klickar du på "Spara som bild" laddar systemet ner schemat som högupplösta bilder (PNG). Du får en bildfil för varje vald dag. Dessa är perfekta att maila ut eller spara i ett gemensamt filsystem.</p>
+        <h3>5. Utskrift & Bildexport</h3>
+        <p>Gå till fliken <strong>🖨️ Utskrift & Export</strong> i inställningarna för att få ut schemat fysiskt.</p>
+        <ul>
+            <li><strong>🖨️ Skriv ut på papper:</strong> Genererar en bläcksparande men tydlig layout. Skrivs bäst ut i <em>A4 Liggande (Landscape)</em>. Se till att "Skriv ut bakgrundsfärger" är ibockat i din webbläsare.</li>
+            <li><strong>📷 Spara som bild(er):</strong> Laddar ner schemat som högupplösta PNG-bilder. Perfekt för att maila ut eller spara digitalt.</li>
+        </ul>
     </div>
 
     <div id="themes">
-        <h3>5. Teman & Utseende</h3>
-        <p>Du kan ändra utseendet på både admin- och displaysidan.</p>
-        <ul>
+        <h3>6. Teman & Utseende</h3>
+        <p>Du kan ändra utseendet på display-skärmarna live.</p>
+        <ol>
             <li>Gå till fliken <strong>Utseende & Tema</strong>.</li>
-            <li>Välj ett tema i listan "Aktivt tema".</li>
-            <li>Du ser direkt en <strong>förhandsgranskning</strong> till höger om hur det kommer se ut.</li>
-            <li>Klicka på <strong>Aktivera Tema</strong> för att spara.</li>
-        </ul>
-        <p>Du kan även skapa egna teman genom att skriva CSS-kod i editorn längst ner på sidan. Observera att ändring av tema påverkar display-skärmarna live.</p>
+            <li>Välj ett tema i listan "Aktivt tema". Förhandsgranskningen till höger visar direkt hur det kommer se ut.</li>
+            <li>Klicka på <strong>Aktivera Tema</strong> för att spara. Display-skärmarna uppdaterar sig själva inom 15 sekunder.</li>
+        </ol>
     </div>
 
     <div id="troubleshoot">
-        <h3>6. Felsökning</h3>
+        <h3>7. Felsökning</h3>
         
-        <p><strong>Skärmen visar inte mina ändringar?</strong><br>
-        Kontrollera att du har klickat på den gröna knappen <strong>Publicera</strong> i admin-vyn. Har du en gul banner över schemat betyder det att du har osparade ändringar. Displayen uppdateras därefter med ca 15 sekunders fördröjning.</p>
+        <p><strong>Display-skärmen säger "Åtkomst nekad"?</strong><br>
+        Kontrollera att du angett URL:en korrekt på TV:n inklusive din token (<code>?token=din_nyckel</code>). Säkerställ att nyckeln överensstämmer med det som är inlagt i Vercel.</p>
 
-        <p><strong>Vädret visar fel stad eller uppdateras inte?</strong><br>
-        Gå till Inställningar > Väder & Plats och gör en ny sökning. Se till att välja rätt stad i listan och klicka på Spara.</p>
-        
-        <p><strong>Schemat ser konstigt ut på mobilen?</strong><br>
-        Både displayen och inställningarna har numera en anpassad mobilvy. Om det mot förmodan ser konstigt ut, testa att ladda om sidan (dra neråt på skärmen) eller töm webbläsarens cache.</p>
+        <p><strong>Schemat uppdateras inte på skärmen?</strong><br>
+        Har du kommit ihåg att trycka på <strong>Publicera</strong> i admin-vyn? Om du har en gul banner överst på schemat betyder det att du har opublicerade ändringar.</p>
 
-        <p><strong>Jag kan inte logga in?</strong><br>
-        Kontrollera lösenordet. Om du glömt det, använd funktionen "Glömt lösenord" på inloggningssidan. En annan admin kan också byta ditt lösenord under fliken "Administratörer".</p>
+        <p><strong>Jag kan inte lägga till personal?</strong><br>
+        Kontrollera att du är inloggad som Administratör och att du tittar på <strong>Dagsvy</strong>. Man kan inte redigera schemat när Veckovy är aktivt.</p>
     </div>
 
     <div style="margin-top:50px; text-align:center; color:#999; font-size:0.8rem;">
-        STRUL Bemanningssystem v1.3 • Uppdaterad manual
+        STRUL Bemanningssystem v1.4 • Uppdaterad manual
     </div>
 
 </div>
