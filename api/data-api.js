@@ -13,7 +13,7 @@ const pool = new Pool({
 const JWT_SECRET = process.env.JWT_SECRET;
 const resend = new Resend(process.env.RESEND_API_KEY); 
 // Hemlig nyckel för externa TV-skärmar (Du kan byta ut denna sträng mot vad du vill)
-const SECRET_DISPLAY_KEY = process.env.DISPLAY_SECRET || "min_hemliga_tv_nyckel_123";
+const SECRET_DISPLAY_KEY = process.env.DISPLAY_SECRET;
 
 if (!JWT_SECRET) {
   console.error("KRITISKT FEL: JWT_SECRET saknas i miljövariablerna.");
