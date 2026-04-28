@@ -5,13 +5,20 @@ let globalStations = [], globalShifts = [], globalCustomThemes = [];
 let editingStationId = null, editingShiftId = null, editingAdminId = null;
 
 export async function initSettings() {
-    if (sessionStorage.getItem('userRole') !== 'admin') {
+    if (sessionStorage.getItem('userRole') !== 'admin' && sessionStorage.getItem('userRole') !== 'superadmin') {
         window.location.href = "user.html";
         return;
     }
 
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName') || 'Admin');
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href = "index.html"; };
+
+    // NYTT: Visa Arbetsplats-flik för Super-Admins
+    if (sessionStorage.getItem('userRole') === 'superadmin') {
+        const tabBtn = document.getElementById('tabBtnWorkplaces');
+        if (tabBtn) tabBtn.style.display = 'flex';
+        initWorkplaceSettings();
+    }
 
     try {
         const [settings, themes, stations, shifts] = await Promise.all([
@@ -81,7 +88,6 @@ function initStationsSettings() {
     const stBtn = document.getElementById('addStationBtn');
     const stCancel = document.getElementById('cancelStationEditBtn');
 
-    // --- DRA-OCH-SLÄPP LOGIK FÖR STATIONER ---
     let dragSrcStationEl = null;
     window.handleStationDragStart = (e) => {
         dragSrcStationEl = e.target.closest('.draggable-station');
@@ -96,11 +102,9 @@ function initStationsSettings() {
             const oldIndex = parseInt(dragSrcStationEl.dataset.index);
             const newIndex = parseInt(targetEl.dataset.index);
             
-            // Flytta objektet i listan lokalt
             const movedItem = globalStations.splice(oldIndex, 1)[0];
             globalStations.splice(newIndex, 0, movedItem);
             
-            // Hämta de nya ID:na i rätt ordning och skicka till databasen
             const newOrderIds = globalStations.map(st => st.id);
             await apiAction('reorder_stations', newOrderIds);
             
@@ -196,7 +200,6 @@ function initShiftsSettings() {
     const shBtn = document.getElementById('addShiftBtn');
     const shCancel = document.getElementById('cancelShiftEditBtn');
 
-    // --- DRA-OCH-SLÄPP LOGIK FÖR PASS ---
     let dragSrcShiftEl = null;
     window.handleShiftDragStart = (e) => {
         dragSrcShiftEl = e.target.closest('.draggable-shift');
@@ -297,9 +300,9 @@ function initAdminSettings() {
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
         document.getElementById('adminListContainer').innerHTML = admins.map(a => {
-            const roleBadge = a.role === 'admin' 
-                ? '<span style="background:#ff9800; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">Admin</span>' 
-                : '<span style="background:#4CAF50; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">User</span>';
+            let roleBadge = '<span style="background:#4CAF50; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">User</span>';
+            if(a.role === 'admin') roleBadge = '<span style="background:#ff9800; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">Admin</span>';
+            if(a.role === 'superadmin') roleBadge = '<span style="background:#9c27b0; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">Super-Admin</span>';
             
             const fullName = `${a.first_name || ''} ${a.last_name || ''}`.trim() || "Namn saknas";
             const displayNameSub = a.display_name ? ` [Visa: ${a.display_name}]` : "";
@@ -384,4 +387,37 @@ function initAdminSettings() {
         }
     };
     renderAdmins();
+}
+
+function initWorkplaceSettings() {
+    const wpName = document.getElementById('newWorkplaceName');
+    const wpBtn = document.getElementById('addWorkplaceBtn');
+    
+    const renderWorkplaces = async () => {
+        const wps = await fetchData('workplaces');
+        const cont = document.getElementById('workplaceListContainer');
+        if (cont && wps) {
+            cont.innerHTML = wps.map(w => `
+            <div class="admin-list-item">
+                <div class="list-info-left">
+                    <strong>${escapeHTML(w.name)}</strong> 
+                    <span style="font-size:0.8rem; color:#888; margin-left:10px;">(ID: ${escapeHTML(w.id)})</span>
+                </div>
+            </div>`).join('');
+        }
+    };
+    
+    if (wpBtn) {
+        wpBtn.onclick = async () => {
+            if (!wpName.value) return showToast("Ange ett namn", "info");
+            await apiAction('save_workplace', { name: wpName.value, is_new: true });
+            wpName.value = '';
+            showToast("Arbetsplats skapad!", "success");
+            renderWorkplaces();
+            
+            setTimeout(() => window.location.reload(), 1500); 
+        };
+    }
+    
+    renderWorkplaces();
 }
