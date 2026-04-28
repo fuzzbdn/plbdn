@@ -102,12 +102,24 @@ export default async function handler(req, res) {
 
         if (currentUserRole !== 'admin') return res.status(403).json({ error: "Behörighet saknas" });
 
-        if (action === 'quick_add_user') {
-            const tempUsername = 'user_' + Date.now();
-            await pool.query('INSERT INTO admin_users (username, display_name, role, workplace_id) VALUES ($1, $2, $3, $4)', 
-                [tempUsername, fullName.trim(), 'user', currentWorkplace]);
-            return res.status(200).json({ success: true });
-        }
+
+if (action === 'quick_add_user') {
+    if (!fullName) return res.status(400).json({ error: "Namn saknas" });
+    
+    // Skapa ett tillfälligt unikt användarnamn (t.ex. user_1714392000)
+    const tempUsername = 'user_' + Date.now();
+    
+    try {
+        await pool.query(
+            'INSERT INTO admin_users (username, display_name, role, workplace_id) VALUES ($1, $2, $3, $4)', 
+            [tempUsername, fullName.trim(), 'user', currentWorkplace]
+        );
+        return res.status(200).json({ success: true });
+    } catch (e) {
+        console.error("Quick add error:", e);
+        return res.status(500).json({ error: "Kunde inte spara till databasen" });
+    }
+}
 
         if (action === 'add_admin') {
             const hashedPassword = await bcrypt.hash(password, 10);
