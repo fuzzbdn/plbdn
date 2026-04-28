@@ -107,27 +107,46 @@ export default async function handler(req, res) {
         // Endast admins nedanför
         if (currentUserRole !== 'admin') return res.status(403).json({ error: "Behörighet saknas" });
 
-        // --- PERSONALHANTERING (FIXAD PAYLOAD) ---
+// --- PERSONALHANTERING ---
         if (action === 'quick_add_user') {
-            // Läs namnet inifrån payload-paketet
             const nameToAdd = payload?.fullName || fullName;
             if (!nameToAdd) return res.status(400).json({ error: "Namn saknas" });
             
+            // Klipp isär namnet för att undvika databas-krasch (first_name får inte vara tomt)
+            const parts = nameToAdd.trim().split(' ');
+            const first = parts[0];
+            const last = parts.length > 1 ? parts.slice(1).join(' ') : '';
             const tempUsername = 'user_' + Date.now();
-            await pool.query(
-                'INSERT INTO admin_users (username, display_name, role, workplace_id) VALUES ($1, $2, $3, $4)', 
-                [tempUsername, nameToAdd.trim(), 'user', currentWorkplace]
-            );
-            return res.status(200).json({ success: true });
+            
+            try {
+                await pool.query(
+                    'INSERT INTO admin_users (username, first_name, last_name, display_name, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6)', 
+                    [tempUsername, first, last, nameToAdd.trim(), 'user', currentWorkplace]
+                );
+                return res.status(200).json({ success: true });
+            } catch (dbError) {
+                console.error("Databasfel vid quick_add_user:", dbError);
+                return res.status(500).json({ success: false, error: "Kunde inte spara till databasen." });
+            }
         }
 
-        if (action === 'remove_user') {
-            // Läs namnet inifrån payload-paketet
+if (action === 'remove_user') {
             const nameToRemove = payload?.fullName || fullName;
             if (!nameToRemove) return res.status(400).json({ error: "Namn saknas" });
 
-            await pool.query("DELETE FROM admin_users WHERE (display_name = $1 OR username = $1) AND workplace_id = $2", [nameToRemove.trim(), currentWorkplace]);
-            return res.status(200).json({ success: true });
+            try {
+                // Raderar oavsett om namnet ligger som visningsnamn, förnamn+efternamn eller användarnamn
+                await pool.query(`
+                    DELETE FROM admin_users 
+                    WHERE (display_name = $1 
+                       OR TRIM(CONCAT(first_name, ' ', COALESCE(last_name, ''))) = $1 
+                       OR username = $1) 
+                    AND workplace_id = $2
+                `, [nameToRemove.trim(), currentWorkplace]);
+                return res.status(200).json({ success: true });
+            } catch (dbError) {
+                return res.status(500).json({ success: false, error: "Kunde inte radera." });
+            }
         }
 
         // Fullständig admin-redigering
