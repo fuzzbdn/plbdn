@@ -36,11 +36,15 @@ function renderAdminGrid() {
         html += `<div class="station-row"><div class="station-label" style="background:${st.color}">${escapeHTML(st.name)}</div>`;
         globalShifts.forEach(sh => {
             const assignments = globalScheduleData[`${currentDateStr}_${st.id}_${sh.id}`] || [];
-            let usersHtml = assignments.map(a => `
-                <span class="assigned-user-pill">
-                    ${escapeHTML(getFriendlyName(a))}
-                    <button class="clear-user-btn" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}" data-user="${a.user_id}">×</button>
-                </span>`).join('');
+let usersHtml = assignments.map(a => {
+    const nameToShow = a.display_name || 
+                       (a.first_name ? `${a.first_name} ${a.last_name||''}`.trim() : a.username);
+    return `
+    <span class="assigned-user-pill">
+        ${escapeHTML(nameToShow)}
+        <button class="clear-user-btn" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}" data-user="${a.user_id}">×</button>
+    </span>`;
+}).join('');
             html += `<div class="shift-block" ondrop="handleDrop(event)" ondragover="event.preventDefault()" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}">${usersHtml}</div>`;
         });
         html += `</div>`;
