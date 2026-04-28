@@ -49,14 +49,30 @@ function renderAdminGrid() {
 }
 
 function renderRoster() {
+// I din js/admin.js, uppdatera renderRoster:
+function renderRoster() {
     const list = document.getElementById('draggableUserList');
-    list.innerHTML = globalUserList.map(u => {
-        const name = getFriendlyName(u);
-        return `<div class="draggable-item" draggable="true" ondragstart="event.dataTransfer.setData('user_id','${u.id}')">
-            ${escapeHTML(name)}
-            <button class="remove-user-btn" data-fullname="${escapeHTML(name)}">×</button>
-        </div>`;
+    if(!list) return;
+    
+    // ... (behåll logiken för sortering och busy-status)
+
+    list.innerHTML = sortedUsers.map(u => {
+        const isAssigned = workingTodayUserIds.has(u.id);
+        const assignedClass = isAssigned ? 'assigned' : '';
+        
+        // PRIORITET: 1. display_name, 2. förnamn+efternamn, 3. username
+        const nameToShow = u.display_name || 
+                           (u.first_name ? `${u.first_name} ${u.last_name||''}`.trim() : u.username);
+        
+        const safeName = escapeHTML(nameToShow);
+        return `<div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('user_id','${u.id}')">
+                    ${safeName} 
+                    <button class="remove-user-btn" data-fullname="${safeName}">×</button>
+                </div>`;
     }).join('');
+    
+    // ... (behåll event listeners för radering)
+}
 }
 
 async function updateGrid(dateStr) {
