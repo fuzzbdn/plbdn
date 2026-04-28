@@ -15,7 +15,6 @@
 <body class="admin-view" id="page-admin">
 
 <div class="admin-wrapper">
-    
     <header class="admin-header">
         <div class="header-content">
             
@@ -35,6 +34,11 @@
             </div>
             
             <div style="display:flex; align-items:center; gap:15px;">
+                <div id="superAdminContainer" style="display:none; align-items:center; gap:10px; background:#e3f2fd; padding:5px 10px; border-radius:6px; border:1px solid #90caf9;">
+                    <label for="workplaceSelect" style="font-size:0.85rem; font-weight:bold; color:#0277bd;">🏢 Arbetsplats:</label>
+                    <select id="workplaceSelect" style="padding:4px; border-radius:4px; border:1px solid #ccc; font-size:0.9rem;"></select>
+                </div>
+                
                 <span id="currentUserDisplay" style="font-weight:500; opacity:0.8;"></span>
                 <button id="logoutBtn" class="logout-btn">Logga ut</button>
             </div>
@@ -43,7 +47,6 @@
     </header>
 
     <div class="admin-layout" style="margin-top: 20px;">
-        
         <aside class="sidebar-roster">
             <div class="roster-card">
                 <h3>Personal</h3>
@@ -56,7 +59,6 @@
         </aside>
 
         <main class="schedule-card-wrapper">
-            
             <div id="publishReminderBanner" class="publish-banner hidden">
                 <span style="font-size:1.2rem; margin-right: 10px;">⚠️</span>
                 <span>Det finns ändringar i utkastet som inte har publicerats till displayen än.</span>
@@ -64,7 +66,6 @@
 
             <div class="schedule-card">
                 <div class="grid-container" id="scheduleContainer"></div>
-                
                 <div id="weeklyContainer" style="display:none; overflow-x: auto;"></div>
             </div>
             
@@ -77,12 +78,10 @@
                 </div>
             </footer>
         </main>
-
     </div>
 </div>
 
 <div id="print-container"></div>
-
 <div id="toast-container"></div> 
 
 <div id="confirmModal" class="modal-overlay">
