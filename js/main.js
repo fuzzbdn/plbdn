@@ -1,17 +1,23 @@
+import { APP_VERSION } from './config.js';
 import { initLogin, initReset } from './auth.js';
 import { initAdmin } from './admin.js';
-import { initUser } from './user.js'; // <-- NY
+import { initUser } from './user.js';
 import { initDisplay } from './display.js';
 import { initSettings } from './settings.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- NYTT: Skriv automatiskt ut versionen på alla sidor ---
+    document.querySelectorAll('.version-tag').forEach(tag => {
+        tag.innerText = APP_VERSION;
+    });
+
     const pageId = document.body.id;
     console.log("Startar modul för sida:", pageId);
 
     if (pageId === 'page-login') initLogin();
     else if (pageId === 'page-reset') initReset();
     else if (pageId === 'page-admin') initAdmin();
-    else if (pageId === 'page-user') initUser(); // <-- NY
+    else if (pageId === 'page-user') initUser(); 
     else if (pageId === 'page-display') initDisplay();
     else if (pageId === 'page-settings') initSettings(); 
 });
@@ -23,9 +29,8 @@ window.openTab = function(tabId) {
         pane.style.display = 'none';
     });
     const allBtns = document.querySelectorAll('.tab-btn');
-    allBtns.forEach(btn => {
-        btn.classList.remove('active');
-    });
+    allBtns.forEach(btn => btn.classList.remove('active'));
+    
     const targetPane = document.getElementById(tabId);
     if (targetPane) {
         targetPane.classList.add('active');
