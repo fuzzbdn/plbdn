@@ -425,3 +425,88 @@
     font-size: 0.85rem;
     font-weight: 600;
 }
+
+/* =========================================
+   8. MOBILANPASSNING FÖR ANVÄNDARVYN (KORT-LAYOUT)
+   Gör om rutnätet till staplade smarta kort på små skärmar.
+   ========================================= */
+@media (max-width: 850px) {
+    /* Gömmer de övre tidsrubrikerna och mellanrummen på mobilen */
+    body#page-user .header-row,
+    body#page-user .station-row[style*="height:30px"] {
+        display: none !important;
+    }
+
+    /* Gör om hela raden till en staplad vit ruta */
+    body#page-user .station-row {
+        display: flex !important;
+        flex-direction: column;
+        background: #fff;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+        gap: 8px;
+    }
+
+    /* Centrerar stationsnamnet och lägger ett färgstreck i botten */
+    body#page-user .station-label {
+        width: 100%;
+        height: auto;
+        min-height: 45px;
+        justify-content: center;
+        border-left: none;
+        border-bottom: 4px solid var(--station-color, #ccc);
+        margin-bottom: 10px;
+        box-sizing: border-box;
+    }
+
+    /* Gör varje pass-ruta bred och skjuter texten till höger */
+    body#page-user .shift-block {
+        width: 100%;
+        min-height: 45px;
+        justify-content: space-between; /* Skjuter isär etikett och namn */
+        border: none;
+        border-left: 4px solid var(--station-color, #ccc);
+        background: #f8f9fa;
+        box-sizing: border-box;
+    }
+
+    /* Skriver automatiskt ut "Förmiddag / Eftermiddag" till vänster inuti rutan */
+    body#page-user .shift-block::before {
+        content: attr(data-label);
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: #666;
+        text-transform: uppercase;
+    }
+
+    /* Design för tomma pass i mobilen */
+    body#page-user .shift-block.empty {
+        background-color: transparent;
+        border-left: 4px dashed #ccc;
+    }
+    body#page-user .shift-block.empty .shift-text {
+        display: none; 
+    }
+    body#page-user .shift-block.empty::after {
+        content: "Obemannat";
+        color: #aaa;
+        font-style: italic;
+        font-size: 0.9rem;
+    }
+    
+    /* Justerar sidhuvudet (datum & knappar) så de inte krockar på små skärmar */
+    body#page-user .header-content {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    body#page-user .header-datepicker {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    body#page-user .date-navigation {
+        margin: 10px 0;
+    }
+}
