@@ -1,187 +1,214 @@
-import { fetchData, saveData } from './service.js';
+import { fetchData, apiAction } from './service.js';
 import { showToast, showConfirm, getISOWeek, isLight, escapeHTML } from './utils.js';
-import { DEFAULT_STATIONS, DEFAULT_SHIFTS, DAYS } from './config.js';
+import { DAYS } from './config.js';
 
-let globalScheduleData = {};
-let publishedDataSnapshot = {};
+let globalScheduleData = {}; // Format: "YYYY-MM-DD_stationId_shiftId" -> [userObj, userObj]
 let globalUserList = [];
 let globalStations = [];
 let globalShifts = [];
 let selectedWeek = 0;
 let selectedYear = 0;
 let currentAdminDayIndex = 0;
-let isWeeklyView = false; // Status för veckovyn
+let isWeeklyView = false;
+let datesOfWeek = []; // Håller reda på datumen för den valda veckan (Mån-Sön)
+let hasUnpublishedChanges = false;
+
+// Hjälpfunktion för att hämta alla Måndag-Söndag datum för en specifik dag
+function getDatesOfWeek(dateStr) {
+    const d = new Date(dateStr);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+    const monday = new Date(d.setDate(diff));
+    const dates = [];
+    for (let i=0; i<7; i++) {
+        const temp = new Date(monday);
+        temp.setDate(monday.getDate() + i);
+        // Justera för tidszon så datumet blir exakt rätt YYYY-MM-DD
+        const tzoffset = temp.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(temp.getTime() - tzoffset)).toISOString().slice(0, 10);
+        dates.push(localISOTime);
+    }
+    return dates;
+}
 
 export async function initAdmin() {
-    // --- SÄKERHETSFIX 1: Stoppa obehöriga från att nå admin-sidan ---
     if (sessionStorage.getItem('userRole') !== 'admin') {
-        window.location.href = "user.html";
-        return;
+        window.location.href = "user.html"; return;
     }
-    // -----------------------------------------------------------------
 
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
     
+    // Ladda grunddata (Stations, Shifts, Users) - Version 2.0
     try {
-        const [users, draft, published, old, stations, shifts] = await Promise.all([
+        const [users, stations, shifts] = await Promise.all([
             fetchData('users'),
-            fetchData('schedule_draft'),
-            fetchData('schedule_published'),
-            fetchData('schedule'),
-            fetchData('config_stations'),
-            fetchData('config_shifts')
+            fetchData('stations'),
+            fetchData('shifts')
         ]);
-
         globalUserList = Array.isArray(users) ? users : [];
-        globalStations = (Array.isArray(stations) && stations.length) ? stations : DEFAULT_STATIONS;
-        globalShifts = (Array.isArray(shifts) && shifts.length) ? shifts : DEFAULT_SHIFTS;
-        
-        publishedDataSnapshot = published || {}; 
-
-        if(!draft || !Object.keys(draft).length) {
-            globalScheduleData = (published && Object.keys(published).length) ? published : (old || {});
-        } else {
-            globalScheduleData = draft;
-        }
-
+        globalStations = Array.isArray(stations) ? stations : [];
+        globalShifts = Array.isArray(shifts) ? shifts : [];
     } catch (e) {
-        console.error("Kunde inte hämta data:", e);
-        showToast("Fel vid hämtning av data", "error");
+        showToast("Fel vid hämtning av grunddata", "error");
     }
 
-    document.getElementById('publishBtn').onclick = async () => {
-        if(await showConfirm("Vill du publicera schemat till displayen?")) { 
-            await saveData('schedule_published', globalScheduleData); 
-            publishedDataSnapshot = JSON.parse(JSON.stringify(globalScheduleData));
-            checkPublishStatus();
-            showToast("Schemat är publicerat!", "success"); 
-        }
-    };
-
+    // Navigering och Datum
     const picker = document.getElementById('adminDatePicker');
     picker.value = new Date().toISOString().split('T')[0];
     picker.onchange = (e) => updateGrid(e.target.value);
     
-    const prevBtn = document.getElementById('prevDayBtn');
-    const nextBtn = document.getElementById('nextDayBtn');
-    
-    if(prevBtn && nextBtn) {
-        prevBtn.onclick = () => changeDate(-1);
-        nextBtn.onclick = () => changeDate(1);
-    }
+    document.getElementById('prevDayBtn').onclick = () => changeDate(-1);
+    document.getElementById('nextDayBtn').onclick = () => changeDate(1);
 
     function changeDate(days) {
-        const currentVal = picker.value;
-        if(!currentVal) return;
-        const d = new Date(currentVal);
+        if(!picker.value) return;
+        const d = new Date(picker.value);
         d.setDate(d.getDate() + days);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const newDateStr = `${yyyy}-${mm}-${dd}`;
-        picker.value = newDateStr;
-        updateGrid(newDateStr);
+        const tzoffset = d.getTimezoneOffset() * 60000;
+        picker.value = (new Date(d.getTime() - tzoffset)).toISOString().slice(0, 10);
+        updateGrid(picker.value);
     }
 
-    updateGrid(picker.value);
+    // Publicera-knapp V2.0
+    document.getElementById('publishBtn').onclick = async () => {
+        if(await showConfirm("Vill du publicera veckans schema till displayen?")) { 
+            const res = await apiAction('publish_schedule', { start_date: datesOfWeek[0], end_date: datesOfWeek[6] });
+            if (res.success) {
+                showToast("Schemat är publicerat!", "success"); 
+                updateGrid(picker.value); // Ladda om för att ta bort "utkast"-status
+            } else {
+                showToast("Kunde inte publicera", "error");
+            }
+        }
+    };
+
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
-    setupSidebarAddUser();
     
+    // Drag and Drop (Spara pass)
+    window.handleDrop = async (e) => {
+        e.preventDefault(); 
+        const date = e.currentTarget.getAttribute('data-date');
+        const stationId = e.currentTarget.getAttribute('data-station');
+        const shiftId = e.currentTarget.getAttribute('data-shift');
+        const userId = e.dataTransfer.getData("user_id"); 
+        
+        if (!userId) return;
+
+        // Kontrollera om personen redan jobbar där
+        const key = `${date}_${stationId}_${shiftId}`;
+        const existing = globalScheduleData[key] || [];
+        if (existing.some(u => u.user_id == userId)) return; // Jobbar redan där
+
+        // Spara i databasen direkt
+        const res = await apiAction('assign_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
+        if (res.success) {
+            updateGrid(picker.value); // Rita om schemat efter vi sparat
+        } else {
+            showToast("Kunde inte lägga till person", "error");
+        }
+    };
+
+    // Lyssna på klick för att ta bort från passet (krysset)
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
-        scheduleContainer.addEventListener('focusout', (e) => {
-            if (e.target.classList.contains('shift-text')) {
-                saveShift(e.target.getAttribute('data-key'), e.target.innerText);
-            }
-        });
-
-        // --- LYSNAR PÅ INMATNING FÖR AUTOCOMPLETE ---
-        scheduleContainer.addEventListener('input', (e) => {
-            if (e.target.classList.contains('shift-text')) {
-                showAutocomplete(e.target);
-            }
-        });
-
-        scheduleContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('add-user-btn')) {
-                manualAdd(e, e.target.getAttribute('data-key'));
-            } else if (e.target.classList.contains('clear-btn')) {
-                saveShift(e.target.getAttribute('data-key'), '');
+        scheduleContainer.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('clear-user-btn')) {
+                const date = e.target.getAttribute('data-date');
+                const stationId = e.target.getAttribute('data-station');
+                const shiftId = e.target.getAttribute('data-shift');
+                const userId = e.target.getAttribute('data-user');
+                
+                const res = await apiAction('remove_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
+                if (res.success) {
+                    updateGrid(picker.value);
+                }
             }
         });
     }
 
-    const userListEl = document.getElementById('draggableUserList');
-    if(userListEl) {
-        userListEl.addEventListener('click', (e) => {
-            if(e.target.classList.contains('remove-user-btn')) {
-                removeUser(e.target.getAttribute('data-user'));
-            }
-        });
-    }
-    
-    window.handleDrop = handleDrop;
+    setupSidebarAddUser();
 
-    // --- LOGIK FÖR KNAPPEN ATT BYTA VY ---
+    // Byt Vy (Dag / Vecka)
     const toggleBtn = document.getElementById('toggleViewBtn');
     if (toggleBtn) {
         toggleBtn.onclick = () => {
             isWeeklyView = !isWeeklyView;
-            
             const dayCont = document.getElementById('scheduleContainer');
             const weekCont = document.getElementById('weeklyContainer');
-            
             if (isWeeklyView) {
                 dayCont.style.display = 'none';
                 weekCont.style.display = 'block';
                 toggleBtn.innerText = "📆 Byt till Dagsvy";
                 toggleBtn.style.backgroundColor = "#455a64";
-                renderWeeklyView();
             } else {
                 dayCont.style.display = 'grid';
                 weekCont.style.display = 'none';
                 toggleBtn.innerText = "📅 Byt till Veckovy";
                 toggleBtn.style.backgroundColor = "#0277bd";
-                renderAdminGrid();
             }
+            renderViews();
         };
     }
+
+    // Starta upp
+    updateGrid(picker.value);
 }
 
-function updateGrid(dateStr) {
+// Laddar schemat från databasen för den valda veckan
+async function updateGrid(dateStr) {
     const d = new Date(dateStr);
     const iso = getISOWeek(d);
     selectedWeek = iso.week; 
     selectedYear = iso.year;
     currentAdminDayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
+    datesOfWeek = getDatesOfWeek(dateStr);
     
-    const dateDisplay = document.getElementById('currentDateDisplay');
-    if(dateDisplay) {
-        dateDisplay.innerText = `${DAYS[currentAdminDayIndex]} v.${selectedWeek}, ${selectedYear}`;
+    document.getElementById('currentDateDisplay').innerText = `${DAYS[currentAdminDayIndex]} v.${selectedWeek}, ${selectedYear}`;
+    
+    // Hämta hela veckans schema från databasen (V2)
+    const scheduleRaw = await fetchData('schedule', `&start_date=${datesOfWeek[0]}&end_date=${datesOfWeek[6]}`);
+    
+    globalScheduleData = {};
+    hasUnpublishedChanges = false;
+
+    if (Array.isArray(scheduleRaw)) {
+        scheduleRaw.forEach(row => {
+            // Formatera datumet till ren text "YYYY-MM-DD"
+            const localDate = row.work_date.split('T')[0];
+            const key = `${localDate}_${row.station_id}_${row.shift_id}`;
+            
+            if (!globalScheduleData[key]) globalScheduleData[key] = [];
+            globalScheduleData[key].push(row);
+            
+            if (!row.is_published) hasUnpublishedChanges = true;
+        });
     }
+
+    renderViews();
     
-    // Välj vilken vy som ska ritas om
-    if (isWeeklyView) {
-        renderWeeklyView();
-    } else {
-        renderAdminGrid();
+    const banner = document.getElementById('publishReminderBanner');
+    if (banner) {
+        if (hasUnpublishedChanges) banner.classList.remove('hidden');
+        else banner.classList.add('hidden');
     }
-    
+}
+
+function renderViews() {
+    if (isWeeklyView) renderWeeklyView(); 
+    else renderAdminGrid();
     renderRoster();
-    checkPublishStatus();
 }
 
 function renderAdminGrid() {
     const cont = document.getElementById('scheduleContainer');
     if(!cont) return;
 
-    const dayName = DAYS[currentAdminDayIndex];
-    const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
+    const currentDateStr = datesOfWeek[currentAdminDayIndex];
 
-    let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${escapeHTML(s.time)}</div>`).join('')}</div>`;
+    let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
 
     globalStations.forEach(st => {
-        if(st.isSpacer) { 
+        if(st.is_spacer) { 
             html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; 
             return; 
         }
@@ -192,78 +219,58 @@ function renderAdminGrid() {
         html += `<div class="station-row"><div class="station-label" style="${styles}">${escapeHTML(st.name)}</div>`;
         
         globalShifts.forEach(sh => {
-            const key = `${prefix}${st.name}-${sh.time}`;
-            const val = globalScheduleData[key] || "";
-            const safeVal = escapeHTML(val);
-            const safeKey = escapeHTML(key);
+            const key = `${currentDateStr}_${st.id}_${sh.id}`;
+            const assignments = globalScheduleData[key] || [];
+            const hasUsers = assignments.length > 0;
             
-// Ändra denna del inuti renderAdminGrid() i admin.js
-html += `
-<div class="shift-block ${safeVal?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-key="${safeKey}" data-label="${escapeHTML(sh.label)}">
-    <span class="shift-text" contenteditable="true" data-key="${safeKey}">${safeVal}</span>
-    <div class="shift-controls">
-        <button class="add-user-btn" data-key="${safeKey}" title="Lägg till">+</button>
-        ${safeVal ? `<button class="clear-btn" data-key="${safeKey}">×</button>`:''}
-    </div>
-</div>`;
+            // Renderar ut alla personer inbokade på detta pass
+            let usersHtml = assignments.map(a => {
+                const fullName = `${a.first_name} ${a.last_name||''}`.trim();
+                return `
+                <span class="assigned-user-pill">
+                    ${escapeHTML(fullName)}
+                    <button class="clear-user-btn" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}" data-user="${a.user_id}">×</button>
+                </span>`;
+            }).join('');
+            
+            html += `
+            <div class="shift-block ${hasUsers?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}" data-label="${escapeHTML(sh.label)}">
+                <div class="shift-users-container">${usersHtml}</div>
+                <div class="shift-controls">
+                    </div>
+            </div>`;
         });
         html += `</div>`;
     });
     cont.innerHTML = html;
 }
 
-// --- DEN NYA VECKOVYN ---
 function renderWeeklyView() {
+    // VECKOVY FÖR V2.0 (Förenklad för att rita ut databas-posterna)
     const cont = document.getElementById('weeklyContainer');
     if(!cont) return;
 
-    let html = '<div class="weekly-grid">';
-    
-    // Bygg tabellhuvudet (Personal + Dagar)
-    html += `<div class="weekly-header-row"><div class="weekly-user-name">Personal</div>`;
-    DAYS.forEach(day => {
-        html += `<div>${day}</div>`;
-    });
+    let html = '<div class="weekly-grid"><div class="weekly-header-row"><div class="weekly-user-name">Personal</div>';
+    DAYS.forEach(day => html += `<div>${day}</div>`);
     html += `</div>`;
 
-    // Sortera personal i bokstavsordning
-    const sortedUsers = [...globalUserList].sort();
-    
-    sortedUsers.forEach(user => {
-        html += `<div class="weekly-user-row">`;
-        html += `<div class="weekly-user-name">${escapeHTML(user)}</div>`;
+    globalUserList.forEach(user => {
+        const fullName = `${user.first_name} ${user.last_name||''}`.trim();
+        html += `<div class="weekly-user-row"><div class="weekly-user-name">${escapeHTML(fullName)}</div>`;
         
-        DAYS.forEach(day => {
-            const prefix = `y${selectedYear}w${selectedWeek}-${day}-`;
+        for (let i = 0; i < 7; i++) {
+            const dateStr = datesOfWeek[i];
             let userAssignments = [];
 
-            // Gå igenom hela schemat efter denna persons pass för denna dag
+            // Leta i hela schemat efter pass för denna dag + användare
             Object.keys(globalScheduleData).forEach(key => {
-                if (key.startsWith(prefix)) {
-                    const cellValue = globalScheduleData[key] || "";
-                    const usersInCell = cellValue.split('/').map(n => n.trim());
-                    
-                    if (usersInCell.includes(user)) {
-                        const remainder = key.replace(prefix, ''); // "Boden-Förmiddag"
-                        let foundStation = null;
-                        let foundShift = null;
-                        
-                        globalStations.forEach(st => {
-                            if(st.isSpacer) return;
-                            globalShifts.forEach(sh => {
-                                if (`${st.name}-${sh.time}` === remainder) {
-                                    foundStation = st; foundShift = sh;
-                                }
-                            });
-                        });
-
-                        if (foundStation && foundShift) {
-                            userAssignments.push({
-                                station: foundStation.name,
-                                color: foundStation.color,
-                                shiftLabel: foundShift.label
-                            });
-                        }
+                if (key.startsWith(dateStr)) {
+                    const rowAssignments = globalScheduleData[key];
+                    const assignment = rowAssignments.find(a => a.user_id === user.id);
+                    if (assignment) {
+                        const st = globalStations.find(s => s.id === assignment.station_id);
+                        const sh = globalShifts.find(s => s.id === assignment.shift_id);
+                        if (st && sh) userAssignments.push({ station: st.name, color: st.color, shiftLabel: sh.label });
                     }
                 }
             });
@@ -275,24 +282,15 @@ function renderWeeklyView() {
                 userAssignments.forEach(a => {
                     const bg = a.color;
                     const fg = isLight(bg) ? '#000' : '#fff';
-                    
-                    // Korta ner FM/EM för att spara plats
-                    let shortLabel = a.shiftLabel;
-                    if(shortLabel.toLowerCase() === 'förmiddag') shortLabel = 'FM';
-                    if(shortLabel.toLowerCase() === 'eftermiddag') shortLabel = 'EM';
-                    
-                    html += `<div class="weekly-badge" style="background:${escapeHTML(bg)}; color:${fg};">
-                        ${escapeHTML(a.station)} <span style="opacity:0.8; font-weight:normal;">(${escapeHTML(shortLabel)})</span>
-                    </div>`;
+                    let shortLabel = a.shiftLabel.toLowerCase() === 'förmiddag' ? 'FM' : (a.shiftLabel.toLowerCase() === 'eftermiddag' ? 'EM' : a.shiftLabel);
+                    html += `<div class="weekly-badge" style="background:${escapeHTML(bg)}; color:${fg};">${escapeHTML(a.station)} <span style="opacity:0.8; font-weight:normal;">(${escapeHTML(shortLabel)})</span></div>`;
                 });
             }
             html += `</div>`;
-        });
-        
-        html += `</div>`; // Stäng weekly-user-row
+        }
+        html += `</div>`; 
     });
-
-    html += '</div>'; // Stäng weekly-grid
+    html += '</div>'; 
     cont.innerHTML = html;
 }
 
@@ -300,130 +298,49 @@ function renderRoster() {
     const list = document.getElementById('draggableUserList');
     if(!list) return;
     
-    const dayName = DAYS[currentAdminDayIndex];
-    const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
-    const work = new Set();
+    const currentDateStr = datesOfWeek[currentAdminDayIndex];
+    const workingTodayUserIds = new Set();
     
+    // Samla in alla som jobbar idag för att gråmarkera dem
     Object.keys(globalScheduleData).forEach(k => { 
-        if(k.startsWith(prefix) && globalScheduleData[k]) { 
-            globalScheduleData[k].split('/').forEach(n => work.add(n.trim())); 
+        if(k.startsWith(currentDateStr)) { 
+            globalScheduleData[k].forEach(a => workingTodayUserIds.add(a.user_id));
         }
     });
 
     const sortedUsers = [...globalUserList].sort((a, b) => {
-        const aBusy = work.has(a);
-        const bBusy = work.has(b);
-        if (aBusy === bBusy) return a.localeCompare(b);
+        const aBusy = workingTodayUserIds.has(a.id);
+        const bBusy = workingTodayUserIds.has(b.id);
+        if (aBusy === bBusy) return (a.first_name || "").localeCompare(b.first_name || "");
         return aBusy ? 1 : -1; 
     });
 
     list.innerHTML = sortedUsers.map(u => {
-        const isAssigned = work.has(u);
+        const isAssigned = workingTodayUserIds.has(u.id);
         const assignedClass = isAssigned ? 'assigned' : '';
-        const safeU = escapeHTML(u);
-        return `<div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('text','${safeU}')">${safeU} <button class="remove-user-btn" data-user="${safeU}">×</button></div>`;
+        const fullName = `${u.first_name} ${u.last_name||''}`.trim();
+        const safeName = escapeHTML(fullName);
+        // NY V2 DND: Skickar 'user_id' istället för namnet
+        return `<div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('user_id','${u.id}')">${safeName} <button class="remove-user-btn" data-fullname="${safeName}">×</button></div>`;
     }).join('');
-}
-
-function checkPublishStatus() {
-    const banner = document.getElementById('publishReminderBanner');
-    if (!banner) return;
-    const dayName = DAYS[currentAdminDayIndex];
-    const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
-    let currentViewChanged = false;
-    const val = (v) => (v || "").trim();
-    const relevantKeys = new Set();
     
-    Object.keys(globalScheduleData).forEach(k => { if(k.startsWith(prefix)) relevantKeys.add(k); });
-    Object.keys(publishedDataSnapshot).forEach(k => { if(k.startsWith(prefix)) relevantKeys.add(k); });
-
-    for (const key of relevantKeys) {
-        if (val(globalScheduleData[key]) !== val(publishedDataSnapshot[key])) {
-            currentViewChanged = true; break;
-        }
-    }
-
-    if (currentViewChanged) { banner.classList.remove('hidden'); } else { banner.classList.add('hidden'); }
-}
-
-async function saveShift(k, v) { 
-    globalScheduleData[k] = v.trim(); 
-    await saveData('schedule_draft', globalScheduleData); 
-    checkPublishStatus();
-    if (isWeeklyView) renderWeeklyView(); else renderAdminGrid(); 
-    renderRoster(); 
-}
-
-async function handleDrop(e) { 
-    e.preventDefault(); 
-    const k = e.currentTarget.getAttribute('data-key');
-    const n = e.dataTransfer.getData("text"); 
-    let c = globalScheduleData[k] || ""; 
-    if(!c.includes(n)) await saveShift(k, c ? c + " / " + n : n); 
-}
-
-function manualAdd(e, key) {
-    e.stopPropagation();
-    const existing = document.getElementById('quick-dropdown');
-    if (existing) existing.remove();
-
-    const dayName = DAYS[currentAdminDayIndex];
-    const prefix = `y${selectedYear}w${selectedWeek}-${dayName}-`;
-    const busyUsers = new Set();
-    
-    Object.keys(globalScheduleData).forEach(k => { 
-        if(k.startsWith(prefix) && globalScheduleData[k]) { 
-            globalScheduleData[k].split('/').forEach(n => busyUsers.add(n.trim())); 
-        }
+    // Ta bort person helt från databasen (Snabbradering)
+    list.querySelectorAll('.remove-user-btn').forEach(btn => {
+        btn.onclick = async (e) => {
+            const name = e.target.getAttribute('data-fullname');
+            if(await showConfirm(`Ta bort ${name} från databasen?`)){
+                const res = await apiAction('remove_user', { fullName: name });
+                if (res.success) {
+                    showToast("Personal borttagen", "info");
+                    // Hämta om personalistan från DB och rendera om
+                    globalUserList = await fetchData('users') || [];
+                    renderViews();
+                } else {
+                    showToast("Kunde inte ta bort användaren", "error");
+                }
+            }
+        };
     });
-    
-    const availableUsers = globalUserList.filter(u => !busyUsers.has(u)).sort();
-    const menu = document.createElement('div');
-    menu.id = 'quick-dropdown';
-    menu.className = 'dropdown-menu';
-    menu.style.left = `${e.pageX}px`;
-    menu.style.top = `${e.pageY + 10}px`;
-
-    let html = availableUsers.length > 0 
-        ? availableUsers.map(u => `<div class="dropdown-item user-select-btn" data-key="${escapeHTML(key)}" data-user="${escapeHTML(u)}">${escapeHTML(u)}</div>`).join('') 
-        : `<div class="dropdown-item disabled">Ingen ledig</div>`;
-    
-    html += `<div class="dropdown-item manual-btn" data-key="${escapeHTML(key)}">+ Skriv in eget namn...</div>`;
-    menu.innerHTML = html;
-    document.body.appendChild(menu);
-
-    menu.addEventListener('click', (evt) => {
-        if (evt.target.classList.contains('user-select-btn')) {
-            selectUser(evt.target.getAttribute('data-key'), evt.target.getAttribute('data-user'));
-        } else if (evt.target.classList.contains('manual-btn')) {
-            selectUserManual(evt.target.getAttribute('data-key'));
-        }
-    });
-    
-    document.addEventListener('click', function closeMenu(evt) { 
-        if (!menu.contains(evt.target)) menu.remove(); 
-    }, { once: true });
-}
-
-async function selectUser(key, name) {
-    const currentVal = globalScheduleData[key] || "";
-    const newVal = currentVal ? currentVal + " / " + name : name;
-    const menu = document.getElementById('quick-dropdown');
-    if(menu) menu.remove();
-    await saveShift(key, newVal);
-}
-
-async function selectUserManual(key) {
-    const menu = document.getElementById('quick-dropdown');
-    if(menu) menu.remove();
-    setTimeout(async () => {
-        const name = prompt("Ange namn:");
-        if (name) {
-            const currentVal = globalScheduleData[key] || "";
-            const newVal = currentVal ? currentVal + " / " + name : name;
-            await saveShift(key, newVal);
-        }
-    }, 50);
 }
 
 function setupSidebarAddUser() {
@@ -431,99 +348,19 @@ function setupSidebarAddUser() {
     const inp = document.getElementById('sidebarNewName');
     if(btn && inp) { 
         btn.onclick = async () => {
-            if(inp.value){
-                globalUserList.push(inp.value);
-                globalUserList.sort();
-                await saveData('users', globalUserList);
-                showToast("Personal tillagd", "success");
-                inp.value='';
-                if (isWeeklyView) renderWeeklyView();
-                renderRoster();
+            const newName = inp.value.trim();
+            if(newName){
+                const res = await apiAction('quick_add_user', { fullName: newName });
+                if (res.success) {
+                    showToast("Personal tillagd i databasen", "success");
+                    inp.value = '';
+                    globalUserList = await fetchData('users') || [];
+                    renderViews();
+                } else {
+                    showToast("Kunde inte lägga till personal", "error");
+                }
             }
         }; 
         inp.onkeydown = e => { if(e.key==='Enter') btn.click(); } 
     }
 }
-
-async function removeUser(u) { 
-    if(await showConfirm('Ta bort '+u+'?')){
-        globalUserList = globalUserList.filter(user => user !== u);
-        await saveData('users', globalUserList);
-        showToast("Personal borttagen", "info");
-        if (isWeeklyView) renderWeeklyView();
-        renderRoster();
-    } 
-}
-
-// =========================================
-// AUTOCOMPLETE FUNKTIONER FÖR SCHEMAT
-// =========================================
-
-function showAutocomplete(element) {
-    closeAutocomplete(); // Stäng eventuell tidigare meny
-
-    const text = element.innerText;
-    
-    // Dela upp texten vid snedstreck (/) ifall flera personer redan är inlagda i samma pass
-    const parts = text.split('/');
-    const currentPart = parts[parts.length - 1].trim();
-
-    // Om rutan är tom eller vi inte har skrivit någon bokstav än, visa ingen meny
-    if (currentPart.length === 0) return;
-
-    // Leta efter personal vars namn börjar på bokstäverna vi skrivit (oberoende av versaler)
-    const matches = globalUserList.filter(u => u.toLowerCase().startsWith(currentPart.toLowerCase()));
-
-    // Om vi inte hittar någon matchning, avbryt
-    if (matches.length === 0) return;
-
-    // Skapa och positionera rullgardinsmenyn under textrutan
-    const rect = element.getBoundingClientRect();
-    const dropdown = document.createElement('div');
-    dropdown.id = 'autocomplete-dropdown';
-    dropdown.className = 'dropdown-menu'; 
-    dropdown.style.left = `${rect.left}px`;
-    dropdown.style.top = `${rect.bottom + window.scrollY}px`; 
-    dropdown.style.position = 'absolute';
-    dropdown.style.zIndex = '10000';
-    dropdown.style.maxHeight = '200px';
-    dropdown.style.overflowY = 'auto';
-
-    // Lägg till de matchande namnen i menyn
-    matches.forEach(match => {
-        const item = document.createElement('div');
-        item.className = 'dropdown-item';
-        item.innerText = match;
-        
-        // När man klickar på ett namn i menyn
-        item.onclick = (evt) => {
-            evt.preventDefault();
-            evt.stopPropagation();
-            
-            // Ersätt den påbörjade texten med det valda namnet
-            parts[parts.length - 1] = parts.length > 1 ? " " + match : match;
-            const newText = parts.join(' / ').trim();
-            
-            element.innerText = newText;
-            
-            // Spara passet direkt
-            saveShift(element.getAttribute('data-key'), newText);
-            closeAutocomplete();
-        };
-        dropdown.appendChild(item);
-    });
-
-    document.body.appendChild(dropdown);
-}
-
-function closeAutocomplete() {
-    const existing = document.getElementById('autocomplete-dropdown');
-    if (existing) existing.remove();
-}
-
-// Stäng menyn automatiskt om användaren klickar någon annanstans på skärmen
-document.addEventListener('click', (e) => {
-    if (!e.target.classList.contains('shift-text')) {
-        closeAutocomplete();
-    }
-});
