@@ -375,3 +375,42 @@
 }
 /* Dölj-klass som används av JavaScriptet */
 .hidden { display: none !important; }
+
+/* =========================================
+   V1.4 RULLGARDINSMENY & AUTOCOMPLETE
+   ========================================= */
+.shift-block {
+    position: relative; /* LIVSVIKTIGT: Fäster dropdown-menyn vid rutan */
+}
+.shift-text {
+    outline: none; /* Tar bort den fula svarta fyrkanten när man skriver */
+    min-width: 30px;
+    display: inline-block;
+}
+.dropdown-menu {
+    position: absolute;
+    background: #ffffff;
+    width: 100%; /* Gör listan exakt lika bred som passet */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    z-index: 10000;
+    max-height: 250px;
+    overflow-y: auto;
+}
+.dropdown-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f5f5f5;
+    color: #333;
+    font-size: 0.95rem;
+    background: #fff;
+}
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+.dropdown-item:hover {
+    background: #f0f8ff;
+    color: #0277bd;
+    font-weight: 600;
+}
