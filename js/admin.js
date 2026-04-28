@@ -83,7 +83,6 @@ export async function initAdmin() {
 
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
-    // Drag and Drop-hantering
     window.handleDrop = async (e) => {
         e.preventDefault(); 
         const date = e.currentTarget.getAttribute('data-date');
@@ -101,12 +100,13 @@ export async function initAdmin() {
         if (res.success) updateGrid(picker.value);
     };
 
-    // Global lyssnare för schemat (Klick & Dropdown)
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
+        
+        // Klick på Plusset eller Krysset
         scheduleContainer.addEventListener('click', async (e) => {
             
-            // 1. Ta bort en person (Krysset på pillret)
+            // Kryss (Ta bort)
             if (e.target.classList.contains('clear-user-btn')) {
                 const date = e.target.getAttribute('data-date');
                 const stationId = e.target.getAttribute('data-station');
@@ -117,116 +117,58 @@ export async function initAdmin() {
                 if (res.success) updateGrid(picker.value);
             }
 
-            // 2. Öppna Rullgardinsmenyn (Gröna Plus-knappen)
+            // Plus (Öppna Dropdown)
             if (e.target.classList.contains('add-user-btn')) {
                 const btn = e.target;
                 const container = btn.parentElement;
-                const date = btn.getAttribute('data-date');
-                const stationId = btn.getAttribute('data-station');
-                const shiftId = btn.getAttribute('data-shift');
+                const select = container.querySelector('.user-select-dropdown');
+                
+                // Dölj alla andra öppna menyer
+                document.querySelectorAll('.user-select-dropdown').forEach(s => s.classList.add('hidden'));
+                document.querySelectorAll('.add-user-btn').forEach(b => b.classList.remove('hidden'));
 
-                // Stäng eventuella andra öppna menyer först
-                document.querySelectorAll('.autocomplete-input').forEach(inp => inp.style.display = 'none');
-                document.querySelectorAll('.autocomplete-dropdown').forEach(dd => dd.style.display = 'none');
-                document.querySelectorAll('.add-user-btn').forEach(b => b.style.display = 'block');
+                // Byt ut knappen mot menyn
+                btn.classList.add('hidden');
+                select.classList.remove('hidden');
+                select.focus();
+            }
+        });
 
-                // Dölj knappen och förbered menyn
-                btn.style.display = 'none';
+        // När du väljer en person i dropdown-listan
+        scheduleContainer.addEventListener('change', async (e) => {
+            if (e.target.classList.contains('user-select-dropdown')) {
+                const select = e.target;
+                const userId = select.value;
+                const date = select.getAttribute('data-date');
+                const stationId = select.getAttribute('data-station');
+                const shiftId = select.getAttribute('data-shift');
 
-                let input = container.querySelector('.autocomplete-input');
-                let dropdown = container.querySelector('.autocomplete-dropdown');
-
-                if (!input) {
-                    // Skapa sökfältet och rullgardinsmenyn
-                    input = document.createElement('input');
-                    input.type = 'text';
-                    input.className = 'autocomplete-input';
-                    input.placeholder = 'Sök / Lägg till...';
-                    
-                    dropdown = document.createElement('div');
-                    dropdown.className = 'autocomplete-dropdown';
-
-                    container.appendChild(input);
-                    container.appendChild(dropdown);
-
-                    // Hjälpfunktion för att spara till databasen
-                    const assignUser = async (userId) => {
-                        input.disabled = true;
-                        const res = await apiAction('assign_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
-                        if (res.success) updateGrid(document.getElementById('adminDatePicker').value);
-                    };
-
-                    const createUserAndAssign = async (name) => {
-                        input.disabled = true;
-                        const addRes = await apiAction('quick_add_user', { fullName: name });
-                        if (addRes.success) {
-                            const newUsers = await fetchData('users');
-                            globalUserList = newUsers || [];
-                            const matchedUser = globalUserList.find(u => getFriendlyName(u).toLowerCase() === name.toLowerCase());
-                            if (matchedUser) await assignUser(matchedUser.id);
-                        } else {
-                            showToast("Kunde inte skapa", "error");
-                            input.disabled = false;
-                        }
-                    };
-
-                    // Ritar ut namnen i listan
-                    const renderList = () => {
-                        dropdown.innerHTML = '';
-                        const val = input.value.trim().toLowerCase();
-                        
-                        // Filtrera på det man skriver
-                        const filtered = globalUserList.filter(u => getFriendlyName(u).toLowerCase().includes(val));
-                        
-                        filtered.forEach(u => {
-                            const item = document.createElement('div');
-                            item.className = 'autocomplete-item';
-                            item.textContent = getFriendlyName(u);
-                            item.onmousedown = (e) => { e.preventDefault(); assignUser(u.id); }; // onmousedown förhindrar att menyn stängs för tidigt
-                            dropdown.appendChild(item);
-                        });
-
-                        // Om namnet inte finns, visa "Skapa ny"
-                        if (val && !filtered.some(u => getFriendlyName(u).toLowerCase() === val)) {
-                            const item = document.createElement('div');
-                            item.className = 'autocomplete-item new-user';
-                            item.innerHTML = `➕ Skapa "<b>${escapeHTML(input.value)}</b>"`;
-                            item.onmousedown = (e) => { e.preventDefault(); createUserAndAssign(input.value.trim()); };
-                            dropdown.appendChild(item);
-                        }
-                    };
-
-                    input.addEventListener('input', renderList);
-
-                    // Om man trycker Enter
-                    input.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter') {
-                            const val = input.value.trim();
-                            if(!val) return;
-                            const exactMatch = globalUserList.find(u => getFriendlyName(u).toLowerCase() === val.toLowerCase());
-                            if(exactMatch) assignUser(exactMatch.id);
-                            else createUserAndAssign(val);
-                        } else if (e.key === 'Escape') {
-                            input.blur();
-                        }
-                    });
-
-                    // Stäng menyn om man klickar utanför
-                    input.addEventListener('blur', () => {
-                        setTimeout(() => {
-                            input.style.display = 'none';
-                            dropdown.style.display = 'none';
-                            btn.style.display = 'block';
-                        }, 150);
-                    });
+                if (userId) {
+                    select.disabled = true; // Lås rullgardinen medan vi sparar
+                    const res = await apiAction('assign_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
+                    if (res.success) {
+                        updateGrid(picker.value);
+                    } else {
+                        showToast("Kunde inte lägga till", "error");
+                        select.disabled = false;
+                    }
+                } else {
+                    // Om användaren valde "-- Välj --", stäng bara listan
+                    select.classList.add('hidden');
+                    select.parentElement.querySelector('.add-user-btn').classList.remove('hidden');
                 }
+            }
+        });
 
-                input.style.display = 'block';
-                dropdown.style.display = 'block';
-                input.value = '';
-                input.disabled = false;
-                input.focus();
-                input.dispatchEvent(new Event('input')); // Ladda in hela listan direkt
+        // Om du ångrar dig och klickar utanför listan
+        scheduleContainer.addEventListener('focusout', (e) => {
+            if (e.target.classList.contains('user-select-dropdown')) {
+                // Vi väntar lite för att 'change' ska hinna triggas om man klickat på ett namn
+                setTimeout(() => {
+                    e.target.classList.add('hidden');
+                    const btn = e.target.parentElement.querySelector('.add-user-btn');
+                    if (btn) btn.classList.remove('hidden');
+                }, 150);
             }
         });
     }
@@ -300,6 +242,9 @@ function renderAdminGrid() {
     const currentDateStr = datesOfWeek[currentAdminDayIndex];
     let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
 
+    // Sortera personalen alfabetiskt för rullgardinsmenyn
+    const sortedUsers = [...globalUserList].sort((a,b) => getFriendlyName(a).localeCompare(getFriendlyName(b)));
+
     globalStations.forEach(st => {
         if(st.is_spacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; return; }
         
@@ -322,11 +267,20 @@ function renderAdminGrid() {
                 </span>`;
             }).join('');
             
+            // Bygg Rullgardinsmenyn (<select>) för passet
+            let selectOptions = `<option value="">-- Välj --</option>`;
+            sortedUsers.forEach(u => {
+                selectOptions += `<option value="${u.id}">${escapeHTML(getFriendlyName(u))}</option>`;
+            });
+            
             html += `
             <div class="shift-block ${hasUsers?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}" data-label="${escapeHTML(sh.label)}">
                 <div class="shift-users-container">${usersHtml}</div>
-                <div class="shift-controls" style="position:relative;">
+                <div class="shift-controls">
                     <button class="add-user-btn" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}">+</button>
+                    <select class="user-select-dropdown hidden" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}">
+                        ${selectOptions}
+                    </select>
                 </div>
             </div>`;
         });
