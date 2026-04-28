@@ -20,6 +20,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
   try {
+    // --- 1. AUTENTISERING ---
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
     
@@ -42,6 +43,7 @@ export default async function handler(req, res) {
         currentWorkplace = req.query.workplace || 'default'; 
     }
 
+    // --- 2. GET (HÄMTA DATA) ---
     if (req.method === 'GET') {
         const { type, start_date, end_date } = req.query;
 
@@ -87,9 +89,11 @@ export default async function handler(req, res) {
         return res.status(200).json(result.rows.length > 0 ? result.rows[0].data : {});
     }
 
+    // --- 3. POST (SPARA/ÄNDRA DATA) ---
     if (req.method === 'POST') {
         const { action, payload, type, data, username, password, fullName, id, firstName, lastName, displayName, email, role } = req.body;
 
+        // Inloggning (publik)
         if (action === 'login') {
             const result = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username || payload?.username]);
             const user = result.rows[0];
@@ -100,27 +104,33 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true, token: signedToken, name: user.display_name || user.first_name || user.username, role: user.role });
         }
 
+        // Endast admins nedanför
         if (currentUserRole !== 'admin') return res.status(403).json({ error: "Behörighet saknas" });
 
+        // --- PERSONALHANTERING (FIXAD PAYLOAD) ---
+        if (action === 'quick_add_user') {
+            // Läs namnet inifrån payload-paketet
+            const nameToAdd = payload?.fullName || fullName;
+            if (!nameToAdd) return res.status(400).json({ error: "Namn saknas" });
+            
+            const tempUsername = 'user_' + Date.now();
+            await pool.query(
+                'INSERT INTO admin_users (username, display_name, role, workplace_id) VALUES ($1, $2, $3, $4)', 
+                [tempUsername, nameToAdd.trim(), 'user', currentWorkplace]
+            );
+            return res.status(200).json({ success: true });
+        }
 
-if (action === 'quick_add_user') {
-    if (!fullName) return res.status(400).json({ error: "Namn saknas" });
-    
-    // Skapa ett tillfälligt unikt användarnamn (t.ex. user_1714392000)
-    const tempUsername = 'user_' + Date.now();
-    
-    try {
-        await pool.query(
-            'INSERT INTO admin_users (username, display_name, role, workplace_id) VALUES ($1, $2, $3, $4)', 
-            [tempUsername, fullName.trim(), 'user', currentWorkplace]
-        );
-        return res.status(200).json({ success: true });
-    } catch (e) {
-        console.error("Quick add error:", e);
-        return res.status(500).json({ error: "Kunde inte spara till databasen" });
-    }
-}
+        if (action === 'remove_user') {
+            // Läs namnet inifrån payload-paketet
+            const nameToRemove = payload?.fullName || fullName;
+            if (!nameToRemove) return res.status(400).json({ error: "Namn saknas" });
 
+            await pool.query("DELETE FROM admin_users WHERE (display_name = $1 OR username = $1) AND workplace_id = $2", [nameToRemove.trim(), currentWorkplace]);
+            return res.status(200).json({ success: true });
+        }
+
+        // Fullständig admin-redigering
         if (action === 'add_admin') {
             const hashedPassword = await bcrypt.hash(password, 10);
             await pool.query('INSERT INTO admin_users (username, password, first_name, last_name, display_name, email, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', 
@@ -140,15 +150,18 @@ if (action === 'quick_add_user') {
             return res.status(200).json({ success: true });
         }
 
-        // ... radering av user/admin, spara stationer/pass etc (samma som tidigare)
-        if (action === 'remove_user') {
-            await pool.query("DELETE FROM admin_users WHERE (display_name = $1 OR username = $1) AND workplace_id = $2", [fullName.trim(), currentWorkplace]);
+        if (action === 'remove_admin') {
+            await pool.query('DELETE FROM admin_users WHERE username = $1 AND workplace_id = $2', [username, currentWorkplace]);
             return res.status(200).json({ success: true });
         }
         
+        // --- SCHEMALÄGGNING & PUBLICERING ---
         if (action === 'assign_shift') {
-            await pool.query('INSERT INTO schedule_assignments (work_date, user_id, station_id, shift_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING', 
-                [payload.date, payload.user_id, payload.station_id, payload.shift_id]);
+            await pool.query(`
+                INSERT INTO schedule_assignments (work_date, user_id, station_id, shift_id, is_published) 
+                VALUES ($1, $2, $3, $4, false) 
+                ON CONFLICT (work_date, user_id, station_id, shift_id) DO NOTHING
+            `, [payload.date, payload.user_id, payload.station_id, payload.shift_id]);
             return res.status(200).json({ success: true });
         }
 
@@ -157,7 +170,62 @@ if (action === 'quick_add_user') {
                 [payload.date, payload.user_id, payload.station_id, payload.shift_id]);
             return res.status(200).json({ success: true });
         }
+
+        if (action === 'publish_schedule') {
+            await pool.query(`
+                UPDATE schedule_assignments sa
+                SET is_published = true
+                FROM stations s
+                WHERE sa.station_id = s.id AND s.workplace_id = $1
+                AND sa.work_date >= $2 AND sa.work_date <= $3
+            `, [currentWorkplace, payload.start_date, payload.end_date]);
+            return res.status(200).json({ success: true });
+        }
+
+        // --- STATIONER & PASS ---
+        if (action === 'save_station') {
+            if (payload.id) {
+                await pool.query('UPDATE stations SET name=$1, color=$2, is_spacer=$3 WHERE id=$4 AND workplace_id=$5', 
+                    [payload.name, payload.color, payload.is_spacer, payload.id, currentWorkplace]);
+            } else {
+                await pool.query('INSERT INTO stations (workplace_id, name, color, is_spacer, sort_order) VALUES ($1, $2, $3, $4, 99)', 
+                    [currentWorkplace, payload.name, payload.color, payload.is_spacer]);
+            }
+            return res.status(200).json({ success: true });
+        }
+        
+        if (action === 'delete_station') {
+            await pool.query('DELETE FROM stations WHERE id=$1 AND workplace_id=$2', [payload.id, currentWorkplace]);
+            return res.status(200).json({ success: true });
+        }
+
+        if (action === 'save_shift') {
+            if (payload.id) {
+                await pool.query('UPDATE shifts SET label=$1, time_range=$2 WHERE id=$3 AND workplace_id=$4', 
+                    [payload.label, payload.time_range, payload.id, currentWorkplace]);
+            } else {
+                await pool.query('INSERT INTO shifts (workplace_id, label, time_range, sort_order) VALUES ($1, $2, $3, 99)', 
+                    [currentWorkplace, payload.label, payload.time_range]);
+            }
+            return res.status(200).json({ success: true });
+        }
+
+        if (action === 'delete_shift') {
+            await pool.query('DELETE FROM shifts WHERE id=$1 AND workplace_id=$2', [payload.id, currentWorkplace]);
+            return res.status(200).json({ success: true });
+        }
+
+        // --- LEGACY (Teman, Meddelanden) ---
+        if (type && data) {
+            await pool.query('DELETE FROM app_storage WHERE key = $1 AND workplace_id = $2', [type, currentWorkplace]);
+            await pool.query('INSERT INTO app_storage (key, data, workplace_id) VALUES ($1, $2, $3)', [type, JSON.stringify(data), currentWorkplace]);
+            return res.status(200).json({ success: true });
+        }
+
     }
     return res.status(405).end();
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { 
+      console.error(e);
+      res.status(500).json({ error: e.message }); 
+  }
 }
