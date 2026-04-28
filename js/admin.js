@@ -35,11 +35,32 @@ function getDatesOfWeek(dateStr) {
 }
 
 export async function initAdmin() {
-    if (sessionStorage.getItem('userRole') !== 'admin') {
+    if (sessionStorage.getItem('userRole') !== 'admin' && sessionStorage.getItem('userRole') !== 'superadmin') {
         window.location.href = "user.html"; return;
     }
 
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
+    
+    // NYTT: SUPER-ADMIN LOGIK FÖR RULLGARDIN
+    if (sessionStorage.getItem('userRole') === 'superadmin') {
+        const saContainer = document.getElementById('superAdminContainer');
+        if (saContainer) saContainer.style.display = 'flex';
+        loadWorkplaces();
+    }
+    
+    async function loadWorkplaces() {
+        const workplaces = await fetchData('workplaces');
+        const select = document.getElementById('workplaceSelect');
+        if (workplaces && select) {
+            select.innerHTML = workplaces.map(w => `<option value="${w.id}">${escapeHTML(w.name)}</option>`).join('');
+            const active = sessionStorage.getItem('activeWorkplace') || 'default';
+            select.value = active;
+            select.onchange = (e) => {
+                sessionStorage.setItem('activeWorkplace', e.target.value);
+                window.location.reload(); 
+            };
+        }
+    }
     
     try {
         const [users, stations, shifts] = await Promise.all([
@@ -68,18 +89,13 @@ export async function initAdmin() {
         updateGrid(picker.value);
     }
 
-    // --- NY LOGIK FÖR PUBLICERING ---
     document.getElementById('publishBtn').onclick = async () => {
         const currentDateStr = datesOfWeek[currentAdminDayIndex];
-        
-        let start = currentDateStr;
-        let end = currentDateStr;
+        let start = currentDateStr, end = currentDateStr;
         let msg = `Vill du publicera dagens schema (${currentDateStr}) till displayen?`;
 
-        // Om vi är i veckovyn, publicera hela veckan
         if (isWeeklyView) {
-            start = datesOfWeek[0];
-            end = datesOfWeek[6];
+            start = datesOfWeek[0]; end = datesOfWeek[6];
             msg = "Vill du publicera hela veckans schema till displayen?";
         }
 
@@ -96,7 +112,6 @@ export async function initAdmin() {
 
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
-    // Hantera Drop
     window.handleDrop = async (e) => {
         e.preventDefault(); 
         const date = e.currentTarget.getAttribute('data-date');
@@ -109,10 +124,8 @@ export async function initAdmin() {
         updateGrid(picker.value);
     };
 
-    // Central Event Listener för Schemat
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
-        
         scheduleContainer.addEventListener('click', async (e) => {
             if (e.target.classList.contains('clear-btn')) {
                 const date = e.target.getAttribute('data-date');
@@ -168,7 +181,6 @@ export async function initAdmin() {
                 dayCont.style.display = 'grid'; weekCont.style.display = 'none';
                 toggleBtn.innerText = "📅 Byt till Veckovy"; toggleBtn.style.backgroundColor = "#0277bd";
             }
-            // Rita om och uppdatera varningen för den nya vyn
             renderViews();
             updatePublishBanner();
         };
@@ -177,7 +189,6 @@ export async function initAdmin() {
     updateGrid(picker.value);
 }
 
-// --- SYNKRONISERA FRITEXT TILL DATABAS ---
 async function syncShiftTextToDB(date, stationId, shiftId, text) {
     const key = `${date}_${stationId}_${shiftId}`;
     const currentAssignments = globalScheduleData[key] || [];
@@ -228,17 +239,14 @@ async function updateGrid(dateStr) {
     updatePublishBanner();
 }
 
-// --- NY LOGIK FÖR VARNINGSBANNERN ---
 function updatePublishBanner() {
     hasUnpublishedChanges = false;
     const currentDateStr = datesOfWeek[currentAdminDayIndex];
 
-    // Kolla i schemat om det finns rader som är opublicerade
     Object.values(globalScheduleData).forEach(assignments => {
         assignments.forEach(row => {
             if (!row.is_published) {
                 const localDate = row.work_date.split('T')[0];
-                // Är vi i veckovy bryr vi oss om hela veckan, i dagsvy bryr vi oss bara om dagens datum
                 if (isWeeklyView || localDate === currentDateStr) {
                     hasUnpublishedChanges = true;
                 }
@@ -296,7 +304,6 @@ function renderAdminGrid() {
     cont.innerHTML = html;
 }
 
-// --- V1.4 RULLGARDINSMENY (+ KNAPP) ---
 function manualAdd(e, date, stationId, shiftId) {
     e.stopPropagation();
     const existing = document.getElementById('quick-dropdown');
@@ -346,7 +353,6 @@ function manualAdd(e, date, stationId, shiftId) {
     }, { once: true });
 }
 
-// --- V1.4 AUTOCOMPLETE ---
 function showAutocomplete(element) {
     closeAutocomplete(); 
     const text = element.innerText;
@@ -390,7 +396,6 @@ function closeAutocomplete() {
 document.addEventListener('click', (e) => {
     if (!e.target.classList.contains('shift-text')) closeAutocomplete();
 });
-
 
 function renderWeeklyView() {
     const cont = document.getElementById('weeklyContainer');
