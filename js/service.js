@@ -1,11 +1,14 @@
 import { showToast } from './utils.js';
 
-// NYTT: Lade till 'extraParams' så vi kan skicka med datum
 export async function fetchData(type, extraParams = "") {
     try {
         const headers = {};
         const token = sessionStorage.getItem('jwtToken');
         if (token) headers['Authorization'] = `Bearer ${token}`;
+        
+        // NYTT: Skicka med vald arbetsplats om man är Superadmin
+        const activeWorkplace = sessionStorage.getItem('activeWorkplace');
+        if (activeWorkplace) headers['x-workplace-id'] = activeWorkplace;
         
         const urlParams = new URLSearchParams(window.location.search);
         const displayToken = urlParams.get('token');
@@ -28,24 +31,33 @@ export async function saveData(type, data) {
         setTimeout(() => window.location.href="index.html", 2000);
         return false; 
     }
+    
+    const headers = { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` };
+    const activeWorkplace = sessionStorage.getItem('activeWorkplace');
+    if (activeWorkplace) headers['x-workplace-id'] = activeWorkplace;
+
     try {
         await fetch('/api/data-api', {
             method: 'POST',
-            headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+            headers: headers,
             body: JSON.stringify({ type, data })
         });
         return true;
     } catch (e) { return false; }
 }
 
-// NYTT: Funktion för snabba API-anrop till V2-funktioner (skapa/ta bort pass)
 export async function apiAction(action, payload = {}) {
     const token = sessionStorage.getItem('jwtToken');
     if (!token) return { success: false, error: "Inte inloggad" };
+    
+    const headers = { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` };
+    const activeWorkplace = sessionStorage.getItem('activeWorkplace');
+    if (activeWorkplace) headers['x-workplace-id'] = activeWorkplace;
+
     try {
         const res = await fetch('/api/data-api', {
             method: 'POST',
-            headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+            headers: headers,
             body: JSON.stringify({ action, payload })
         });
         return await res.json();
