@@ -85,6 +85,7 @@ export default async function handler(req, res) {
             return res.status(200).json(result.rows);
         }
 
+        // Hämta inställningar, meddelanden, väder etc från gamla app_storage
         const result = await pool.query('SELECT data FROM app_storage WHERE key = $1 AND workplace_id = $2', [type, currentWorkplace]);
         return res.status(200).json(result.rows.length > 0 ? result.rows[0].data : {});
     }
@@ -107,7 +108,7 @@ export default async function handler(req, res) {
         // Endast admins nedanför
         if (currentUserRole !== 'admin') return res.status(403).json({ error: "Behörighet saknas" });
 
-// --- PERSONALHANTERING ---
+        // --- PERSONALHANTERING ---
         if (action === 'quick_add_user') {
             const nameToAdd = payload?.fullName || fullName;
             if (!nameToAdd) return res.status(400).json({ error: "Namn saknas" });
@@ -130,7 +131,7 @@ export default async function handler(req, res) {
             }
         }
 
-if (action === 'remove_user') {
+        if (action === 'remove_user') {
             const nameToRemove = payload?.fullName || fullName;
             if (!nameToRemove) return res.status(400).json({ error: "Namn saknas" });
 
@@ -218,6 +219,13 @@ if (action === 'remove_user') {
             return res.status(200).json({ success: true });
         }
 
+        if (action === 'reorder_stations') {
+            for (let i = 0; i < payload.length; i++) {
+                await pool.query('UPDATE stations SET sort_order=$1 WHERE id=$2 AND workplace_id=$3', [i, payload[i], currentWorkplace]);
+            }
+            return res.status(200).json({ success: true });
+        }
+
         if (action === 'save_shift') {
             if (payload.id) {
                 await pool.query('UPDATE shifts SET label=$1, time_range=$2 WHERE id=$3 AND workplace_id=$4', 
@@ -231,6 +239,13 @@ if (action === 'remove_user') {
 
         if (action === 'delete_shift') {
             await pool.query('DELETE FROM shifts WHERE id=$1 AND workplace_id=$2', [payload.id, currentWorkplace]);
+            return res.status(200).json({ success: true });
+        }
+
+        if (action === 'reorder_shifts') {
+            for (let i = 0; i < payload.length; i++) {
+                await pool.query('UPDATE shifts SET sort_order=$1 WHERE id=$2 AND workplace_id=$3', [i, payload[i], currentWorkplace]);
+            }
             return res.status(200).json({ success: true });
         }
 
