@@ -99,13 +99,19 @@ function renderDayGrid() {
         if(st.isSpacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; return; }
         
         const contrast = isLight(st.color) ? '#000' : '#fff';
-        html += `<div class="station-row"><div class="station-label" style="background-color:${escapeHTML(st.color)}; color:${contrast};">${escapeHTML(st.name)}</div>`;
+        
+        // FIX: Vi lägger till '--station-color' så CSS:en kan hämta rätt färg till korten
+        html += `<div class="station-row" style="--station-color:${escapeHTML(st.color)};">
+                    <div class="station-label" style="background-color:${escapeHTML(st.color)}; color:${contrast};">${escapeHTML(st.name)}</div>`;
         
         globalShifts.forEach(sh => {
             const key = `${prefix}${st.name}-${sh.time}`;
             const val = globalScheduleData[key] || "";
-            // REN LÄSVY: Inget "contenteditable", inga knappar
-            html += `<div class="shift-block ${val?'':'empty'}"><span class="shift-text">${escapeHTML(val)}</span></div>`;
+            
+            // FIX: Lade till 'data-label' så mobilen kan skriva ut "Förmiddag" bredvid namnet
+            html += `<div class="shift-block ${val?'':'empty'}" data-label="${escapeHTML(sh.label)}">
+                        <span class="shift-text">${escapeHTML(val)}</span>
+                     </div>`;
         });
         html += `</div>`;
     });
