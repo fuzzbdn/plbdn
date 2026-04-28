@@ -427,86 +427,130 @@
 }
 
 /* =========================================
-   8. MOBILANPASSNING FÖR ANVÄNDARVYN (KORT-LAYOUT)
-   Gör om rutnätet till staplade smarta kort på små skärmar.
+   8. MOBILANPASSNING (SMARTPHONE)
+   Förvandlar rutnät till staplade kort på små skärmar.
    ========================================= */
 @media (max-width: 850px) {
-    /* Gömmer de övre tidsrubrikerna och mellanrummen på mobilen */
-    body#page-user .header-row,
-    body#page-user .station-row[style*="height:30px"] {
-        display: none !important;
-    }
+    /* --- Huvudlayout och Header --- */
+    .admin-header .header-content { flex-direction: column; gap: 10px; text-align: center; }
+    .header-datepicker { flex-wrap: wrap; justify-content: center; width: 100%; }
+    .date-navigation { width: 100%; justify-content: space-between; margin: 10px 0; }
+    .admin-layout { flex-direction: column; }
+    
+    /* Personallistan (flyttas upp) */
+    .sidebar-roster { width: 100%; max-height: 250px; position: static; margin-bottom: 20px; }
 
-    /* Gör om hela raden till en staplad vit ruta */
-    body#page-user .station-row {
+    /* --- DAGSVYN --- */
+    .header-row { display: none !important; } /* Döljer de övre tidsrubrikerna */
+    
+    .station-row {
         display: flex !important;
         flex-direction: column;
         background: #fff;
-        padding: 15px;
+        padding: 12px;
         border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
         margin-bottom: 20px;
         gap: 8px;
+        border: 1px solid var(--border-color);
     }
 
-    /* Centrerar stationsnamnet och lägger ett färgstreck i botten */
-    body#page-user .station-label {
+    /* Stationsnamnet i toppen av varje kort */
+    .station-label {
         width: 100%;
         height: auto;
         min-height: 45px;
         justify-content: center;
         border-left: none;
-        border-bottom: 4px solid var(--station-color, #ccc);
-        margin-bottom: 10px;
+        margin-bottom: 5px;
         box-sizing: border-box;
+        border-radius: 6px;
     }
 
-    /* Gör varje pass-ruta bred och skjuter texten till höger */
-    body#page-user .shift-block {
+    /* Arbetspassen - En rad för varje pass */
+    .shift-block {
         width: 100%;
-        min-height: 45px;
-        justify-content: space-between; /* Skjuter isär etikett och namn */
-        border: none;
-        border-left: 4px solid var(--station-color, #ccc);
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px solid var(--border-color);
         background: #f8f9fa;
         box-sizing: border-box;
+        padding: 8px 12px;
+        position: relative;
     }
 
-    /* Skriver automatiskt ut "Förmiddag / Eftermiddag" till vänster inuti rutan */
-    body#page-user .shift-block::before {
+    /* Plockar upp 'data-label' och skriver ut FM/EM i mobilen */
+    .shift-block::before {
         content: attr(data-label);
         font-size: 0.85rem;
         font-weight: 800;
-        color: #666;
+        color: #0277bd;
         text-transform: uppercase;
+        width: 100px; /* Håller vänsterkolumnen jämn */
+        flex-shrink: 0;
     }
 
-    /* Design för tomma pass i mobilen */
-    body#page-user .shift-block.empty {
-        background-color: transparent;
-        border-left: 4px dashed #ccc;
+    .shift-text { flex-grow: 1; text-align: right; }
+    
+    /* Knappar för admin stannar snyggt till höger */
+    .shift-controls { background: #fff; border-radius: 4px; padding: 2px; margin-left: 10px; }
+
+    /* Tomma rutor säger "Obemannat" */
+    .shift-block.empty::after {
+        content: "Obemannat"; color: #aaa; font-style: italic;
+        font-size: 0.9rem; flex-grow: 1; text-align: right;
     }
-    body#page-user .shift-block.empty .shift-text {
-        display: none; 
-    }
-    body#page-user .shift-block.empty::after {
-        content: "Obemannat";
-        color: #aaa;
-        font-style: italic;
-        font-size: 0.9rem;
+    .shift-block.empty .shift-text { display: none; }
+
+    /* --- VECKOVYN --- */
+    .weekly-grid { min-width: 100%; }
+    .weekly-header-row { display: none; } /* Gömmer veckodagarna i toppen */
+    
+    .weekly-user-row {
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        margin-bottom: 20px;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
     
-    /* Justerar sidhuvudet (datum & knappar) så de inte krockar på små skärmar */
-    body#page-user .header-content {
-        flex-direction: column;
-        gap: 15px;
+    /* Namnet högst upp i varje persons kort */
+    .weekly-user-name {
+        background: #e3f2fd;
+        color: #0277bd;
         text-align: center;
+        padding: 12px;
+        font-size: 1.2rem;
+        border-bottom: 2px solid var(--border-color);
     }
-    body#page-user .header-datepicker {
-        flex-wrap: wrap;
-        justify-content: center;
+    
+    /* Layout för varje dag */
+    .weekly-cell {
+        border: none;
+        border-bottom: 1px dashed #eee;
+        flex-direction: row; 
+        justify-content: flex-start;
+        align-items: center;
+        min-height: 45px;
+        padding: 10px 15px;
+        background: #fafafa;
+        gap: 15px;
     }
-    body#page-user .date-navigation {
-        margin: 10px 0;
-    }
+    .weekly-cell:last-child { border-bottom: none; }
+
+    /* Automatiska etiketter för veckodagarna via CSS */
+    .weekly-cell:nth-child(2)::before { content: "Måndag"; font-weight: 800; width: 70px; color: #555; }
+    .weekly-cell:nth-child(3)::before { content: "Tisdag"; font-weight: 800; width: 70px; color: #555; }
+    .weekly-cell:nth-child(4)::before { content: "Onsdag"; font-weight: 800; width: 70px; color: #555; }
+    .weekly-cell:nth-child(5)::before { content: "Torsdag"; font-weight: 800; width: 70px; color: #555; }
+    .weekly-cell:nth-child(6)::before { content: "Fredag"; font-weight: 800; width: 70px; color: #555; }
+    .weekly-cell:nth-child(7)::before { content: "Lördag"; font-weight: 800; width: 70px; color: #555; }
+    .weekly-cell:nth-child(8)::before { content: "Söndag"; font-weight: 800; width: 70px; color: #555; }
+
+    .weekly-badge { width: auto; flex: 1; text-align: left; }
 }
