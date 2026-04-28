@@ -554,3 +554,13 @@
 
     .weekly-badge { width: auto; flex: 1; text-align: left; }
 }
+
+/* V2.0 - Assigned User Pills */
+.shift-users-container { display: flex; flex-wrap: wrap; gap: 5px; flex-grow: 1; align-items: center; }
+.assigned-user-pill { 
+    background: #e3f2fd; color: #0277bd; border: 1px solid #90caf9; 
+    border-radius: 12px; padding: 2px 8px; font-size: 0.9rem; font-weight: 600; 
+    display: inline-flex; align-items: center; gap: 5px; 
+}
+.clear-user-btn { background: none; border: none; color: #d32f2f; font-weight: bold; cursor: pointer; padding: 0 2px; }
+.clear-user-btn:hover { background: rgba(255,0,0,0.1); border-radius: 50%; }
