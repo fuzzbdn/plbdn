@@ -13,6 +13,7 @@ let isWeeklyView = false;
 let datesOfWeek = [];
 let hasUnpublishedChanges = false;
 
+// Hjälpare: Prioriterar visningsnamn
 function getFriendlyName(u) {
     if (u.display_name) return u.display_name;
     if (u.first_name) return `${u.first_name} ${u.last_name || ''}`.trim();
@@ -29,8 +30,7 @@ function getDatesOfWeek(dateStr) {
         const temp = new Date(monday);
         temp.setDate(monday.getDate() + i);
         const tzoffset = temp.getTimezoneOffset() * 60000;
-        const localISOTime = (new Date(temp.getTime() - tzoffset)).toISOString().slice(0, 10);
-        dates.push(localISOTime);
+        dates.push((new Date(temp.getTime() - tzoffset)).toISOString().slice(0, 10));
     }
     return dates;
 }
@@ -83,6 +83,7 @@ export async function initAdmin() {
 
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
+    // Hantera Drop
     window.handleDrop = async (e) => {
         e.preventDefault(); 
         const date = e.currentTarget.getAttribute('data-date');
@@ -91,84 +92,54 @@ export async function initAdmin() {
         const userId = e.dataTransfer.getData("user_id"); 
         
         if (!userId) return;
-
-        const key = `${date}_${stationId}_${shiftId}`;
-        const existing = globalScheduleData[key] || [];
-        if (existing.some(u => u.user_id == userId)) return; 
-
-        const res = await apiAction('assign_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
-        if (res.success) updateGrid(picker.value);
+        await apiAction('assign_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
+        updateGrid(picker.value);
     };
 
+    // Central Event Listener för Schemat
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
         
-        // Klick på Plusset eller Krysset
+        // När man klickar i schemat (+ eller x)
         scheduleContainer.addEventListener('click', async (e) => {
             
-            // Kryss (Ta bort)
-            if (e.target.classList.contains('clear-user-btn')) {
+            // Rensa passet helt (Det gamla kryss-beteendet)
+            if (e.target.classList.contains('clear-btn')) {
                 const date = e.target.getAttribute('data-date');
                 const stationId = e.target.getAttribute('data-station');
                 const shiftId = e.target.getAttribute('data-shift');
-                const userId = e.target.getAttribute('data-user');
+                const key = `${date}_${stationId}_${shiftId}`;
                 
-                const res = await apiAction('remove_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
-                if (res.success) updateGrid(picker.value);
-            }
-
-            // Plus (Öppna Dropdown)
-            if (e.target.classList.contains('add-user-btn')) {
-                const btn = e.target;
-                const container = btn.parentElement;
-                const select = container.querySelector('.user-select-dropdown');
-                
-                // Dölj alla andra öppna menyer
-                document.querySelectorAll('.user-select-dropdown').forEach(s => s.classList.add('hidden'));
-                document.querySelectorAll('.add-user-btn').forEach(b => b.classList.remove('hidden'));
-
-                // Byt ut knappen mot menyn
-                btn.classList.add('hidden');
-                select.classList.remove('hidden');
-                select.focus();
-            }
-        });
-
-        // När du väljer en person i dropdown-listan
-        scheduleContainer.addEventListener('change', async (e) => {
-            if (e.target.classList.contains('user-select-dropdown')) {
-                const select = e.target;
-                const userId = select.value;
-                const date = select.getAttribute('data-date');
-                const stationId = select.getAttribute('data-station');
-                const shiftId = select.getAttribute('data-shift');
-
-                if (userId) {
-                    select.disabled = true; // Lås rullgardinen medan vi sparar
-                    const res = await apiAction('assign_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
-                    if (res.success) {
-                        updateGrid(picker.value);
-                    } else {
-                        showToast("Kunde inte lägga till", "error");
-                        select.disabled = false;
-                    }
-                } else {
-                    // Om användaren valde "-- Välj --", stäng bara listan
-                    select.classList.add('hidden');
-                    select.parentElement.querySelector('.add-user-btn').classList.remove('hidden');
+                const assignments = globalScheduleData[key] || [];
+                for (let a of assignments) {
+                    await apiAction('remove_shift', { date, user_id: a.user_id, station_id: stationId, shift_id: shiftId });
                 }
+                updateGrid(picker.value);
+            }
+
+            // Öppna rullgardinsmenyn (Gamla beteendet)
+            if (e.target.classList.contains('add-user-btn')) {
+                const date = e.target.getAttribute('data-date');
+                const stationId = e.target.getAttribute('data-station');
+                const shiftId = e.target.getAttribute('data-shift');
+                manualAdd(e, date, stationId, shiftId);
             }
         });
 
-        // Om du ångrar dig och klickar utanför listan
-        scheduleContainer.addEventListener('focusout', (e) => {
-            if (e.target.classList.contains('user-select-dropdown')) {
-                // Vi väntar lite för att 'change' ska hinna triggas om man klickat på ett namn
-                setTimeout(() => {
-                    e.target.classList.add('hidden');
-                    const btn = e.target.parentElement.querySelector('.add-user-btn');
-                    if (btn) btn.classList.remove('hidden');
-                }, 150);
+        // När man skriver in text för Autocomplete
+        scheduleContainer.addEventListener('input', (e) => {
+            if (e.target.classList.contains('shift-text')) {
+                showAutocomplete(e.target);
+            }
+        });
+
+        // När man lämnar textrutan (Sparar texten till databasen)
+        scheduleContainer.addEventListener('focusout', async (e) => {
+            if (e.target.classList.contains('shift-text')) {
+                const date = e.target.getAttribute('data-date');
+                const stationId = e.target.getAttribute('data-station');
+                const shiftId = e.target.getAttribute('data-shift');
+                await syncShiftTextToDB(date, stationId, shiftId, e.target.innerText);
             }
         });
     }
@@ -195,6 +166,33 @@ export async function initAdmin() {
     updateGrid(picker.value);
 }
 
+// --- SYNKRONISERA FRITEXT TILL DATABAS ---
+async function syncShiftTextToDB(date, stationId, shiftId, text) {
+    const key = `${date}_${stationId}_${shiftId}`;
+    const currentAssignments = globalScheduleData[key] || [];
+    
+    // 1. Rensa passet för att bygga upp det baserat på texten
+    for (let a of currentAssignments) {
+        await apiAction('remove_shift', { date, user_id: a.user_id, station_id: stationId, shift_id: shiftId });
+    }
+
+    // 2. Läs namnen och skapa/boka in
+    const names = text.split('/').map(n => n.trim()).filter(n => n.length > 0);
+    for (let name of names) {
+        let u = globalUserList.find(u => getFriendlyName(u).toLowerCase() === name.toLowerCase());
+        if (!u) {
+            await apiAction('quick_add_user', { fullName: name });
+            const newUsers = await fetchData('users');
+            if (newUsers) globalUserList = newUsers;
+            u = globalUserList.find(u => getFriendlyName(u).toLowerCase() === name.toLowerCase());
+        }
+        if (u) {
+            await apiAction('assign_shift', { date, user_id: u.id, station_id: stationId, shift_id: shiftId });
+        }
+    }
+    updateGrid(document.getElementById('adminDatePicker').value);
+}
+
 async function updateGrid(dateStr) {
     const d = new Date(dateStr);
     const iso = getISOWeek(d);
@@ -206,7 +204,6 @@ async function updateGrid(dateStr) {
     document.getElementById('currentDateDisplay').innerText = `${DAYS[currentAdminDayIndex]} v.${selectedWeek}, ${selectedYear}`;
     
     const scheduleRaw = await fetchData('schedule', `&start_date=${datesOfWeek[0]}&end_date=${datesOfWeek[6]}`);
-    
     globalScheduleData = {};
     hasUnpublishedChanges = false;
 
@@ -242,9 +239,6 @@ function renderAdminGrid() {
     const currentDateStr = datesOfWeek[currentAdminDayIndex];
     let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
 
-    // Sortera personalen alfabetiskt för rullgardinsmenyn
-    const sortedUsers = [...globalUserList].sort((a,b) => getFriendlyName(a).localeCompare(getFriendlyName(b)));
-
     globalStations.forEach(st => {
         if(st.is_spacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; return; }
         
@@ -258,29 +252,16 @@ function renderAdminGrid() {
             const assignments = globalScheduleData[key] || [];
             const hasUsers = assignments.length > 0;
             
-            let usersHtml = assignments.map(a => {
-                const nameToShow = getFriendlyName(a); 
-                return `
-                <span class="assigned-user-pill">
-                    ${escapeHTML(nameToShow)}
-                    <button class="clear-user-btn" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}" data-user="${a.user_id}">×</button>
-                </span>`;
-            }).join('');
-            
-            // Bygg Rullgardinsmenyn (<select>) för passet
-            let selectOptions = `<option value="">-- Välj --</option>`;
-            sortedUsers.forEach(u => {
-                selectOptions += `<option value="${u.id}">${escapeHTML(getFriendlyName(u))}</option>`;
-            });
+            // Formatera som text med / emellan, precis som v1.4
+            const textVal = assignments.map(a => getFriendlyName(a)).join(' / ');
+            const safeVal = escapeHTML(textVal);
             
             html += `
-            <div class="shift-block ${hasUsers?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}" data-label="${escapeHTML(sh.label)}">
-                <div class="shift-users-container">${usersHtml}</div>
+            <div class="shift-block ${hasUsers?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}">
+                <span class="shift-text" contenteditable="true" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}">${safeVal}</span>
                 <div class="shift-controls">
-                    <button class="add-user-btn" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}">+</button>
-                    <select class="user-select-dropdown hidden" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}">
-                        ${selectOptions}
-                    </select>
+                    <button class="add-user-btn" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}" title="Lägg till">+</button>
+                    ${hasUsers ? `<button class="clear-btn" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}">×</button>` : ''}
                 </div>
             </div>`;
         });
@@ -288,6 +269,105 @@ function renderAdminGrid() {
     });
     cont.innerHTML = html;
 }
+
+// --- V1.4 RULLGARDINSMENY ---
+function manualAdd(e, date, stationId, shiftId) {
+    e.stopPropagation();
+    const existing = document.getElementById('quick-dropdown');
+    if (existing) existing.remove();
+
+    const sortedUsers = [...globalUserList].sort((a,b) => getFriendlyName(a).localeCompare(getFriendlyName(b)));
+    
+    const menu = document.createElement('div');
+    menu.id = 'quick-dropdown';
+    menu.className = 'dropdown-menu';
+    menu.style.left = `${e.pageX}px`;
+    menu.style.top = `${e.pageY + 10}px`;
+    menu.style.position = 'absolute';
+    menu.style.zIndex = '10000';
+
+    let html = sortedUsers.map(u => `<div class="dropdown-item user-select-btn" data-id="${u.id}">${escapeHTML(getFriendlyName(u))}</div>`).join('');
+    html += `<div class="dropdown-item manual-btn" style="color:#0277bd; font-weight:bold;">+ Skriv in eget namn...</div>`;
+    menu.innerHTML = html;
+    document.body.appendChild(menu);
+
+    menu.addEventListener('click', async (evt) => {
+        if (evt.target.classList.contains('user-select-btn')) {
+            const userId = evt.target.getAttribute('data-id');
+            await apiAction('assign_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
+            menu.remove();
+            updateGrid(document.getElementById('adminDatePicker').value);
+        } else if (evt.target.classList.contains('manual-btn')) {
+            menu.remove();
+            setTimeout(async () => {
+                const name = prompt("Ange namn:");
+                if (name) {
+                    await apiAction('quick_add_user', { fullName: name });
+                    const users = await fetchData('users');
+                    globalUserList = users || [];
+                    const newUser = globalUserList.find(u => getFriendlyName(u).toLowerCase() === name.trim().toLowerCase());
+                    if (newUser) {
+                        await apiAction('assign_shift', { date, user_id: newUser.id, station_id: stationId, shift_id: shiftId });
+                    }
+                    updateGrid(document.getElementById('adminDatePicker').value);
+                }
+            }, 50);
+        }
+    });
+    
+    document.addEventListener('click', function closeMenu(evt) { 
+        if (!menu.contains(evt.target)) menu.remove(); 
+    }, { once: true });
+}
+
+// --- V1.4 AUTOCOMPLETE ---
+function showAutocomplete(element) {
+    closeAutocomplete(); 
+    const text = element.innerText;
+    const parts = text.split('/');
+    const currentPart = parts[parts.length - 1].trim();
+    if (currentPart.length === 0) return;
+
+    const matches = globalUserList.filter(u => getFriendlyName(u).toLowerCase().startsWith(currentPart.toLowerCase()));
+    if (matches.length === 0) return;
+
+    const rect = element.getBoundingClientRect();
+    const dropdown = document.createElement('div');
+    dropdown.id = 'autocomplete-dropdown';
+    dropdown.className = 'dropdown-menu'; 
+    dropdown.style.left = `${rect.left}px`;
+    dropdown.style.top = `${rect.bottom + window.scrollY}px`; 
+    dropdown.style.position = 'absolute';
+    dropdown.style.zIndex = '10000';
+    dropdown.style.maxHeight = '200px';
+    dropdown.style.overflowY = 'auto';
+
+    matches.forEach(match => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.innerText = getFriendlyName(match);
+        
+        item.onmousedown = (evt) => { 
+            evt.preventDefault();
+            parts[parts.length - 1] = parts.length > 1 ? " " + getFriendlyName(match) : getFriendlyName(match);
+            element.innerText = parts.join(' / ').trim();
+            closeAutocomplete();
+            element.blur(); 
+        };
+        dropdown.appendChild(item);
+    });
+    document.body.appendChild(dropdown);
+}
+
+function closeAutocomplete() {
+    const existing = document.getElementById('autocomplete-dropdown');
+    if (existing) existing.remove();
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.classList.contains('shift-text')) closeAutocomplete();
+});
+
 
 function renderWeeklyView() {
     const cont = document.getElementById('weeklyContainer');
@@ -363,9 +443,7 @@ function renderRoster() {
     list.innerHTML = sortedUsers.map(u => {
         const isAssigned = workingTodayUserIds.has(u.id);
         const assignedClass = isAssigned ? 'assigned' : '';
-        const nameToShow = getFriendlyName(u); 
-        const safeName = escapeHTML(nameToShow);
-        
+        const safeName = escapeHTML(getFriendlyName(u));
         return `<div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('user_id','${u.id}')">${safeName} <button class="remove-user-btn" data-fullname="${safeName}">×</button></div>`;
     }).join('');
     
