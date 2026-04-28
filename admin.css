@@ -564,3 +564,28 @@
 }
 .clear-user-btn { background: none; border: none; color: #d32f2f; font-weight: bold; cursor: pointer; padding: 0 2px; }
 .clear-user-btn:hover { background: rgba(255,0,0,0.1); border-radius: 50%; }
+
+/* Smart snabb-inmatning direkt i schemat */
+.quick-assign-input {
+    border: 1px solid transparent;
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 4px 6px;
+    border-radius: 4px;
+    width: 70px;
+    transition: all 0.2s;
+    color: var(--text-color);
+}
+.quick-assign-input:focus {
+    border-color: #2196F3;
+    background: #fff;
+    width: 130px; /* Expanderar när du klickar i den */
+    outline: none;
+    box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+}
+.quick-assign-input::placeholder {
+    color: #999;
+    font-weight: normal;
+}
