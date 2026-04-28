@@ -13,7 +13,6 @@ let isWeeklyView = false;
 let datesOfWeek = [];
 let hasUnpublishedChanges = false;
 
-// --- HJÄLPARE: Hämta rätt namn (Visningsnamn i första hand) ---
 function getFriendlyName(u) {
     if (u.display_name) return u.display_name;
     if (u.first_name) return `${u.first_name} ${u.last_name || ''}`.trim();
@@ -84,7 +83,7 @@ export async function initAdmin() {
 
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
-    // Hantera när du släpper en person på schemat
+    // Hantera när du släpper en person på schemat (Drag and Drop)
     window.handleDrop = async (e) => {
         e.preventDefault(); 
         const date = e.currentTarget.getAttribute('data-date');
@@ -99,16 +98,14 @@ export async function initAdmin() {
         if (existing.some(u => u.user_id == userId)) return; 
 
         const res = await apiAction('assign_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
-        if (res.success) {
-            updateGrid(picker.value);
-        } else {
-            showToast("Kunde inte lägga till person", "error");
-        }
+        if (res.success) updateGrid(picker.value);
     };
 
-    // Lyssna på klick för att ta bort från passet (Krysset på Pillren)
+    // Global lyssnare för klick och smart inmatning inuti schemat
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
+        
+        // Ta bort pass (klicka på krysset)
         scheduleContainer.addEventListener('click', async (e) => {
             if (e.target.classList.contains('clear-user-btn')) {
                 const date = e.target.getAttribute('data-date');
@@ -118,6 +115,56 @@ export async function initAdmin() {
                 
                 const res = await apiAction('remove_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
                 if (res.success) updateGrid(picker.value);
+            }
+        });
+
+        // SMART INMATNING (Skriva namn och trycka Enter)
+        scheduleContainer.addEventListener('keydown', async (e) => {
+            if (e.target.classList.contains('quick-assign-input') && e.key === 'Enter') {
+                const inputVal = e.target.value.trim();
+                if (!inputVal) return;
+
+                const date = e.target.getAttribute('data-date');
+                const stationId = e.target.getAttribute('data-station');
+                const shiftId = e.target.getAttribute('data-shift');
+
+                e.target.disabled = true; // Förhindra dubbelklick
+
+                // 1. Försök hitta befintlig användare
+                const lowerInput = inputVal.toLowerCase();
+                let matchedUser = globalUserList.find(u => 
+                    (u.display_name && u.display_name.toLowerCase() === lowerInput) ||
+                    (u.first_name && `${u.first_name} ${u.last_name||''}`.trim().toLowerCase() === lowerInput) ||
+                    (u.username && u.username.toLowerCase() === lowerInput)
+                );
+
+                // 2. Skapa användaren om den inte fanns
+                if (!matchedUser) {
+                    const addRes = await apiAction('quick_add_user', { fullName: inputVal });
+                    if (addRes.success) {
+                        const newUsers = await fetchData('users');
+                        if (newUsers) {
+                            globalUserList = newUsers;
+                            matchedUser = globalUserList.find(u => u.display_name && u.display_name.toLowerCase() === lowerInput);
+                        }
+                    }
+                }
+
+                // 3. Boka in användaren på passet
+                if (matchedUser) {
+                    const assignRes = await apiAction('assign_shift', {
+                        date: date, user_id: matchedUser.id, station_id: stationId, shift_id: shiftId
+                    });
+                    if (assignRes.success) {
+                        updateGrid(picker.value);
+                    } else {
+                        showToast("Kunde inte boka in passet.", "error");
+                        e.target.disabled = false;
+                    }
+                } else {
+                    showToast("Kunde inte hitta eller skapa användaren.", "error");
+                    e.target.disabled = false;
+                }
             }
         });
     }
@@ -205,7 +252,7 @@ function renderAdminGrid() {
             const hasUsers = assignments.length > 0;
             
             let usersHtml = assignments.map(a => {
-                const nameToShow = getFriendlyName(a); // <-- Här används visningsnamnet
+                const nameToShow = getFriendlyName(a); 
                 return `
                 <span class="assigned-user-pill">
                     ${escapeHTML(nameToShow)}
@@ -213,9 +260,13 @@ function renderAdminGrid() {
                 </span>`;
             }).join('');
             
+            // --- HÄR LÄGGER VI IN INMATNINGSFÄLTET I RUTAN ---
             html += `
             <div class="shift-block ${hasUsers?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}" data-label="${escapeHTML(sh.label)}">
                 <div class="shift-users-container">${usersHtml}</div>
+                <div class="shift-controls">
+                    <input type="text" class="quick-assign-input" placeholder="+ Namn" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}">
+                </div>
             </div>`;
         });
         html += `</div>`;
@@ -297,7 +348,7 @@ function renderRoster() {
     list.innerHTML = sortedUsers.map(u => {
         const isAssigned = workingTodayUserIds.has(u.id);
         const assignedClass = isAssigned ? 'assigned' : '';
-        const nameToShow = getFriendlyName(u); // <-- Här används visningsnamnet i listan
+        const nameToShow = getFriendlyName(u); 
         const safeName = escapeHTML(nameToShow);
         
         return `<div class="draggable-item ${assignedClass}" draggable="true" ondragstart="event.dataTransfer.setData('user_id','${u.id}')">${safeName} <button class="remove-user-btn" data-fullname="${safeName}">×</button></div>`;
