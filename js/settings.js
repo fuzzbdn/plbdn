@@ -30,7 +30,6 @@ export async function initSettings() {
         initStationsSettings();
         initShiftsSettings();
         initAdminSettings();
-        // Notera: initThemeTab och initExportTab bör också inkluderas om de används
     } catch (e) {
         showToast("Kunde inte ladda inställningar", "error");
     }
@@ -82,18 +81,54 @@ function initStationsSettings() {
     const stBtn = document.getElementById('addStationBtn');
     const stCancel = document.getElementById('cancelStationEditBtn');
 
+    // --- DRA-OCH-SLÄPP LOGIK FÖR STATIONER ---
+    let dragSrcStationEl = null;
+    window.handleStationDragStart = (e) => {
+        dragSrcStationEl = e.target.closest('.draggable-station');
+        e.dataTransfer.effectAllowed = 'move';
+        dragSrcStationEl.classList.add('dragging');
+    };
+    window.handleStationDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; };
+    window.handleStationDrop = async (e) => {
+        e.stopPropagation();
+        const targetEl = e.target.closest('.draggable-station');
+        if (dragSrcStationEl && targetEl && dragSrcStationEl !== targetEl) {
+            const oldIndex = parseInt(dragSrcStationEl.dataset.index);
+            const newIndex = parseInt(targetEl.dataset.index);
+            
+            // Flytta objektet i listan lokalt
+            const movedItem = globalStations.splice(oldIndex, 1)[0];
+            globalStations.splice(newIndex, 0, movedItem);
+            
+            // Hämta de nya ID:na i rätt ordning och skicka till databasen
+            const newOrderIds = globalStations.map(st => st.id);
+            await apiAction('reorder_stations', newOrderIds);
+            
+            renderStations(); 
+        }
+        return false;
+    };
+
     const renderStations = () => {
         const cont = document.getElementById('stationListContainer');
-        cont.innerHTML = globalStations.map(st => {
+        cont.innerHTML = globalStations.map((st, i) => {
+            const dragAttr = `draggable="true" ondragstart="handleStationDragStart(event)" ondragover="handleStationDragOver(event)" ondrop="handleStationDrop(event)" data-index="${i}"`;
+            
             if (st.is_spacer) {
-                return `<div class="admin-list-item" style="background:#f9f9f9;">
-                            <i>--- Mellanrum ---</i>
-                            <button class="list-btn" onclick="deleteStation(${st.id})">🗑️</button>
+                return `<div class="admin-list-item draggable-station" ${dragAttr} style="background:#f9f9f9; cursor:grab;">
+                            <div class="list-info-left">
+                                <span class="drag-handle" style="margin-right:10px; color:#aaa;">☰</span>
+                                <i>--- Mellanrum ---</i>
+                            </div>
+                            <div class="list-actions-right">
+                                <button class="list-btn" onclick="deleteStation(${st.id})">🗑️</button>
+                            </div>
                         </div>`;
             }
             return `
-            <div class="admin-list-item">
+            <div class="admin-list-item draggable-station" ${dragAttr} style="cursor:grab;">
                 <div class="list-info-left">
+                    <span class="drag-handle" style="margin-right:10px; color:#aaa;">☰</span>
                     <div style="width:20px; height:20px; background:${escapeHTML(st.color)}; border-radius:50%; margin-right:10px; border:1px solid #ccc;"></div>
                     <strong>${escapeHTML(st.name)}</strong>
                 </div>
@@ -161,10 +196,39 @@ function initShiftsSettings() {
     const shBtn = document.getElementById('addShiftBtn');
     const shCancel = document.getElementById('cancelShiftEditBtn');
 
+    // --- DRA-OCH-SLÄPP LOGIK FÖR PASS ---
+    let dragSrcShiftEl = null;
+    window.handleShiftDragStart = (e) => {
+        dragSrcShiftEl = e.target.closest('.draggable-shift');
+        e.dataTransfer.effectAllowed = 'move';
+        dragSrcShiftEl.classList.add('dragging');
+    };
+    window.handleShiftDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; };
+    window.handleShiftDrop = async (e) => {
+        e.stopPropagation();
+        const targetEl = e.target.closest('.draggable-shift');
+        if (dragSrcShiftEl && targetEl && dragSrcShiftEl !== targetEl) {
+            const oldIndex = parseInt(dragSrcShiftEl.dataset.index);
+            const newIndex = parseInt(targetEl.dataset.index);
+            
+            const movedItem = globalShifts.splice(oldIndex, 1)[0];
+            globalShifts.splice(newIndex, 0, movedItem);
+            
+            const newOrderIds = globalShifts.map(sh => sh.id);
+            await apiAction('reorder_shifts', newOrderIds);
+            
+            renderShifts(); 
+        }
+        return false;
+    };
+
     const renderShifts = () => {
-        document.getElementById('shiftListContainer').innerHTML = globalShifts.map(sh => `
-        <div class="admin-list-item">
+        document.getElementById('shiftListContainer').innerHTML = globalShifts.map((sh, i) => {
+            const dragAttr = `draggable="true" ondragstart="handleShiftDragStart(event)" ondragover="handleShiftDragOver(event)" ondrop="handleShiftDrop(event)" data-index="${i}"`;
+            return `
+        <div class="admin-list-item draggable-shift" ${dragAttr} style="cursor:grab;">
             <div class="list-info-left">
+                <span class="drag-handle" style="margin-right:10px; color:#aaa;">☰</span>
                 <strong>${escapeHTML(sh.label)}</strong> 
                 <span style="color:#666; margin-left:5px;">(${escapeHTML(sh.time_range || '')})</span>
             </div>
@@ -172,7 +236,7 @@ function initShiftsSettings() {
                 <button class="list-btn" onclick="startEditShift(${sh.id})">✏️</button>
                 <button class="list-btn" onclick="deleteShift(${sh.id})">🗑️</button>
             </div>
-        </div>`).join('');
+        </div>`}).join('');
     };
 
     window.startEditShift = (id) => {
@@ -237,7 +301,6 @@ function initAdminSettings() {
                 ? '<span style="background:#ff9800; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">Admin</span>' 
                 : '<span style="background:#4CAF50; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">User</span>';
             
-            // --- MODIFIERAD RAD: Visar fullständigt namn som huvudrubrik ---
             const fullName = `${a.first_name || ''} ${a.last_name || ''}`.trim() || "Namn saknas";
             const displayNameSub = a.display_name ? ` [Visa: ${a.display_name}]` : "";
             
