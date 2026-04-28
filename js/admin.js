@@ -13,7 +13,6 @@ let isWeeklyView = false;
 let datesOfWeek = [];
 let hasUnpublishedChanges = false;
 
-// Hjälpare: Prioriterar visningsnamn
 function getFriendlyName(u) {
     if (u.display_name) return u.display_name;
     if (u.first_name) return `${u.first_name} ${u.last_name || ''}`.trim();
@@ -100,10 +99,7 @@ export async function initAdmin() {
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
         
-        // När man klickar i schemat (+ eller x)
         scheduleContainer.addEventListener('click', async (e) => {
-            
-            // Rensa passet helt (Det gamla kryss-beteendet)
             if (e.target.classList.contains('clear-btn')) {
                 const date = e.target.getAttribute('data-date');
                 const stationId = e.target.getAttribute('data-station');
@@ -117,7 +113,6 @@ export async function initAdmin() {
                 updateGrid(picker.value);
             }
 
-            // Öppna rullgardinsmenyn (Gamla beteendet)
             if (e.target.classList.contains('add-user-btn')) {
                 const date = e.target.getAttribute('data-date');
                 const stationId = e.target.getAttribute('data-station');
@@ -126,20 +121,21 @@ export async function initAdmin() {
             }
         });
 
-        // När man skriver in text för Autocomplete
         scheduleContainer.addEventListener('input', (e) => {
             if (e.target.classList.contains('shift-text')) {
                 showAutocomplete(e.target);
             }
         });
 
-        // När man lämnar textrutan (Sparar texten till databasen)
-        scheduleContainer.addEventListener('focusout', async (e) => {
+        scheduleContainer.addEventListener('focusout', (e) => {
             if (e.target.classList.contains('shift-text')) {
-                const date = e.target.getAttribute('data-date');
-                const stationId = e.target.getAttribute('data-station');
-                const shiftId = e.target.getAttribute('data-shift');
-                await syncShiftTextToDB(date, stationId, shiftId, e.target.innerText);
+                // Fördröj sparandet lite så att man hinner klicka i listan först
+                setTimeout(async () => {
+                    const date = e.target.getAttribute('data-date');
+                    const stationId = e.target.getAttribute('data-station');
+                    const shiftId = e.target.getAttribute('data-shift');
+                    await syncShiftTextToDB(date, stationId, shiftId, e.target.innerText);
+                }, 150); 
             }
         });
     }
@@ -171,12 +167,10 @@ async function syncShiftTextToDB(date, stationId, shiftId, text) {
     const key = `${date}_${stationId}_${shiftId}`;
     const currentAssignments = globalScheduleData[key] || [];
     
-    // 1. Rensa passet för att bygga upp det baserat på texten
     for (let a of currentAssignments) {
         await apiAction('remove_shift', { date, user_id: a.user_id, station_id: stationId, shift_id: shiftId });
     }
 
-    // 2. Läs namnen och skapa/boka in
     const names = text.split('/').map(n => n.trim()).filter(n => n.length > 0);
     for (let name of names) {
         let u = globalUserList.find(u => getFriendlyName(u).toLowerCase() === name.toLowerCase());
@@ -252,7 +246,6 @@ function renderAdminGrid() {
             const assignments = globalScheduleData[key] || [];
             const hasUsers = assignments.length > 0;
             
-            // Formatera som text med / emellan, precis som v1.4
             const textVal = assignments.map(a => getFriendlyName(a)).join(' / ');
             const safeVal = escapeHTML(textVal);
             
@@ -270,26 +263,26 @@ function renderAdminGrid() {
     cont.innerHTML = html;
 }
 
-// --- V1.4 RULLGARDINSMENY ---
+// --- V1.4 RULLGARDINSMENY (+ KNAPP) ---
 function manualAdd(e, date, stationId, shiftId) {
     e.stopPropagation();
     const existing = document.getElementById('quick-dropdown');
     if (existing) existing.remove();
 
+    const block = e.target.closest('.shift-block'); // Fäst listan i pass-rutan
     const sortedUsers = [...globalUserList].sort((a,b) => getFriendlyName(a).localeCompare(getFriendlyName(b)));
     
     const menu = document.createElement('div');
     menu.id = 'quick-dropdown';
     menu.className = 'dropdown-menu';
-    menu.style.left = `${e.pageX}px`;
-    menu.style.top = `${e.pageY + 10}px`;
-    menu.style.position = 'absolute';
-    menu.style.zIndex = '10000';
+    menu.style.top = 'calc(100% + 2px)'; // Positionera exakt under rutan
+    menu.style.left = '0';
 
     let html = sortedUsers.map(u => `<div class="dropdown-item user-select-btn" data-id="${u.id}">${escapeHTML(getFriendlyName(u))}</div>`).join('');
-    html += `<div class="dropdown-item manual-btn" style="color:#0277bd; font-weight:bold;">+ Skriv in eget namn...</div>`;
+    html += `<div class="dropdown-item manual-btn" style="color:#0277bd; font-weight:bold; background:#e3f2fd;">+ Skriv in eget namn...</div>`;
     menu.innerHTML = html;
-    document.body.appendChild(menu);
+    
+    block.appendChild(menu);
 
     menu.addEventListener('click', async (evt) => {
         if (evt.target.classList.contains('user-select-btn')) {
@@ -331,16 +324,12 @@ function showAutocomplete(element) {
     const matches = globalUserList.filter(u => getFriendlyName(u).toLowerCase().startsWith(currentPart.toLowerCase()));
     if (matches.length === 0) return;
 
-    const rect = element.getBoundingClientRect();
+    const block = element.closest('.shift-block'); // Fäst listan i pass-rutan
     const dropdown = document.createElement('div');
     dropdown.id = 'autocomplete-dropdown';
     dropdown.className = 'dropdown-menu'; 
-    dropdown.style.left = `${rect.left}px`;
-    dropdown.style.top = `${rect.bottom + window.scrollY}px`; 
-    dropdown.style.position = 'absolute';
-    dropdown.style.zIndex = '10000';
-    dropdown.style.maxHeight = '200px';
-    dropdown.style.overflowY = 'auto';
+    dropdown.style.top = 'calc(100% + 2px)'; // Positionera exakt under rutan
+    dropdown.style.left = '0';
 
     matches.forEach(match => {
         const item = document.createElement('div');
@@ -348,15 +337,16 @@ function showAutocomplete(element) {
         item.innerText = getFriendlyName(match);
         
         item.onmousedown = (evt) => { 
-            evt.preventDefault();
+            evt.preventDefault(); // Detta förhindrar att textrutan tappar fokus oavsiktligt
             parts[parts.length - 1] = parts.length > 1 ? " " + getFriendlyName(match) : getFriendlyName(match);
             element.innerText = parts.join(' / ').trim();
             closeAutocomplete();
-            element.blur(); 
+            element.blur(); // Detta triggar 'focusout' manuellt som i sin tur sparar till DB!
         };
         dropdown.appendChild(item);
     });
-    document.body.appendChild(dropdown);
+    
+    block.appendChild(dropdown);
 }
 
 function closeAutocomplete() {
