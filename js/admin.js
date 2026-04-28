@@ -68,9 +68,23 @@ export async function initAdmin() {
         updateGrid(picker.value);
     }
 
+    // --- NY LOGIK FÖR PUBLICERING ---
     document.getElementById('publishBtn').onclick = async () => {
-        if(await showConfirm("Vill du publicera veckans schema till displayen?")) { 
-            const res = await apiAction('publish_schedule', { start_date: datesOfWeek[0], end_date: datesOfWeek[6] });
+        const currentDateStr = datesOfWeek[currentAdminDayIndex];
+        
+        let start = currentDateStr;
+        let end = currentDateStr;
+        let msg = `Vill du publicera dagens schema (${currentDateStr}) till displayen?`;
+
+        // Om vi är i veckovyn, publicera hela veckan
+        if (isWeeklyView) {
+            start = datesOfWeek[0];
+            end = datesOfWeek[6];
+            msg = "Vill du publicera hela veckans schema till displayen?";
+        }
+
+        if(await showConfirm(msg)) { 
+            const res = await apiAction('publish_schedule', { start_date: start, end_date: end });
             if (res.success) {
                 showToast("Schemat är publicerat!", "success"); 
                 updateGrid(picker.value);
@@ -129,7 +143,6 @@ export async function initAdmin() {
 
         scheduleContainer.addEventListener('focusout', (e) => {
             if (e.target.classList.contains('shift-text')) {
-                // Fördröj sparandet lite så att man hinner klicka i listan först
                 setTimeout(async () => {
                     const date = e.target.getAttribute('data-date');
                     const stationId = e.target.getAttribute('data-station');
@@ -155,7 +168,9 @@ export async function initAdmin() {
                 dayCont.style.display = 'grid'; weekCont.style.display = 'none';
                 toggleBtn.innerText = "📅 Byt till Veckovy"; toggleBtn.style.backgroundColor = "#0277bd";
             }
+            // Rita om och uppdatera varningen för den nya vyn
             renderViews();
+            updatePublishBanner();
         };
     }
 
@@ -199,7 +214,6 @@ async function updateGrid(dateStr) {
     
     const scheduleRaw = await fetchData('schedule', `&start_date=${datesOfWeek[0]}&end_date=${datesOfWeek[6]}`);
     globalScheduleData = {};
-    hasUnpublishedChanges = false;
 
     if (Array.isArray(scheduleRaw)) {
         scheduleRaw.forEach(row => {
@@ -207,12 +221,31 @@ async function updateGrid(dateStr) {
             const key = `${localDate}_${row.station_id}_${row.shift_id}`;
             if (!globalScheduleData[key]) globalScheduleData[key] = [];
             globalScheduleData[key].push(row);
-            if (!row.is_published) hasUnpublishedChanges = true;
         });
     }
 
     renderViews();
-    
+    updatePublishBanner();
+}
+
+// --- NY LOGIK FÖR VARNINGSBANNERN ---
+function updatePublishBanner() {
+    hasUnpublishedChanges = false;
+    const currentDateStr = datesOfWeek[currentAdminDayIndex];
+
+    // Kolla i schemat om det finns rader som är opublicerade
+    Object.values(globalScheduleData).forEach(assignments => {
+        assignments.forEach(row => {
+            if (!row.is_published) {
+                const localDate = row.work_date.split('T')[0];
+                // Är vi i veckovy bryr vi oss om hela veckan, i dagsvy bryr vi oss bara om dagens datum
+                if (isWeeklyView || localDate === currentDateStr) {
+                    hasUnpublishedChanges = true;
+                }
+            }
+        });
+    });
+
     const banner = document.getElementById('publishReminderBanner');
     if (banner) {
         if (hasUnpublishedChanges) banner.classList.remove('hidden');
@@ -269,13 +302,13 @@ function manualAdd(e, date, stationId, shiftId) {
     const existing = document.getElementById('quick-dropdown');
     if (existing) existing.remove();
 
-    const block = e.target.closest('.shift-block'); // Fäst listan i pass-rutan
+    const block = e.target.closest('.shift-block'); 
     const sortedUsers = [...globalUserList].sort((a,b) => getFriendlyName(a).localeCompare(getFriendlyName(b)));
     
     const menu = document.createElement('div');
     menu.id = 'quick-dropdown';
     menu.className = 'dropdown-menu';
-    menu.style.top = 'calc(100% + 2px)'; // Positionera exakt under rutan
+    menu.style.top = 'calc(100% + 2px)'; 
     menu.style.left = '0';
 
     let html = sortedUsers.map(u => `<div class="dropdown-item user-select-btn" data-id="${u.id}">${escapeHTML(getFriendlyName(u))}</div>`).join('');
@@ -324,11 +357,11 @@ function showAutocomplete(element) {
     const matches = globalUserList.filter(u => getFriendlyName(u).toLowerCase().startsWith(currentPart.toLowerCase()));
     if (matches.length === 0) return;
 
-    const block = element.closest('.shift-block'); // Fäst listan i pass-rutan
+    const block = element.closest('.shift-block'); 
     const dropdown = document.createElement('div');
     dropdown.id = 'autocomplete-dropdown';
     dropdown.className = 'dropdown-menu'; 
-    dropdown.style.top = 'calc(100% + 2px)'; // Positionera exakt under rutan
+    dropdown.style.top = 'calc(100% + 2px)'; 
     dropdown.style.left = '0';
 
     matches.forEach(match => {
@@ -337,11 +370,11 @@ function showAutocomplete(element) {
         item.innerText = getFriendlyName(match);
         
         item.onmousedown = (evt) => { 
-            evt.preventDefault(); // Detta förhindrar att textrutan tappar fokus oavsiktligt
+            evt.preventDefault(); 
             parts[parts.length - 1] = parts.length > 1 ? " " + getFriendlyName(match) : getFriendlyName(match);
             element.innerText = parts.join(' / ').trim();
             closeAutocomplete();
-            element.blur(); // Detta triggar 'focusout' manuellt som i sin tur sparar till DB!
+            element.blur(); 
         };
         dropdown.appendChild(item);
     });
@@ -467,6 +500,7 @@ function setupSidebarAddUser() {
                     inp.value = '';
                     globalUserList = await fetchData('users') || [];
                     renderViews();
+                    updatePublishBanner();
                 } else {
                     showToast("Kunde inte lägga till personal", "error");
                 }
