@@ -197,14 +197,15 @@ function renderAdminGrid() {
             const safeVal = escapeHTML(val);
             const safeKey = escapeHTML(key);
             
-            html += `
-            <div class="shift-block ${safeVal?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-key="${safeKey}">
-                <span class="shift-text" contenteditable="true" data-key="${safeKey}">${safeVal}</span>
-                <div class="shift-controls">
-                    <button class="add-user-btn" data-key="${safeKey}" title="Lägg till">+</button>
-                    ${safeVal ? `<button class="clear-btn" data-key="${safeKey}">×</button>`:''}
-                </div>
-            </div>`;
+// Ändra denna del inuti renderAdminGrid() i admin.js
+html += `
+<div class="shift-block ${safeVal?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-key="${safeKey}" data-label="${escapeHTML(sh.label)}">
+    <span class="shift-text" contenteditable="true" data-key="${safeKey}">${safeVal}</span>
+    <div class="shift-controls">
+        <button class="add-user-btn" data-key="${safeKey}" title="Lägg till">+</button>
+        ${safeVal ? `<button class="clear-btn" data-key="${safeKey}">×</button>`:''}
+    </div>
+</div>`;
         });
         html += `</div>`;
     });
