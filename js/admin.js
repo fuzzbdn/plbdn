@@ -83,7 +83,7 @@ export async function initAdmin() {
 
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
     
-    // Hantera när du släpper en person på schemat (Drag and Drop)
+    // Drag and Drop-hantering
     window.handleDrop = async (e) => {
         e.preventDefault(); 
         const date = e.currentTarget.getAttribute('data-date');
@@ -101,12 +101,12 @@ export async function initAdmin() {
         if (res.success) updateGrid(picker.value);
     };
 
-    // Global lyssnare för klick och smart inmatning inuti schemat
+    // Global lyssnare för schemat (Klick & Dropdown)
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
-        
-        // Ta bort pass (klicka på krysset)
         scheduleContainer.addEventListener('click', async (e) => {
+            
+            // 1. Ta bort en person (Krysset på pillret)
             if (e.target.classList.contains('clear-user-btn')) {
                 const date = e.target.getAttribute('data-date');
                 const stationId = e.target.getAttribute('data-station');
@@ -116,55 +116,117 @@ export async function initAdmin() {
                 const res = await apiAction('remove_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
                 if (res.success) updateGrid(picker.value);
             }
-        });
 
-        // SMART INMATNING (Skriva namn och trycka Enter)
-        scheduleContainer.addEventListener('keydown', async (e) => {
-            if (e.target.classList.contains('quick-assign-input') && e.key === 'Enter') {
-                const inputVal = e.target.value.trim();
-                if (!inputVal) return;
+            // 2. Öppna Rullgardinsmenyn (Gröna Plus-knappen)
+            if (e.target.classList.contains('add-user-btn')) {
+                const btn = e.target;
+                const container = btn.parentElement;
+                const date = btn.getAttribute('data-date');
+                const stationId = btn.getAttribute('data-station');
+                const shiftId = btn.getAttribute('data-shift');
 
-                const date = e.target.getAttribute('data-date');
-                const stationId = e.target.getAttribute('data-station');
-                const shiftId = e.target.getAttribute('data-shift');
+                // Stäng eventuella andra öppna menyer först
+                document.querySelectorAll('.autocomplete-input').forEach(inp => inp.style.display = 'none');
+                document.querySelectorAll('.autocomplete-dropdown').forEach(dd => dd.style.display = 'none');
+                document.querySelectorAll('.add-user-btn').forEach(b => b.style.display = 'block');
 
-                e.target.disabled = true; // Förhindra dubbelklick
+                // Dölj knappen och förbered menyn
+                btn.style.display = 'none';
 
-                // 1. Försök hitta befintlig användare
-                const lowerInput = inputVal.toLowerCase();
-                let matchedUser = globalUserList.find(u => 
-                    (u.display_name && u.display_name.toLowerCase() === lowerInput) ||
-                    (u.first_name && `${u.first_name} ${u.last_name||''}`.trim().toLowerCase() === lowerInput) ||
-                    (u.username && u.username.toLowerCase() === lowerInput)
-                );
+                let input = container.querySelector('.autocomplete-input');
+                let dropdown = container.querySelector('.autocomplete-dropdown');
 
-                // 2. Skapa användaren om den inte fanns
-                if (!matchedUser) {
-                    const addRes = await apiAction('quick_add_user', { fullName: inputVal });
-                    if (addRes.success) {
-                        const newUsers = await fetchData('users');
-                        if (newUsers) {
-                            globalUserList = newUsers;
-                            matchedUser = globalUserList.find(u => u.display_name && u.display_name.toLowerCase() === lowerInput);
+                if (!input) {
+                    // Skapa sökfältet och rullgardinsmenyn
+                    input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'autocomplete-input';
+                    input.placeholder = 'Sök / Lägg till...';
+                    
+                    dropdown = document.createElement('div');
+                    dropdown.className = 'autocomplete-dropdown';
+
+                    container.appendChild(input);
+                    container.appendChild(dropdown);
+
+                    // Hjälpfunktion för att spara till databasen
+                    const assignUser = async (userId) => {
+                        input.disabled = true;
+                        const res = await apiAction('assign_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
+                        if (res.success) updateGrid(document.getElementById('adminDatePicker').value);
+                    };
+
+                    const createUserAndAssign = async (name) => {
+                        input.disabled = true;
+                        const addRes = await apiAction('quick_add_user', { fullName: name });
+                        if (addRes.success) {
+                            const newUsers = await fetchData('users');
+                            globalUserList = newUsers || [];
+                            const matchedUser = globalUserList.find(u => getFriendlyName(u).toLowerCase() === name.toLowerCase());
+                            if (matchedUser) await assignUser(matchedUser.id);
+                        } else {
+                            showToast("Kunde inte skapa", "error");
+                            input.disabled = false;
                         }
-                    }
+                    };
+
+                    // Ritar ut namnen i listan
+                    const renderList = () => {
+                        dropdown.innerHTML = '';
+                        const val = input.value.trim().toLowerCase();
+                        
+                        // Filtrera på det man skriver
+                        const filtered = globalUserList.filter(u => getFriendlyName(u).toLowerCase().includes(val));
+                        
+                        filtered.forEach(u => {
+                            const item = document.createElement('div');
+                            item.className = 'autocomplete-item';
+                            item.textContent = getFriendlyName(u);
+                            item.onmousedown = (e) => { e.preventDefault(); assignUser(u.id); }; // onmousedown förhindrar att menyn stängs för tidigt
+                            dropdown.appendChild(item);
+                        });
+
+                        // Om namnet inte finns, visa "Skapa ny"
+                        if (val && !filtered.some(u => getFriendlyName(u).toLowerCase() === val)) {
+                            const item = document.createElement('div');
+                            item.className = 'autocomplete-item new-user';
+                            item.innerHTML = `➕ Skapa "<b>${escapeHTML(input.value)}</b>"`;
+                            item.onmousedown = (e) => { e.preventDefault(); createUserAndAssign(input.value.trim()); };
+                            dropdown.appendChild(item);
+                        }
+                    };
+
+                    input.addEventListener('input', renderList);
+
+                    // Om man trycker Enter
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            const val = input.value.trim();
+                            if(!val) return;
+                            const exactMatch = globalUserList.find(u => getFriendlyName(u).toLowerCase() === val.toLowerCase());
+                            if(exactMatch) assignUser(exactMatch.id);
+                            else createUserAndAssign(val);
+                        } else if (e.key === 'Escape') {
+                            input.blur();
+                        }
+                    });
+
+                    // Stäng menyn om man klickar utanför
+                    input.addEventListener('blur', () => {
+                        setTimeout(() => {
+                            input.style.display = 'none';
+                            dropdown.style.display = 'none';
+                            btn.style.display = 'block';
+                        }, 150);
+                    });
                 }
 
-                // 3. Boka in användaren på passet
-                if (matchedUser) {
-                    const assignRes = await apiAction('assign_shift', {
-                        date: date, user_id: matchedUser.id, station_id: stationId, shift_id: shiftId
-                    });
-                    if (assignRes.success) {
-                        updateGrid(picker.value);
-                    } else {
-                        showToast("Kunde inte boka in passet.", "error");
-                        e.target.disabled = false;
-                    }
-                } else {
-                    showToast("Kunde inte hitta eller skapa användaren.", "error");
-                    e.target.disabled = false;
-                }
+                input.style.display = 'block';
+                dropdown.style.display = 'block';
+                input.value = '';
+                input.disabled = false;
+                input.focus();
+                input.dispatchEvent(new Event('input')); // Ladda in hela listan direkt
             }
         });
     }
@@ -260,12 +322,11 @@ function renderAdminGrid() {
                 </span>`;
             }).join('');
             
-            // --- HÄR LÄGGER VI IN INMATNINGSFÄLTET I RUTAN ---
             html += `
             <div class="shift-block ${hasUsers?'':'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}" data-label="${escapeHTML(sh.label)}">
                 <div class="shift-users-container">${usersHtml}</div>
-                <div class="shift-controls">
-                    <input type="text" class="quick-assign-input" placeholder="+ Namn" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}">
+                <div class="shift-controls" style="position:relative;">
+                    <button class="add-user-btn" data-date="${currentDateStr}" data-station="${st.id}" data-shift="${sh.id}">+</button>
                 </div>
             </div>`;
         });
