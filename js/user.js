@@ -12,8 +12,11 @@ let currentDayIndex = 0;
 let isWeeklyView = false;
 
 export async function initUser() {
-    // Säkerställ att de är inloggade
-    if (!sessionStorage.getItem('jwtToken')) window.location.href = "index.html";
+    // --- FIX: Säkerställ att de är inloggade och avbryt skriptet direkt annars ---
+    if (!sessionStorage.getItem('jwtToken')) { 
+        window.location.href = "index.html"; 
+        return; 
+    }
 
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Användare');
     
@@ -100,7 +103,7 @@ function renderDayGrid() {
         
         const contrast = isLight(st.color) ? '#000' : '#fff';
         
-        // FIX: Vi lägger till '--station-color' så CSS:en kan hämta rätt färg till korten
+        // --- FIX: Lägg till CSS-variabel för färg så mobilkorten får rätt ramfärg ---
         html += `<div class="station-row" style="--station-color:${escapeHTML(st.color)};">
                     <div class="station-label" style="background-color:${escapeHTML(st.color)}; color:${contrast};">${escapeHTML(st.name)}</div>`;
         
@@ -108,7 +111,7 @@ function renderDayGrid() {
             const key = `${prefix}${st.name}-${sh.time}`;
             const val = globalScheduleData[key] || "";
             
-            // FIX: Lade till 'data-label' så mobilen kan skriva ut "Förmiddag" bredvid namnet
+            // --- FIX: Inkludera data-label så passets namn syns på mobilen ---
             html += `<div class="shift-block ${val?'':'empty'}" data-label="${escapeHTML(sh.label)}">
                         <span class="shift-text">${escapeHTML(val)}</span>
                      </div>`;
