@@ -1,6 +1,6 @@
 import { fetchData } from './service.js';
 import { getISOWeek, isLight, escapeHTML } from './utils.js';
-import { DAYS } from './config.js'; // <-- Felet är fixat här!
+import { DAYS } from './config.js'; 
 
 let globalStations = [];
 let globalShifts = [];
@@ -107,7 +107,9 @@ function renderGrid() {
         globalShifts.forEach(sh => {
             const key = `${st.id}_${sh.id}`;
             const assignments = globalScheduleData[key] || [];
-            const val = assignments.map(a => `${a.first_name} ${a.last_name||''}`.trim()).join(' / ');
+            
+            // FIX: Prioriterar display_name om det finns, annars förnamn + efternamn
+            const val = assignments.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
             
             html += `<div class="shift-card ${val?'':'empty'}" data-label="${escapeHTML(sh.label)}">${escapeHTML(val)}</div>`;
         });
