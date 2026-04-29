@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="admin.css">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
     <script type="module" src="js/main.js"></script>
 </head>
 <body id="page-settings">
@@ -38,7 +40,6 @@
                 <button class="tab-btn" onclick="openTab('tab-shifts')">⏰ Arbetspass</button>
                 <button class="tab-btn" onclick="openTab('tab-theme')">🎨 Utseende & Tema</button>
                 <button class="tab-btn" onclick="openTab('tab-admins')">👥 Användare & Konton</button>
-                
                 <button class="tab-btn" onclick="openTab('tab-absences')">🏖️ Hantera Frånvaro</button>
                 
                 <button class="tab-btn" id="tabBtnWorkplaces" onclick="openTab('tab-workplaces')" style="display:none; border-left: 4px solid #ff9800;">🏢 Arbetsplatser</button>
@@ -99,8 +100,8 @@
                             <button id="btnSetNextWeek" class="list-btn" style="border:1px solid #ccc;">Nästa vecka</button>
                         </div>
                         <div style="display:flex; gap:15px;">
-                            <button id="doPrintBtn" class="save-btn" style="background-color:#455a64; flex:1;">🖨️ Skriv ut</button>
-                            <button id="doImageBtn" class="save-btn" style="background-color:#0277bd; flex:1;">📷 Spara som bild(er)</button>
+                            <button id="doPrintBtn" class="save-btn" style="background-color:#455a64; flex:1;">🖨️ Skriv ut (PDF)</button>
+                            <button id="doImageBtn" class="save-btn" style="background-color:#0277bd; flex:1;">📷 Spara som bild / ZIP</button>
                         </div>
                     </div>
                 </div>
@@ -190,7 +191,7 @@
                         
                         <div class="form-group" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e0e0e0;">
                             <label style="margin-bottom:10px; display:block; font-weight:800; color:#333;">Skapa eller redigera konto:</label>
-                            <input type="text" id="newAdminDisplayName" placeholder="Visningsnamn (Hur personen ska visas på schemat)" style="width:100%; margin-bottom:10px; border: 2px solid #90caf9;">
+                            <input type="text" id="newAdminDisplayName" placeholder="Visningsnamn (t.ex. Kalle - Hur personen ska visas på schemat)" style="width:100%; margin-bottom:10px; border: 2px solid #90caf9;">
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
                                 <input type="text" id="newAdminFirstName" placeholder="Riktigt Förnamn">
                                 <input type="text" id="newAdminLastName" placeholder="Riktigt Efternamn">
