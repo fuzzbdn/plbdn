@@ -118,7 +118,15 @@ export default async function handler(req, res) {
                 return res.status(401).json({ success: false, error: "Fel uppgifter" });
             }
             const signedToken = jwt.sign({ id: user.id, username: user.username, role: user.role, workplaceId: user.workplace_id }, JWT_SECRET, { expiresIn: '24h' });
-            return res.status(200).json({ success: true, token: signedToken, name: user.display_name || user.first_name || user.username, role: user.role });
+            
+            // NYTT FÖR V2.0: Returnerar även userId
+            return res.status(200).json({ 
+                success: true, 
+                token: signedToken, 
+                userId: user.id,
+                name: user.display_name || user.first_name || user.username, 
+                role: user.role 
+            });
         }
 
         if (currentUserRole !== 'admin' && currentUserRole !== 'superadmin') return res.status(403).json({ error: "Behörighet saknas" });
@@ -171,7 +179,6 @@ export default async function handler(req, res) {
             }
         }
 
-        // --- KROCKKUDDE FÖR KONTOSKAPANDE ---
         if (action === 'add_admin') {
             const hashedPassword = await bcrypt.hash(password, 10);
             const safeFirstName = firstName || displayName || username;
