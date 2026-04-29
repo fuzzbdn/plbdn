@@ -47,9 +47,13 @@
     </header>
 
     <div class="admin-layout" style="margin-top: 20px;">
-        <aside class="sidebar-roster">
+<aside class="sidebar-roster">
             <div class="roster-card">
-                <h3>Personal</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">
+                    <h3 style="margin:0; border:none; padding:0;">Personal</h3>
+                    <button id="openAbsenceBtn" class="list-btn" style="background:#e3f2fd; color:#0277bd; font-size:0.85rem; padding:4px 8px; border-radius:4px; font-weight:bold;">🏖️ Frånvaro</button>
+                </div>
+                
                 <div class="sidebar-add-row">
                     <input type="text" id="sidebarNewName" placeholder="Nytt namn..." class="sidebar-input">
                     <button id="sidebarAddBtn" class="sidebar-add-btn">+</button>
