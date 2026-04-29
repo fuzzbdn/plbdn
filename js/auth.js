@@ -6,13 +6,11 @@ import { APP_VERSION } from './config.js';
    ========================================= */
 export function initLogin() {
     
-    // 1. Skriv ut versionen på skärmen dynamiskt från config.js
     const versionDisplay = document.getElementById('appVersionDisplay');
     if (versionDisplay) {
         versionDisplay.innerText = APP_VERSION;
     }
 
-    // 2. Ladda in rätt tema om det finns sparade inställningar
     fetch('/api/data-api?type=settings').then(r=>r.json()).then(s => { 
         if(s?.theme) {
             fetch('/api/data-api?type=custom_themes').then(r=>r.json()).then(themes => {
@@ -45,13 +43,16 @@ export function initLogin() {
             const d = await res.json();
             
             if(d.success) {
-                // Spara sessionsvariabler
                 sessionStorage.setItem('jwtToken', d.token); 
-                sessionStorage.setItem('adminUser', d.user); 
+                sessionStorage.setItem('userId', d.userId); // NYTT: Sparar användarens ID
                 sessionStorage.setItem('adminName', d.name);
-                sessionStorage.setItem('userRole', d.role); // Sparar rollen (superadmin / admin / user)
+                sessionStorage.setItem('userRole', d.role); 
                 
-                window.location.href = "admin.html";
+                if (d.role === 'user') {
+                    window.location.href = "user.html";
+                } else {
+                    window.location.href = "admin.html";
+                }
             } else {
                 showToast("Fel användarnamn eller lösenord", "error");
             }
@@ -64,7 +65,6 @@ export function initLogin() {
     if(userIn) userIn.onkeydown = handleEnter;
     if(passIn) passIn.onkeydown = handleEnter;
 
-    // --- GLÖMT LÖSENORD-HANTERING ---
     const forgotLink = document.getElementById('forgotPassLink');
     if (forgotLink) {
         forgotLink.onclick = (e) => { 
