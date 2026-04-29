@@ -3,6 +3,8 @@ import { showToast, showConfirm, isLight, escapeHTML } from './utils.js';
 
 let globalStations = [], globalShifts = [], globalCustomThemes = [], globalScheduleData = {};
 let globalAdmins = []; 
+let globalUserList = []; // NYTT: Behövs för frånvaro-rullgardinen
+let globalAbsences = []; // NYTT: Behövs för att rita ut listan
 let editingStationId = null, editingShiftId = null, editingAdminId = null;
 
 export async function initSettings() {
@@ -25,17 +27,22 @@ export async function initSettings() {
     try {
         const todayStr = new Date().toISOString().split('T')[0];
 
-        const [settings, themes, stations, shifts, scheduleData] = await Promise.all([
+        // Lade till users och absences i laddningen
+        const [settings, themes, stations, shifts, scheduleData, users, absences] = await Promise.all([
             fetchData('settings'),
             fetchData('custom_themes'),
             fetchData('stations'),
             fetchData('shifts'),
-            fetchData('schedule', `&start_date=${todayStr}&end_date=${todayStr}`)
+            fetchData('schedule', `&start_date=${todayStr}&end_date=${todayStr}`),
+            fetchData('users'),
+            fetchData('absences')
         ]);
 
         globalCustomThemes = Array.isArray(themes) ? themes : [];
         globalStations = Array.isArray(stations) ? stations : [];
         globalShifts = Array.isArray(shifts) ? shifts : [];
+        globalUserList = Array.isArray(users) ? users : [];
+        globalAbsences = Array.isArray(absences) ? absences : [];
         
         globalScheduleData = {};
         if (Array.isArray(scheduleData)) {
@@ -51,12 +58,15 @@ export async function initSettings() {
         initStationsSettings();
         initShiftsSettings();
         initAdminSettings();
+        initAbsenceSettings(); // Initiera nya frånvarofliken
         initThemeTab(settings);
         initExportTab();
     } catch (e) {
         showToast("Kunde inte ladda alla inställningar", "error");
     }
 }
+
+// ... Behåll alla andra init-funktioner fram till initAbsenceSettings (initGeneralTab, initWeatherTab, initStationsSettings, initShiftsSettings, initAdminSettings)
 
 function initGeneralTab() {
     const msgIn = document.getElementById('displayMessageInput');
@@ -450,6 +460,87 @@ function initAdminSettings() {
     renderAdmins();
 }
 
+// --- NYTT: Logik för frånvarofliken i Inställningar ---
+function initAbsenceSettings() {
+    const saveBtn = document.getElementById('saveAbsenceBtn');
+    const userSelect = document.getElementById('absUser');
+    if(!saveBtn || !userSelect) return;
+
+    // Fyll på rullgardinen med personal
+    userSelect.innerHTML = globalUserList.map(u => 
+        `<option value="${u.id}">${escapeHTML(u.display_name || u.first_name || u.username)}</option>`
+    ).join('');
+
+    // Sätt standard-datum till idag
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('absStart').value = today;
+    document.getElementById('absEnd').value = today;
+
+    const renderAbsences = () => {
+        const cont = document.getElementById('absenceListContainer');
+        if(!globalAbsences || globalAbsences.length === 0) {
+            cont.innerHTML = "<div style='color:#888; font-style:italic;'>Ingen frånvaro registrerad.</div>";
+            return;
+        }
+        let html = '';
+        globalAbsences.forEach(a => {
+            let icon = '✈️';
+            if(a.type === 'Sjuk') icon = '🤒';
+            if(a.type === 'VAB') icon = '🧸';
+            if(a.type === 'Semester') icon = '🌴';
+
+            const name = a.display_name || `${a.first_name} ${a.last_name||''}`.trim();
+            const dates = a.start_date.split('T')[0] === a.end_date.split('T')[0] 
+                ? a.start_date.split('T')[0] 
+                : `${a.start_date.split('T')[0]} till ${a.end_date.split('T')[0]}`;
+
+            html += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #ddd; background:#fff; margin-bottom:5px; border-radius:4px;">
+                <div>
+                    <strong>${icon} ${escapeHTML(name)}</strong> <span style="color:#666; font-size:0.85em; margin-left:10px;">${a.type} (${dates})</span>
+                </div>
+                <button class="list-btn" onclick="deleteAbsence(${a.id})" style="color:#d32f2f;">🗑️</button>
+            </div>`;
+        });
+        cont.innerHTML = html;
+    };
+
+    window.deleteAbsence = async (id) => {
+        if(await showConfirm("Radera denna frånvaro?")) {
+            await apiAction('delete_absence', { id });
+            globalAbsences = await fetchData('absences') || [];
+            renderAbsences();
+        }
+    };
+
+    saveBtn.onclick = async () => {
+        const user_id = document.getElementById('absUser').value;
+        const type = document.getElementById('absType').value;
+        const start_date = document.getElementById('absStart').value;
+        const end_date = document.getElementById('absEnd').value;
+
+        if(!user_id || !start_date || !end_date) return showToast("Fyll i alla fält", "error");
+        if(start_date > end_date) return showToast("Slutdatum kan inte vara före startdatum", "error");
+
+        const u = globalUserList.find(x => String(x.id) === String(user_id));
+        const name = u ? (u.display_name || u.first_name) : "Personen";
+        const msg = `Detta markerar ${name} som ${type} mellan ${start_date} och ${end_date}.\n\n⚠️ Eventuella inbokade pass under denna period kommer att rensas automatiskt. Vill du fortsätta?`;
+
+        if(await showConfirm(msg)) {
+            const res = await apiAction('save_absence', { user_id, type, start_date, end_date });
+            if(res.success) {
+                showToast("Frånvaro sparad!", "success");
+                globalAbsences = await fetchData('absences') || [];
+                renderAbsences();
+            } else {
+                showToast("Ett fel uppstod", "error");
+            }
+        }
+    };
+
+    renderAbsences();
+}
+
 function initWorkplaceSettings() {
     const wpName = document.getElementById('newWorkplaceName');
     const wpBtn = document.getElementById('addWorkplaceBtn');
@@ -553,7 +644,6 @@ function initThemeTab(currentSettings) {
                 const key = `${st.id}_${sh.id}`;
                 const assignments = globalScheduleData[key] || [];
                 
-                // FIX: Samma prioritering av display_name som gjordes i display.js
                 const val = assignments.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
                 const safeVal = escapeHTML(val);
                 
