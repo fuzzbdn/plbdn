@@ -3,7 +3,6 @@ import { showToast } from './utils.js';
 export async function fetchData(type, extraParams = "") {
     try {
         const headers = {};
-        // FIX: Bytt till localStorage
         const token = localStorage.getItem('jwtToken');
         if (token) headers['Authorization'] = `Bearer ${token}`;
         
@@ -20,7 +19,7 @@ export async function fetchData(type, extraParams = "") {
 
         const res = await fetch(url, { headers });
         
-        // FIX: Om inloggningen gått ut (401), skicka direkt till inloggning
+        // Logga ut automatiskt om token har gått ut
         if (res.status === 401) {
             localStorage.clear();
             window.location.href = "index.html";
