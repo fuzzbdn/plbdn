@@ -34,7 +34,6 @@ export default async function handler(req, res) {
             currentUserRole = decoded.role || 'user';
             currentWorkplace = decoded.workplaceId || 'default';
 
-            // Super-Admin åsidosätter arbetsplatsen via headern
             if (currentUserRole === 'superadmin' && req.headers['x-workplace-id']) {
                 currentWorkplace = req.headers['x-workplace-id'];
             }
@@ -59,7 +58,6 @@ export default async function handler(req, res) {
             return res.status(200).json(result.rows);
         }
 
-        // --- NYTT: Hämta personal till schemat (Dölj Super-Admins) ---
         if (type === 'users') {
             const result = await pool.query(
                 `SELECT id, username, first_name, last_name, display_name, email, role 
@@ -71,7 +69,6 @@ export default async function handler(req, res) {
             return res.status(200).json(result.rows);
         }
 
-        // --- NYTT: Hämta konton till inställningar (Visa alla) ---
         if (type === 'admins') {
             const result = await pool.query(
                 `SELECT id, username, first_name, last_name, display_name, email, role 
@@ -94,6 +91,7 @@ export default async function handler(req, res) {
         }
 
         if (type === 'schedule') {
+            // --- NYTT: ORDER BY sa.id ASC tvingar fram inmatningsordning (kronologiskt) ---
             const result = await pool.query(`
                 SELECT sa.id, sa.work_date, sa.user_id, sa.station_id, sa.shift_id, sa.is_published,
                        u.first_name, u.last_name, u.display_name
@@ -102,6 +100,7 @@ export default async function handler(req, res) {
                 JOIN stations s ON sa.station_id = s.id
                 WHERE s.workplace_id = $1
                 AND sa.work_date >= $2 AND sa.work_date <= $3
+                ORDER BY sa.id ASC
             `, [currentWorkplace, start_date, end_date]);
             return res.status(200).json(result.rows);
         }
