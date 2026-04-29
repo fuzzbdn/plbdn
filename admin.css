@@ -414,3 +414,15 @@
     color: #0277bd;
     font-weight: 600;
 }
+/* --- FRÅNVARO / SJUKDOM --- */
+.draggable-item.absent {
+    background-color: #ffebee !important;
+    color: #c62828 !important;
+    border-color: #ffcdd2;
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+.draggable-item.absent:hover {
+    transform: none;
+    box-shadow: none;
+}
