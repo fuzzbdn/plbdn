@@ -2,7 +2,7 @@ import { fetchData, saveData, apiAction } from './service.js';
 import { showToast, showConfirm, isLight, escapeHTML } from './utils.js';
 
 let globalStations = [], globalShifts = [], globalCustomThemes = [], globalScheduleData = {};
-let globalAdmins = []; // NYTT: För säker hantering av editering
+let globalAdmins = []; 
 let editingStationId = null, editingShiftId = null, editingAdminId = null;
 
 export async function initSettings() {
@@ -334,7 +334,7 @@ function initAdminSettings() {
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
         if (!Array.isArray(admins)) admins = []; 
-        globalAdmins = admins; // FIX: Spara adminlistan lokalt
+        globalAdmins = admins; 
         
         let html = `
         <div style="display:flex; padding: 10px 15px; background: #f5f5f5; border-bottom: 2px solid #ddd; font-weight: 600; font-size: 0.85rem; color: #555; text-transform: uppercase; position: sticky; top: 0; z-index: 10;">
@@ -379,7 +379,6 @@ function initAdminSettings() {
         document.getElementById('adminListContainer').innerHTML = html;
     };
 
-    // FIX: Funktion som hittar användaren via ID innan editering
     window.startEditAdmin = (id) => {
         const u = globalAdmins.find(admin => String(admin.id) === String(id));
         if (!u) return;
@@ -425,7 +424,6 @@ function initAdminSettings() {
 
         const res = await fetch('/api/data-api', {
             method: 'POST',
-            // FIX: Uppdaterad till localStorage
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` },
             body: JSON.stringify(payload)
         });
@@ -443,7 +441,6 @@ function initAdminSettings() {
         if (await showConfirm(`Ta bort kontot @${u}?`)) {
             await fetch('/api/data-api', {
                 method: 'POST',
-                // FIX: Uppdaterad till localStorage
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` },
                 body: JSON.stringify({ action: 'remove_admin', username: u })
             });
@@ -555,8 +552,11 @@ function initThemeTab(currentSettings) {
             globalShifts.forEach(sh => {
                 const key = `${st.id}_${sh.id}`;
                 const assignments = globalScheduleData[key] || [];
-                const val = assignments.map(a => `${a.first_name} ${a.last_name||''}`.trim()).join(' / ');
+                
+                // FIX: Samma prioritering av display_name som gjordes i display.js
+                const val = assignments.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
                 const safeVal = escapeHTML(val);
+                
                 html += `<div class="shift-card ${safeVal?'':'empty'}" data-label="${escapeHTML(sh.label)}">${safeVal}</div>`;
             });
             
