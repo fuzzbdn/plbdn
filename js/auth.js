@@ -1,16 +1,7 @@
 import { showToast } from './utils.js';
-import { APP_VERSION } from './config.js'; 
 
-/* =========================================
-   HANTERA INLOGGNINGSSIDAN (index.html)
-   ========================================= */
 export function initLogin() {
     
-    const versionDisplay = document.getElementById('appVersionDisplay');
-    if (versionDisplay) {
-        versionDisplay.innerText = APP_VERSION;
-    }
-
     fetch('/api/data-api?type=settings').then(r=>r.json()).then(s => { 
         if(s?.theme) {
             fetch('/api/data-api?type=custom_themes').then(r=>r.json()).then(themes => {
@@ -43,10 +34,11 @@ export function initLogin() {
             const d = await res.json();
             
             if(d.success) {
-                sessionStorage.setItem('jwtToken', d.token); 
-                sessionStorage.setItem('userId', d.userId); // NYTT: Sparar användarens ID
-                sessionStorage.setItem('adminName', d.name);
-                sessionStorage.setItem('userRole', d.role); 
+                // FIX: Ändrat till localStorage
+                localStorage.setItem('jwtToken', d.token); 
+                localStorage.setItem('userId', d.userId); 
+                localStorage.setItem('adminName', d.name);
+                localStorage.setItem('userRole', d.role); 
                 
                 if (d.role === 'user') {
                     window.location.href = "user.html";
@@ -101,9 +93,6 @@ export function initLogin() {
     }
 }
 
-/* =========================================
-   HANTERA ÅTERSTÄLLNINGSSIDAN (reset.html)
-   ========================================= */
 export function initReset() {
     const t = new URLSearchParams(window.location.search).get('token');
     if(!t) return; 
