@@ -91,7 +91,6 @@ export default async function handler(req, res) {
         }
 
         if (type === 'schedule') {
-            // --- NYTT: ORDER BY sa.id ASC tvingar fram inmatningsordning (kronologiskt) ---
             const result = await pool.query(`
                 SELECT sa.id, sa.work_date, sa.user_id, sa.station_id, sa.shift_id, sa.is_published,
                        u.first_name, u.last_name, u.display_name
@@ -172,21 +171,24 @@ export default async function handler(req, res) {
             }
         }
 
+        // --- KROCKKUDDE FÖR KONTOSKAPANDE ---
         if (action === 'add_admin') {
             const hashedPassword = await bcrypt.hash(password, 10);
+            const safeFirstName = firstName || displayName || username;
             await pool.query('INSERT INTO admin_users (username, password, first_name, last_name, display_name, email, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', 
-                [username, hashedPassword, firstName, lastName, displayName, email, role, currentWorkplace]);
+                [username, hashedPassword, safeFirstName, lastName, displayName, email, role, currentWorkplace]);
             return res.status(200).json({ success: true });
         }
 
         if (action === 'edit_admin') {
+            const safeFirstName = firstName || displayName || username;
             if (password && password.trim() !== "") {
                 const hashedPassword = await bcrypt.hash(password, 10);
                 await pool.query('UPDATE admin_users SET username=$1, password=$2, first_name=$3, last_name=$4, display_name=$5, email=$6, role=$7 WHERE id=$8 AND workplace_id=$9',
-                    [username, hashedPassword, firstName, lastName, displayName, email, role, id, currentWorkplace]);
+                    [username, hashedPassword, safeFirstName, lastName, displayName, email, role, id, currentWorkplace]);
             } else {
                 await pool.query('UPDATE admin_users SET username=$1, first_name=$2, last_name=$3, display_name=$4, email=$5, role=$6 WHERE id=$7 AND workplace_id=$8',
-                    [username, firstName, lastName, displayName, email, role, id, currentWorkplace]);
+                    [username, safeFirstName, lastName, displayName, email, role, id, currentWorkplace]);
             }
             return res.status(200).json({ success: true });
         }
