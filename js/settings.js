@@ -2,18 +2,19 @@ import { fetchData, saveData, apiAction } from './service.js';
 import { showToast, showConfirm, isLight, escapeHTML } from './utils.js';
 
 let globalStations = [], globalShifts = [], globalCustomThemes = [], globalScheduleData = {};
+let globalAdmins = []; // NYTT: För säker hantering av editering
 let editingStationId = null, editingShiftId = null, editingAdminId = null;
 
 export async function initSettings() {
-    const role = (sessionStorage.getItem('userRole') || '').trim().toLowerCase();
+    const role = (localStorage.getItem('userRole') || '').trim().toLowerCase();
     
     if (role !== 'admin' && role !== 'superadmin') {
         window.location.href = "user.html";
         return;
     }
 
-    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName') || 'Admin');
-    document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href = "index.html"; };
+    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (localStorage.getItem('adminName') || 'Admin');
+    document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = "index.html"; };
 
     if (role === 'superadmin') {
         const tabBtn = document.getElementById('tabBtnWorkplaces');
@@ -330,10 +331,10 @@ function initAdminSettings() {
     const admRole = document.getElementById('newAdminRole');
     if (!admBtn) return;
 
-    // --- NY OCH TYDLIGARE ANVÄNDARLISTA (TABELL-LAYOUT) ---
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
         if (!Array.isArray(admins)) admins = []; 
+        globalAdmins = admins; // FIX: Spara adminlistan lokalt
         
         let html = `
         <div style="display:flex; padding: 10px 15px; background: #f5f5f5; border-bottom: 2px solid #ddd; font-weight: 600; font-size: 0.85rem; color: #555; text-transform: uppercase; position: sticky; top: 0; z-index: 10;">
@@ -348,7 +349,6 @@ function initAdminSettings() {
             html += `<div style="padding: 15px; text-align: center; color: #666;">Inga konton hittades.</div>`;
         } else {
             html += admins.map(a => {
-                // Tydligare badges för roller
                 let roleBadge = '<span style="background:#e0e0e0; color:#333; padding:3px 8px; border-radius:12px; font-size:0.75em; font-weight:bold;">🧍 Användare</span>';
                 if(a.role === 'admin') roleBadge = '<span style="background:#fff3e0; color:#e65100; padding:3px 8px; border-radius:12px; border: 1px solid #ffe0b2; font-size:0.75em; font-weight:bold;">🔧 Admin</span>';
                 if(a.role === 'superadmin') roleBadge = '<span style="background:#f3e5f5; color:#4a148c; padding:3px 8px; border-radius:12px; border: 1px solid #e1bee7; font-size:0.75em; font-weight:bold;">👑 Super-Admin</span>';
@@ -369,7 +369,7 @@ function initAdminSettings() {
                         ${roleBadge}
                     </div>
                     <div style="width: 80px; display: flex; justify-content: flex-end; gap: 8px;">
-                        <button class="list-btn" onclick='startEditAdmin(${JSON.stringify(a).replace(/'/g, "&#39;")})' title="Redigera" style="background:#f5f5f5;">✏️</button>
+                        <button class="list-btn" onclick="startEditAdmin('${a.id}')" title="Redigera" style="background:#f5f5f5;">✏️</button>
                         <button class="list-btn" onclick="deleteAdmin('${escapeHTML(a.username)}')" title="Ta bort" style="background:#ffebee; color: #d32f2f;">🗑️</button>
                     </div>
                 </div>`;
@@ -379,7 +379,11 @@ function initAdminSettings() {
         document.getElementById('adminListContainer').innerHTML = html;
     };
 
-    window.startEditAdmin = (u) => {
+    // FIX: Funktion som hittar användaren via ID innan editering
+    window.startEditAdmin = (id) => {
+        const u = globalAdmins.find(admin => String(admin.id) === String(id));
+        if (!u) return;
+
         editingAdminId = u.id;
         admDisp.value = u.display_name || "";
         admFirst.value = u.first_name || "";
@@ -393,7 +397,6 @@ function initAdminSettings() {
         admBtn.style.background = "#2196F3";
         admCancel.style.display = "inline-flex";
         
-        // Scrolla upp till formuläret om man klickat redigera långt ner i listan
         document.getElementById('newAdminDisplayName').scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
@@ -422,7 +425,8 @@ function initAdminSettings() {
 
         const res = await fetch('/api/data-api', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('jwtToken')}` },
+            // FIX: Uppdaterad till localStorage
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` },
             body: JSON.stringify(payload)
         });
 
@@ -439,7 +443,8 @@ function initAdminSettings() {
         if (await showConfirm(`Ta bort kontot @${u}?`)) {
             await fetch('/api/data-api', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('jwtToken')}` },
+                // FIX: Uppdaterad till localStorage
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` },
                 body: JSON.stringify({ action: 'remove_admin', username: u })
             });
             renderAdmins();
