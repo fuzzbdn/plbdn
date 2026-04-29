@@ -183,8 +183,7 @@ export default async function handler(req, res) {
 
         if (action === 'save_workplace' && currentUserRole === 'superadmin') {
             if (payload.is_new) {
-                // FIX: Vi använder bara Date.now() för att skapa ett helt unikt nummer-ID!
-                const safeId = Date.now().toString();
+                const safeId = Date.now().toString(); // Säkert unikt ID
                 await pool.query('INSERT INTO workplaces (id, name) VALUES ($1, $2)', [safeId, payload.name]);
             } else {
                 await pool.query('UPDATE workplaces SET name=$1 WHERE id=$2', [payload.name, payload.id]);
