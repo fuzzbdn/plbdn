@@ -98,6 +98,45 @@
         </div>
     </div>
 </div>
+<div id="absenceModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 600px; text-align: left;">
+        <h3 style="margin-top:0; color:#0277bd;">🏖️ Hantera Frånvaro</h3>
+        <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Personen kommer att tas bort från alla pass under denna period och kan inte schemaläggas.</p>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom: 15px;">
+            <div class="form-group" style="margin:0;">
+                <label>Vem?</label>
+                <select id="absUser" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;"></select>
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label>Typ av frånvaro:</label>
+                <select id="absType" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;">
+                    <option value="Sjuk">🤒 Sjuk</option>
+                    <option value="VAB">🧸 VAB</option>
+                    <option value="Semester">🌴 Semester</option>
+                    <option value="Tjänstledig">✈️ Tjänstledig</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label>Från datum:</label>
+                <input type="date" id="absStart" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label>Till datum:</label>
+                <input type="date" id="absEnd" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;">
+            </div>
+        </div>
+        <button id="saveAbsenceBtn" class="save-btn" style="width:100%; margin-bottom: 20px;">Spara Frånvaro</button>
 
+        <h4 style="border-bottom:1px solid #ccc; padding-bottom:5px;">Aktuell frånvaro</h4>
+        <div id="absenceListContainer" style="max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:4px; padding:10px; background:#fafafa;">
+            Laddar...
+        </div>
+
+        <div style="text-align:right; margin-top:15px;">
+            <button id="closeAbsenceBtn" class="list-btn" style="background:#e0e0e0; padding:8px 15px; border-radius:4px; border: 1px solid #ccc;">Stäng fönstret</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
