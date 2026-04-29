@@ -1,6 +1,6 @@
 import { fetchData, saveData, apiAction } from './service.js';
 import { showToast, showConfirm, isLight, escapeHTML } from './utils.js';
-import { DAYS } from './config.js'; // Importerar dagarna för utskriften
+import { DAYS } from './config.js'; 
 
 let globalStations = [], globalShifts = [], globalCustomThemes = [], globalScheduleData = {};
 let globalAdmins = []; 
@@ -746,7 +746,7 @@ function initThemeTab(currentSettings) {
     }
 }
 
-// --- NYTT: UTSKRIFTS OCH BILDEXPORT-MOTORN (V1.4 Design) ---
+// --- UTSKRIFT & BILDEXPORT (Återställd till v1.4 Display Design) ---
 function initExportTab() {
     const btnToday = document.getElementById('btnSetToday');
     const btnWeek = document.getElementById('btnSetWeek');
@@ -758,7 +758,7 @@ function initExportTab() {
 
     if(!startInp || !endInp) return;
 
-    // Hjälpfunktion för att sätta datum i input-fälten
+    // Hjälpfunktion för att sätta datum i fälten
     const setDates = (start, end) => {
         const tz = start.getTimezoneOffset() * 60000;
         startInp.value = new Date(start.getTime() - tz).toISOString().split('T')[0];
@@ -784,16 +784,15 @@ function initExportTab() {
         setDates(start, end);
     };
 
-    // Sätt standard till "Denna vecka" när man öppnar fliken
+    // Sätt standard till "Denna vecka"
     if(btnWeek) btnWeek.click();
 
-    // Funktionen som bygger upp schemat som Dagsvyer (Exakt som Admin-schemat ser ut)
+    // Denna funktion bygger utskriften genom att använda de klassiska v1.4 "Display"-klasserna från base.css
     const generateExportHTML = async () => {
         if(!startInp.value || !endInp.value) return null;
         
         showToast("Hämtar schema för export...", "info");
         
-        // Hämta allt från databasen
         const [stations, shifts, schedule] = await Promise.all([
             fetchData('stations'), fetchData('shifts'),
             fetchData('schedule', `&start_date=${startInp.value}&end_date=${endInp.value}`)
@@ -804,7 +803,6 @@ function initExportTab() {
             return null;
         }
 
-        // Vilka datum har vi valt?
         const dates = [];
         let curr = new Date(startInp.value);
         const end = new Date(endInp.value);
@@ -815,7 +813,7 @@ function initExportTab() {
         }
 
         const wrapper = document.createElement('div');
-        wrapper.className = 'print-wrapper';
+        wrapper.className = 'print-wrapper display-view'; // 'display-view' för att base.css ska veta vad som gäller
         wrapper.style.padding = '20px';
         wrapper.style.background = '#fff';
         wrapper.style.color = '#333';
@@ -823,26 +821,30 @@ function initExportTab() {
 
         let html = `<h2 style="text-align:center; color:#0277bd; margin-bottom:30px;">Schema: ${startInp.value} till ${endInp.value}</h2>`;
 
-        // Bygg en "Dagsvy" (Schedule Card) för varje datum
         dates.forEach(dateStr => {
             const d = new Date(dateStr);
             const dayName = DAYS[d.getDay() === 0 ? 6 : d.getDay() - 1];
             const shortDate = `${d.getDate()}/${d.getMonth() + 1}`;
             
-            // Använder samma CSS-klasser som i admin.css för att det ska bli 100% identiskt
-            html += `<div class="schedule-card" style="margin-bottom: 40px; box-shadow: none; border: 2px solid #e0e0e0; page-break-inside: avoid; background:#fff;">`;
-            html += `<h3 style="margin: 0; padding: 12px; background: #f8f9fa; border-bottom: 2px solid #e0e0e0; text-align: center; color: #333; font-size:1.2rem;">${dayName} ${shortDate}</h3>`;
-            html += `<div class="grid-container" style="border: none; border-radius: 0;">`;
+            // Varje dag får en egen sektion som undviker att brytas mitt itu vid pappersutskrift
+            html += `<div style="margin-bottom: 40px; page-break-inside: avoid;">`;
+            html += `<h3 style="margin: 0 0 10px 0; padding: 10px; background: #f0f2f5; border-left: 5px solid #0277bd; color: #333;">${dayName} ${shortDate}</h3>`;
             
-            html += `<div class="header-row"><div></div>${shifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
+            // Här börjar magin: Vi använder "time-header-row" och "display-row" exakt som skärmen!
+            html += `<div style="padding: 15px; background: #f4f4f9; border: 1px solid #ddd; border-radius: 8px;">`;
+            
+            html += `<div class="time-header-row"><div></div>${shifts.map(s => `<div class="time-header">${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
 
             stations.forEach(st => {
-                if(st.is_spacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px; background:#f9f9f9;"></div>`; return; }
+                if(st.is_spacer) { 
+                    html += `<div class="display-row spacer-row"></div>`; 
+                    return; 
+                }
 
                 const contrast = isLight(st.color) ? '#000' : '#fff';
-                const styles = `background-color:${escapeHTML(st.color)}; color:${contrast}; --station-color:${escapeHTML(st.color)};`;
+                const vars = `style="--station-color:${escapeHTML(st.color)}; --contrast-color:${contrast};"`;
 
-                html += `<div class="station-row"><div class="station-label" style="${styles}">${escapeHTML(st.name)}</div>`;
+                html += `<div class="display-row" ${vars}><div class="station-label">${escapeHTML(st.name)}</div>`;
 
                 shifts.forEach(sh => {
                     let assignedRows = schedule.filter(r =>
@@ -855,10 +857,7 @@ function initExportTab() {
                     const hasUsers = assignedRows.length > 0;
                     const textVal = assignedRows.map(a => a.display_name || `${a.first_name} ${a.last_name||''}`.trim()).join(' / ');
                     
-                    html += `
-                    <div class="shift-block ${hasUsers?'':'empty'}" style="pointer-events: none; padding:12px; display:flex; align-items:center; justify-content:center;">
-                        <span class="shift-text" style="font-weight:600;">${escapeHTML(textVal)}</span>
-                    </div>`;
+                    html += `<div class="shift-card ${hasUsers?'':'empty'}" data-label="${escapeHTML(sh.label)}">${escapeHTML(textVal)}</div>`;
                 });
                 html += `</div>`;
             });
@@ -869,7 +868,7 @@ function initExportTab() {
         return wrapper;
     };
 
-    // Skriv ut Papper/PDF
+    // Pappersutskrift
     if(printBtn) printBtn.onclick = async () => {
         const wrapper = await generateExportHTML();
         if(!wrapper) return;
@@ -881,12 +880,12 @@ function initExportTab() {
             document.body.appendChild(printContainer);
         }
         
-        // Döljer allt på skärmen utom själva utskriftscontainern när print-dialogen öppnas
+        // Denna stil döljer inställningsmenyn när print-fönstret öppnas och tvingar fram bakgrundsfärger
         let printStyle = document.getElementById('print-style-rules');
         if(!printStyle) {
             printStyle = document.createElement('style');
             printStyle.id = 'print-style-rules';
-            printStyle.innerHTML = '@media print { body > *:not(#print-container) { display: none !important; } #print-container { display: block !important; position: absolute; top:0; left:0; width:100%; } .schedule-card { break-inside: avoid; page-break-inside: avoid; } }';
+            printStyle.innerHTML = '@media print { body > *:not(#print-container) { display: none !important; } #print-container { display: block !important; position: absolute; top:0; left:0; width:100%; } .print-wrapper > div { break-inside: avoid; page-break-inside: avoid; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }';
             document.head.appendChild(printStyle);
         }
 
@@ -896,12 +895,12 @@ function initExportTab() {
         setTimeout(() => { window.print(); }, 500);
     };
 
-    // Exportera som PNG-bild
+    // Bildexport
     if(imgBtn) imgBtn.onclick = async () => {
         const wrapper = await generateExportHTML();
         if(!wrapper) return;
         
-        // Tvinga skärmen att låtsas vara 1200px bred så inte flexboxarna trycks ihop på små skärmar
+        // Placerar den osynligt utanför skärmen för att fota den med 1200px bredd
         wrapper.style.position = 'absolute';
         wrapper.style.top = '-9999px';
         wrapper.style.left = '0';
@@ -909,7 +908,6 @@ function initExportTab() {
         document.body.appendChild(wrapper);
         
         try {
-            // Skala upp bilden för krispigare text
             const canvas = await html2canvas(wrapper, { backgroundColor: '#ffffff', scale: 2 });
             const link = document.createElement('a');
             link.download = `Schema_${startInp.value}_till_${endInp.value}.png`;
