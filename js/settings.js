@@ -1,11 +1,10 @@
 import { fetchData, saveData, apiAction } from './service.js';
 import { showToast, showConfirm, isLight, escapeHTML } from './utils.js';
 
-let globalStations = [], globalShifts = [], globalCustomThemes = [];
+let globalStations = [], globalShifts = [], globalCustomThemes = [], globalScheduleData = {};
 let editingStationId = null, editingShiftId = null, editingAdminId = null;
 
 export async function initSettings() {
-    // Krockkudde 1: Hantera stora/små bokstäver i rollen
     const role = (sessionStorage.getItem('userRole') || '').trim().toLowerCase();
     
     if (role !== 'admin' && role !== 'superadmin') {
@@ -23,24 +22,37 @@ export async function initSettings() {
     }
 
     try {
-        const [settings, themes, stations, shifts] = await Promise.all([
+        // Hämta dagens datum så att förhandsgranskningen av temat får lite test-data
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        const [settings, themes, stations, shifts, scheduleData] = await Promise.all([
             fetchData('settings'),
             fetchData('custom_themes'),
             fetchData('stations'),
-            fetchData('shifts')
+            fetchData('shifts'),
+            fetchData('schedule', `&start_date=${todayStr}&end_date=${todayStr}`)
         ]);
 
-        // Krockkudde 2: Om databasen returnerar null, gör det till en tom array
         globalCustomThemes = Array.isArray(themes) ? themes : [];
         globalStations = Array.isArray(stations) ? stations : [];
         globalShifts = Array.isArray(shifts) ? shifts : [];
+        
+        // Anpassa schemat för snabb läsning i iframen
+        globalScheduleData = {};
+        if (Array.isArray(scheduleData)) {
+            scheduleData.forEach(row => {
+                const key = `${row.station_id}_${row.shift_id}`;
+                if (!globalScheduleData[key]) globalScheduleData[key] = [];
+                globalScheduleData[key].push(row);
+            });
+        }
 
         initGeneralTab();
         initWeatherTab();
         initStationsSettings();
         initShiftsSettings();
         initAdminSettings();
-        initThemeTab();
+        initThemeTab(settings);
         initExportTab();
     } catch (e) {
         showToast("Kunde inte ladda alla inställningar", "error");
@@ -322,7 +334,6 @@ function initAdminSettings() {
 
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
-        // Krockkudde 3: Fånga upp om databasen misslyckas med att hämta listan
         if (!Array.isArray(admins)) admins = []; 
         
         document.getElementById('adminListContainer').innerHTML = admins.map(a => {
@@ -421,7 +432,6 @@ function initWorkplaceSettings() {
     
     const renderWorkplaces = async () => {
         let wps = await fetchData('workplaces');
-        // Krockkudde 4: Om arbetsplats-tabellen strular i API:et, låt det inte krascha skärmen
         if (!Array.isArray(wps)) wps = [];
         
         const cont = document.getElementById('workplaceListContainer');
@@ -451,12 +461,177 @@ function initWorkplaceSettings() {
     renderWorkplaces();
 }
 
-// Återställning av gamla flikfunktioner
-function initThemeTab() {
-    const themeSel = document.getElementById('themeSelect');
+// --- TEMA-FÖRHANDSGRANSKNING (UPPDATERAD FÖR V2) ---
+function initThemeTab(currentSettings) {
+    const themeSelect = document.getElementById('themeSelect');
+    const editSelect = document.getElementById('editThemeSelect');
+    const iframe = document.getElementById('themePreviewIframe');
+
+    if (iframe) {
+        iframe.style.width = '1920px';
+        iframe.style.height = '1080px';
+        iframe.style.transformOrigin = 'top left';
+        
+        const resizeIframe = () => {
+            const parent = iframe.parentElement;
+            if (!parent) return;
+            const scale = parent.clientWidth / 1920;
+            iframe.style.transform = `scale(${scale})`;
+            parent.style.height = `${1080 * scale}px`;
+        };
+        
+        window.addEventListener('resize', resizeIframe);
+        setTimeout(resizeIframe, 50); 
+    }
+
+    function updatePreview(themeId) {
+        if (!iframe || !iframe.contentDocument) return;
+        
+        let customCss = "";
+        if (themeId && themeId !== 'light') {
+            const t = globalCustomThemes.find(x => x.id === themeId);
+            if (t) customCss = t.css;
+        }
+
+        const now = new Date();
+        const dayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1; 
+        const dayName = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"][dayIndex];
+        const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
+
+        let html = `
+        <div class="display-wrapper">
+            <div class="top-bar">
+                <h1 id="mainTitle">Vi som jobbar ${dayName} ${dateStr}</h1>
+                <div style="display:flex; align-items:center;">
+                    <div id="weatherWidget" style="margin-right:20px; font-weight:700;">PREVIEW: 20°C</div>
+                    <div id="clock">12:00</div>
+                </div>
+            </div>
+            
+            <div id="mainContainer">
+                <div class="time-header-row">
+                    <div></div>
+                    ${globalShifts.map(s => `<div class="time-header">${escapeHTML(s.label)}</div>`).join('')}
+                </div>
+        `;
+        
+        globalStations.forEach(st => {
+            if (st.is_spacer) { 
+                html += `<div class="display-row spacer-row"></div>`; 
+                return; 
+            }
+            
+            const contrast = isLight(st.color) ? '#000' : '#fff';
+            const vars = `style="--station-color:${escapeHTML(st.color)}; --contrast-color:${contrast};"`;
+            
+            html += `<div class="display-row" ${vars}><div class="station-label">${escapeHTML(st.name)}</div>`;
+            
+            globalShifts.forEach(sh => {
+                const key = `${st.id}_${sh.id}`;
+                const assignments = globalScheduleData[key] || [];
+                const val = assignments.map(a => `${a.first_name} ${a.last_name||''}`.trim()).join(' / ');
+                const safeVal = escapeHTML(val);
+                html += `<div class="shift-card ${safeVal?'':'empty'}" data-label="${escapeHTML(sh.label)}">${safeVal}</div>`;
+            });
+            
+            html += `</div>`;
+        });
+        
+        html += `</div></div>`;
+
+        const doc = iframe.contentDocument;
+        doc.open();
+        doc.write(`
+            <!DOCTYPE html>
+            <html lang="sv">
+            <head>
+                <base href="${window.location.href}">
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+                <link rel="stylesheet" href="base.css">
+                <link rel="stylesheet" href="display.css">
+                <style>
+                    body { margin: 0; background-color: var(--bg-color); }
+                    ::-webkit-scrollbar { display: none; }
+                    ${customCss}
+                </style>
+            </head>
+            <body class="display-view">
+                ${html}
+            </body>
+            </html>
+        `);
+        doc.close();
+    }
+
+    function populate() {
+        const cur = themeSelect?.value || (currentSettings?.theme || 'light');
+        if(themeSelect) {
+            themeSelect.innerHTML = `<option value="light">Ljus (Standard)</option>` + 
+                                    globalCustomThemes.map(t => `<option value="${escapeHTML(t.id)}">✨ ${escapeHTML(t.name)}</option>`).join('');
+            themeSelect.value = cur;
+        }
+        setTimeout(() => updatePreview(cur), 100);
+        if(editSelect) {
+            editSelect.innerHTML = '<option value="">-- Välj tema att redigera --</option>' + 
+                                   globalCustomThemes.map(t => `<option value="${escapeHTML(t.id)}">${escapeHTML(t.name)}</option>`).join('');
+        }
+    }
+
+    if(themeSelect) themeSelect.onchange = (e) => updatePreview(e.target.value);
+
     const saveBtn = document.getElementById('saveThemeBtn');
-    if(themeSel && saveBtn) {
-        saveBtn.onclick = () => showToast("Tema sparat", "success");
+    if(saveBtn) {
+        saveBtn.onclick = async () => {
+            await saveData('settings', { theme: themeSelect.value });
+            showToast("Tema aktiverat!", "success");
+        };
+    }
+
+    if(editSelect) {
+        const tName = document.getElementById('customThemeName');
+        const tCss = document.getElementById('customThemeCSS');
+        const tId = document.getElementById('customThemeId');
+        
+        editSelect.onchange = () => { 
+            const t = globalCustomThemes.find(x => x.id === editSelect.value); 
+            if (t) { tName.value = t.name; tCss.value = t.css; tId.value = t.id; } 
+        };
+        
+        document.getElementById('clearThemeEditorBtn').onclick = () => { 
+            tId.value=""; tName.value=""; tCss.value=""; editSelect.value=""; 
+        };
+        
+        document.getElementById('saveCustomThemeBtn').onclick = async () => {
+            if(!tName.value || !tCss.value) return showToast("Fyll i namn och CSS", "error");
+            const id = tId.value || 'theme_' + Date.now();
+            const newTheme = { id: id, name: tName.value, css: tCss.value };
+            const index = globalCustomThemes.findIndex(t => t.id === id);
+            if(index >= 0) globalCustomThemes[index] = newTheme; else globalCustomThemes.push(newTheme);
+            
+            await saveData('custom_themes', globalCustomThemes);
+            showToast("Tema sparat!", "success");
+            document.getElementById('clearThemeEditorBtn').click(); populate();
+            
+            if(themeSelect && themeSelect.value === id) updatePreview(id);
+        };
+        
+        document.getElementById('deleteThemeBtn').onclick = async () => {
+            const id = editSelect.value; if(!id) return;
+            if(await showConfirm("Radera detta tema?")) {
+                globalCustomThemes = globalCustomThemes.filter(t => t.id !== id);
+                await saveData('custom_themes', globalCustomThemes);
+                if(themeSelect && themeSelect.value === id) { themeSelect.value='light'; await saveData('settings', {theme:'light'}); }
+                showToast("Tema raderat", "info"); document.getElementById('clearThemeEditorBtn').click(); populate();
+            }
+        };
+    }
+    populate();
+    
+    const tabBtn = document.querySelector('button[onclick="openTab(\'tab-theme\')"]');
+    if(tabBtn) {
+        tabBtn.addEventListener('click', () => {
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 10);
+        });
     }
 }
 
