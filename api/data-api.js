@@ -15,7 +15,6 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  // VIKTIGT: Låter frontend skicka med x-workplace-id
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-workplace-id');
 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
@@ -55,13 +54,25 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: "Åtkomst nekad." });
         }
 
-        // --- ARBETSPLATSER ---
         if (type === 'workplaces' && currentUserRole === 'superadmin') {
             const result = await pool.query('SELECT * FROM workplaces ORDER BY name ASC');
             return res.status(200).json(result.rows);
         }
 
-        if (type === 'users' || type === 'admins') {
+        // --- NYTT: Hämta personal till schemat (Dölj Super-Admins) ---
+        if (type === 'users') {
+            const result = await pool.query(
+                `SELECT id, username, first_name, last_name, display_name, email, role 
+                 FROM admin_users 
+                 WHERE workplace_id = $1 AND (role != 'superadmin' OR role IS NULL)
+                 ORDER BY COALESCE(display_name, first_name, username) ASC`, 
+                [currentWorkplace]
+            );
+            return res.status(200).json(result.rows);
+        }
+
+        // --- NYTT: Hämta konton till inställningar (Visa alla) ---
+        if (type === 'admins') {
             const result = await pool.query(
                 `SELECT id, username, first_name, last_name, display_name, email, role 
                  FROM admin_users 
@@ -112,13 +123,10 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true, token: signedToken, name: user.display_name || user.first_name || user.username, role: user.role });
         }
 
-        // Tillåt både admin och superadmin
         if (currentUserRole !== 'admin' && currentUserRole !== 'superadmin') return res.status(403).json({ error: "Behörighet saknas" });
 
-        // --- SPARA ARBETSPLATSER ---
         if (action === 'save_workplace' && currentUserRole === 'superadmin') {
             if (payload.is_new) {
-                // Skapar ett unikt och säkert ID av namnet
                 const safeId = payload.name.toLowerCase().replace(/[^a-z0-9]/g, '');
                 await pool.query('INSERT INTO workplaces (id, name) VALUES ($1, $2)', [safeId, payload.name]);
             } else {
