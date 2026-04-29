@@ -6,7 +6,7 @@ let globalScheduleData = {};
 let globalUserList = [];
 let globalStations = [];
 let globalShifts = [];
-let globalAbsences = []; // NYTT
+let globalAbsences = []; 
 let selectedWeek = 0;
 let selectedYear = 0;
 let currentAdminDayIndex = 0;
@@ -35,7 +35,6 @@ function getDatesOfWeek(dateStr) {
     return dates;
 }
 
-// Hjälpfunktion för att se om en person är borta en viss dag
 function getUserAbsence(userId, dateStr) {
     return globalAbsences.find(a => 
         String(a.user_id) === String(userId) && 
@@ -131,7 +130,6 @@ export async function initAdmin() {
         
         if (!userId) return;
         
-        // KROCK-SYSTEMET: Kolla om personen är sjuk innan vi droppar
         const abs = getUserAbsence(userId, date);
         if (abs) {
             showToast(`Personen är markerad som ${abs.type} detta datum!`, "error");
@@ -183,7 +181,6 @@ export async function initAdmin() {
     }
 
     setupSidebarAddUser();
-    initAbsenceModal();
 
     const toggleBtn = document.getElementById('toggleViewBtn');
     if (toggleBtn) {
@@ -206,90 +203,6 @@ export async function initAdmin() {
     updateGrid(picker.value);
 }
 
-// --- FRÅNVARO-HANTERING ---
-function initAbsenceModal() {
-    const btn = document.getElementById('openAbsenceBtn');
-    const modal = document.getElementById('absenceModal');
-    const closeBtn = document.getElementById('closeAbsenceBtn');
-    const saveBtn = document.getElementById('saveAbsenceBtn');
-
-    if(btn) btn.onclick = () => {
-        document.getElementById('absStart').value = document.getElementById('adminDatePicker').value;
-        document.getElementById('absEnd').value = document.getElementById('adminDatePicker').value;
-        const select = document.getElementById('absUser');
-        select.innerHTML = globalUserList.map(u => `<option value="${u.id}">${escapeHTML(getFriendlyName(u))}</option>`).join('');
-        renderAbsenceList();
-        modal.classList.add('show');
-    };
-
-    if(closeBtn) closeBtn.onclick = () => modal.classList.remove('show');
-
-    if(saveBtn) saveBtn.onclick = async () => {
-        const user_id = document.getElementById('absUser').value;
-        const type = document.getElementById('absType').value;
-        const start_date = document.getElementById('absStart').value;
-        const end_date = document.getElementById('absEnd').value;
-
-        if(!user_id || !start_date || !end_date) return showToast("Fyll i alla fält", "error");
-        if(start_date > end_date) return showToast("Slutdatum kan inte vara före startdatum", "error");
-
-        const u = globalUserList.find(x => String(x.id) === String(user_id));
-        const msg = `Detta markerar ${getFriendlyName(u)} som ${type} mellan ${start_date} och ${end_date}.\n\n⚠️ Eventuella inbokade pass under denna period kommer att rensas automatiskt. Vill du fortsätta?`;
-
-        if(await showConfirm(msg)) {
-            const res = await apiAction('save_absence', { user_id, type, start_date, end_date });
-            if(res.success) {
-                showToast("Frånvaro sparad!", "success");
-                globalAbsences = await fetchData('absences') || [];
-                renderAbsenceList();
-                updateGrid(document.getElementById('adminDatePicker').value);
-                modal.classList.remove('show');
-            } else {
-                showToast("Ett fel uppstod", "error");
-            }
-        }
-    };
-
-    window.deleteAbsence = async (id) => {
-        if(await showConfirm("Radera denna frånvaro?")) {
-            await apiAction('delete_absence', { id });
-            globalAbsences = await fetchData('absences') || [];
-            renderAbsenceList();
-            updateGrid(document.getElementById('adminDatePicker').value);
-        }
-    };
-}
-
-function renderAbsenceList() {
-    const cont = document.getElementById('absenceListContainer');
-    if(!globalAbsences || globalAbsences.length === 0) {
-        cont.innerHTML = "<div style='color:#888; font-style:italic;'>Ingen frånvaro registrerad.</div>";
-        return;
-    }
-
-    let html = '';
-    globalAbsences.forEach(a => {
-        let icon = '✈️';
-        if(a.type === 'Sjuk') icon = '🤒';
-        if(a.type === 'VAB') icon = '🧸';
-        if(a.type === 'Semester') icon = '🌴';
-
-        const name = a.display_name || `${a.first_name} ${a.last_name||''}`.trim();
-        const dates = a.start_date.split('T')[0] === a.end_date.split('T')[0] 
-            ? a.start_date.split('T')[0] 
-            : `${a.start_date.split('T')[0]} till ${a.end_date.split('T')[0]}`;
-
-        html += `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #ddd; background:#fff; margin-bottom:5px; border-radius:4px;">
-            <div>
-                <strong>${icon} ${escapeHTML(name)}</strong> <span style="color:#666; font-size:0.85em; margin-left:10px;">${a.type} (${dates})</span>
-            </div>
-            <button class="list-btn" onclick="deleteAbsence(${a.id})" style="color:#d32f2f;">🗑️</button>
-        </div>`;
-    });
-    cont.innerHTML = html;
-}
-
 async function syncShiftTextToDB(date, stationId, shiftId, text) {
     const key = `${date}_${stationId}_${shiftId}`;
     const currentAssignments = globalScheduleData[key] || [];
@@ -308,7 +221,6 @@ async function syncShiftTextToDB(date, stationId, shiftId, text) {
             u = globalUserList.find(u => getFriendlyName(u).toLowerCase() === name.toLowerCase());
         }
         if (u) {
-            // KROCK-SYSTEMET vid textinmatning
             const abs = getUserAbsence(u.id, date);
             if (!abs) {
                 await apiAction('assign_shift', { date, user_id: u.id, station_id: stationId, shift_id: shiftId });
@@ -434,7 +346,6 @@ function manualAdd(e, date, stationId, shiftId) {
     menu.addEventListener('click', async (evt) => {
         if (evt.target.classList.contains('user-select-btn')) {
             const userId = evt.target.getAttribute('data-id');
-            // KROCK-SYSTEM:
             const abs = getUserAbsence(userId, date);
             if(abs) {
                 showToast("Personen är frånvarande detta datum!", "error");
@@ -534,7 +445,6 @@ function renderWeeklyView() {
         return userAssignments;
     };
 
-    // NYTT: Skicka in funktionen som kollar frånvaro till HTML-byggaren
     const getAbsence = (userId, dateStr) => getUserAbsence(userId, dateStr);
 
     cont.innerHTML = buildWeeklyGridHTML(globalUserList, datesOfWeek, getAssignments, false, DAYS, getAbsence);
@@ -565,7 +475,6 @@ function renderRoster() {
     });
 
     list.innerHTML = sortedUsers.map(u => {
-        // NYTT: Kolla om personen är sjuk och bygg badge
         const abs = getUserAbsence(u.id, currentDateStr);
         let absIcon = '';
         let absClass = '';
@@ -580,8 +489,6 @@ function renderRoster() {
         const isAssigned = workingTodayUserIds.has(u.id);
         const assignedClass = isAssigned ? 'assigned' : '';
         const safeName = escapeHTML(getFriendlyName(u));
-        
-        // Stäng av drag'n'drop om personen är frånvarande
         const canDrag = abs ? 'false' : 'true';
 
         return `<div class="draggable-item ${assignedClass} ${absClass}" draggable="${canDrag}" ondragstart="event.dataTransfer.setData('user_id','${u.id}')">
