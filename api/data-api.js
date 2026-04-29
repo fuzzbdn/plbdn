@@ -2,6 +2,7 @@ import pg from 'pg';
 const { Pool } = pg;
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { Resend } from 'resend'; // NYTT: För lösenordsmejlen
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -10,6 +11,7 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const SECRET_DISPLAY_KEY = process.env.DISPLAY_SECRET;
+const resend = new Resend(process.env.RESEND_API_KEY); // NYTT: Hämtar nyckeln från Vercel
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -109,8 +111,9 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-        const { action, payload, type, data, username, password, fullName, id, firstName, lastName, displayName, email, role } = req.body;
+        const { action, payload, type, data, username, password, fullName, id, firstName, lastName, displayName, email, role, token: tokenBody, newPassword } = req.body;
 
+        // --- 1. INLOGGNING ---
         if (action === 'login') {
             const result = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username || payload?.username]);
             const user = result.rows[0];
@@ -119,7 +122,6 @@ export default async function handler(req, res) {
             }
             const signedToken = jwt.sign({ id: user.id, username: user.username, role: user.role, workplaceId: user.workplace_id }, JWT_SECRET, { expiresIn: '24h' });
             
-            // NYTT FÖR V2.0: Returnerar även userId
             return res.status(200).json({ 
                 success: true, 
                 token: signedToken, 
@@ -129,6 +131,64 @@ export default async function handler(req, res) {
             });
         }
 
+        // --- 2. BEGÄR LÖSENORDSÅTERSTÄLLNING (NYTT FÖR V2) ---
+        if (action === 'request_reset') {
+            if (!email) return res.status(400).json({ error: "E-post saknas" });
+            
+            const result = await pool.query('SELECT id, email, first_name FROM admin_users WHERE email = $1', [email]);
+            const user = result.rows[0];
+
+            if (user) {
+                // Skapa en speciell engångs-token som bara räcker i 1 timme
+                const resetToken = jwt.sign({ id: user.id, purpose: 'reset' }, JWT_SECRET, { expiresIn: '1h' });
+                
+                // Läs av vilken URL appen körs på för att skapa en korrekt länk
+                const origin = req.headers.origin || `https://${req.headers.host}`;
+                const resetLink = `${origin}/reset.html?token=${resetToken}`;
+
+                try {
+                    await resend.emails.send({
+                        from: 'STRUL System <onboarding@resend.dev>', // Byt ut till din egen domän om du har en verifierad i Resend
+                        to: user.email,
+                        subject: 'Återställ ditt lösenord för STRUL',
+                        html: `
+                        <div style="font-family: sans-serif; color: #333; max-width: 500px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 8px;">
+                            <h2 style="color: #0277bd;">Återställ ditt lösenord</h2>
+                            <p>Hej ${user.first_name || ''},</p>
+                            <p>Vi har fått en förfrågan om att återställa lösenordet för ditt STRUL-konto.</p>
+                            <a href="${resetLink}" style="display: inline-block; background-color: #0277bd; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 4px; font-weight: bold; margin: 15px 0;">Välj nytt lösenord</a>
+                            <p style="font-size: 0.85em; color: #666;">Länken är giltig i 1 timme. Om du inte har begärt detta kan du ignorera detta mejl.</p>
+                        </div>
+                        `
+                    });
+                } catch (e) {
+                    console.error("Resend error:", e);
+                }
+            }
+            // Vi svarar alltid "success" oavsett om e-posten finns eller inte (av säkerhetsskäl så hackare inte kan gissa mejladresser)
+            return res.status(200).json({ success: true });
+        }
+
+        // --- 3. UTFÖR SJÄLVA LÖSENORDSBYTET (NYTT FÖR V2) ---
+        if (action === 'perform_reset') {
+            if (!tokenBody || !newPassword) return res.status(400).json({ error: "Saknar data" });
+            
+            try {
+                // Verifiera att token är korrekt och inte har gått ut
+                const decoded = jwt.verify(tokenBody, JWT_SECRET);
+                if (decoded.purpose !== 'reset') throw new Error("Ogiltig token typ");
+
+                // Kryptera och spara det nya lösenordet i databasen
+                const hashedPassword = await bcrypt.hash(newPassword, 10);
+                await pool.query('UPDATE admin_users SET password = $1 WHERE id = $2', [hashedPassword, decoded.id]);
+                
+                return res.status(200).json({ success: true });
+            } catch (err) {
+                return res.status(400).json({ success: false, error: "Återställningslänken är ogiltig eller har gått ut." });
+            }
+        }
+
+        // === Här under krävs inloggning för att fortsätta ===
         if (currentUserRole !== 'admin' && currentUserRole !== 'superadmin') return res.status(403).json({ error: "Behörighet saknas" });
 
         if (action === 'save_workplace' && currentUserRole === 'superadmin') {
