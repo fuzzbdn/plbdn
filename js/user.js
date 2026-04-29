@@ -12,7 +12,7 @@ let selectedWeek = 0;
 let selectedYear = 0;
 let currentDayIndex = 0;
 let isWeeklyView = false;
-let currentSelectedDateStr = ''; // NYTT: Håller koll på exakt vald dag
+let currentSelectedDateStr = '';
 
 export async function initUserView() {
     const userId = sessionStorage.getItem('userId');
@@ -32,13 +32,30 @@ export async function initUserView() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (name || 'Användare');
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href = "index.html"; };
 
-    // --- FILTER KNAPPEN ---
+    // --- FILTER KNAPPEN (Tvingar fram 7-dagarsvy) ---
     const filterBtn = document.getElementById('toggleMyScheduleBtn');
     if (filterBtn) {
         filterBtn.onclick = () => {
             showOnlyMe = !showOnlyMe;
             filterBtn.innerText = showOnlyMe ? "👥 Visa alla pass" : "👤 Visa endast mitt";
             filterBtn.style.backgroundColor = showOnlyMe ? "#455a64" : "#4CAF50";
+            
+            const toggleBtn = document.getElementById('toggleViewBtn');
+            
+            if (showOnlyMe) {
+                // Tvinga till 7-dagarsvy och dölj knappen för att byta till dagsvy
+                isWeeklyView = true;
+                document.getElementById('scheduleContainer').style.display = 'none';
+                document.getElementById('userWeeklyContainer').style.display = 'block';
+                if (toggleBtn) toggleBtn.style.display = 'none';
+            } else {
+                // Visa knappen igen när man tittar på alla
+                if (toggleBtn) {
+                    toggleBtn.style.display = 'inline-block';
+                    toggleBtn.innerText = isWeeklyView ? "📆 Byt till Dagsvy" : "📅 Byt till Veckovy";
+                    toggleBtn.style.backgroundColor = isWeeklyView ? "#455a64" : "#0277bd";
+                }
+            }
             
             const picker = document.getElementById('userDatePicker');
             updateGrid(picker.value);
@@ -97,7 +114,7 @@ export async function initUserView() {
 }
 
 async function updateGrid(dateStr) {
-    currentSelectedDateStr = dateStr; // FIX: Sparar exakt vilket datum som klickats på
+    currentSelectedDateStr = dateStr;
     const d = new Date(dateStr);
     const iso = getISOWeek(d);
     selectedWeek = iso.week;
@@ -107,7 +124,7 @@ async function updateGrid(dateStr) {
     datesToShow = [];
 
     if (showOnlyMe) {
-        // Läge: Kommande 7 dagar
+        // Läge: Kommande 7 dagar (Tvingat)
         for(let i=0; i<7; i++) {
             const temp = new Date(d);
             temp.setDate(d.getDate() + i);
@@ -143,7 +160,6 @@ function renderDailyView() {
     const cont = document.getElementById('scheduleContainer');
     if(!cont) return;
 
-    // FIX: Tvinga Dagsvyn att använda exakt det valda datumet!
     const currentDateStr = currentSelectedDateStr; 
     const myId = sessionStorage.getItem('userId');
 
