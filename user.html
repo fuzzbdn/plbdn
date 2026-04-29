@@ -18,21 +18,33 @@
         <div class="header-content">
             <div style="display:flex; align-items:center; gap:20px;">
                 <h1>Schema</h1>
+                
+                <div class="header-datepicker" style="display:flex; align-items:center; gap:10px;">
+                    <label for="userDatePicker" style="font-size:0.9rem; opacity:0.7;">Datum:</label>
+                    <input type="date" id="userDatePicker">
+                    <button id="toggleViewBtn" class="export-button" style="background-color: #0277bd; margin-left: 20px;">📅 Byt till Veckovy</button>
+                </div>
+            </div>
+
+            <div class="date-navigation">
+                <button id="prevDayBtn" class="nav-arrow" title="Föregående dag">◀</button>
+                <div id="currentDateDisplay"></div>
+                <button id="nextDayBtn" class="nav-arrow" title="Nästa dag">▶</button>
             </div>
             
             <div style="display:flex; align-items:center; gap:15px;">
-                <button id="toggleMyScheduleBtn" class="export-button" style="background-color: #0277bd;">👤 Visa endast mitt schema</button>
-                
+                <button id="toggleMyScheduleBtn" class="export-button" style="background-color: #4CAF50;">👤 Visa endast mitt</button>
                 <span id="currentUserDisplay" style="font-weight:500; opacity:0.8;"></span>
                 <button id="logoutBtn" class="logout-btn">Logga ut</button>
             </div>
         </div>
     </header>
 
-    <div class="admin-layout" style="margin-top: 20px;">
-        <main class="schedule-card-wrapper">
+    <div class="admin-layout" style="margin-top: 20px; justify-content: center;">
+        <main class="schedule-card-wrapper" style="max-width: 1400px; width: 100%;">
             <div class="schedule-card">
-                <div id="userWeeklyContainer" style="overflow-x: auto;">Laddar schema...</div>
+                <div class="grid-container" id="scheduleContainer"></div>
+                <div id="userWeeklyContainer" style="display:none; overflow-x: auto;"></div>
             </div>
         </main>
     </div>
