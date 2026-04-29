@@ -15,12 +15,12 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  // VIKTIGT: Låter frontend skicka med x-workplace-id
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-workplace-id');
 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
   try {
-    // --- 1. AUTENTISERING ---
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
     
@@ -34,6 +34,11 @@ export default async function handler(req, res) {
             isAuthorized = true;
             currentUserRole = decoded.role || 'user';
             currentWorkplace = decoded.workplaceId || 'default';
+
+            // Super-Admin åsidosätter arbetsplatsen via headern
+            if (currentUserRole === 'superadmin' && req.headers['x-workplace-id']) {
+                currentWorkplace = req.headers['x-workplace-id'];
+            }
         } catch (err) { }
     }
 
@@ -43,12 +48,17 @@ export default async function handler(req, res) {
         currentWorkplace = req.query.workplace || 'default'; 
     }
 
-    // --- 2. GET (HÄMTA DATA) ---
     if (req.method === 'GET') {
         const { type, start_date, end_date } = req.query;
 
         if (!isAuthorized && !['settings', 'custom_themes'].includes(type)) {
             return res.status(401).json({ error: "Åtkomst nekad." });
+        }
+
+        // --- ARBETSPLATSER ---
+        if (type === 'workplaces' && currentUserRole === 'superadmin') {
+            const result = await pool.query('SELECT * FROM workplaces ORDER BY name ASC');
+            return res.status(200).json(result.rows);
         }
 
         if (type === 'users' || type === 'admins') {
@@ -85,16 +95,13 @@ export default async function handler(req, res) {
             return res.status(200).json(result.rows);
         }
 
-        // Hämta inställningar, meddelanden, väder etc från gamla app_storage
         const result = await pool.query('SELECT data FROM app_storage WHERE key = $1 AND workplace_id = $2', [type, currentWorkplace]);
         return res.status(200).json(result.rows.length > 0 ? result.rows[0].data : {});
     }
 
-    // --- 3. POST (SPARA/ÄNDRA DATA) ---
     if (req.method === 'POST') {
         const { action, payload, type, data, username, password, fullName, id, firstName, lastName, displayName, email, role } = req.body;
 
-        // Inloggning (publik)
         if (action === 'login') {
             const result = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username || payload?.username]);
             const user = result.rows[0];
@@ -105,15 +112,25 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true, token: signedToken, name: user.display_name || user.first_name || user.username, role: user.role });
         }
 
-        // Endast admins nedanför
-        if (currentUserRole !== 'admin') return res.status(403).json({ error: "Behörighet saknas" });
+        // Tillåt både admin och superadmin
+        if (currentUserRole !== 'admin' && currentUserRole !== 'superadmin') return res.status(403).json({ error: "Behörighet saknas" });
 
-        // --- PERSONALHANTERING ---
+        // --- SPARA ARBETSPLATSER ---
+        if (action === 'save_workplace' && currentUserRole === 'superadmin') {
+            if (payload.is_new) {
+                // Skapar ett unikt och säkert ID av namnet
+                const safeId = payload.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                await pool.query('INSERT INTO workplaces (id, name) VALUES ($1, $2)', [safeId, payload.name]);
+            } else {
+                await pool.query('UPDATE workplaces SET name=$1 WHERE id=$2', [payload.name, payload.id]);
+            }
+            return res.status(200).json({ success: true });
+        }
+
         if (action === 'quick_add_user') {
             const nameToAdd = payload?.fullName || fullName;
             if (!nameToAdd) return res.status(400).json({ error: "Namn saknas" });
             
-            // Klipp isär namnet för att undvika databas-krasch (first_name får inte vara tomt)
             const parts = nameToAdd.trim().split(' ');
             const first = parts[0];
             const last = parts.length > 1 ? parts.slice(1).join(' ') : '';
@@ -126,7 +143,6 @@ export default async function handler(req, res) {
                 );
                 return res.status(200).json({ success: true });
             } catch (dbError) {
-                console.error("Databasfel vid quick_add_user:", dbError);
                 return res.status(500).json({ success: false, error: "Kunde inte spara till databasen." });
             }
         }
@@ -136,7 +152,6 @@ export default async function handler(req, res) {
             if (!nameToRemove) return res.status(400).json({ error: "Namn saknas" });
 
             try {
-                // Raderar oavsett om namnet ligger som visningsnamn, förnamn+efternamn eller användarnamn
                 await pool.query(`
                     DELETE FROM admin_users 
                     WHERE (display_name = $1 
@@ -150,7 +165,6 @@ export default async function handler(req, res) {
             }
         }
 
-        // Fullständig admin-redigering
         if (action === 'add_admin') {
             const hashedPassword = await bcrypt.hash(password, 10);
             await pool.query('INSERT INTO admin_users (username, password, first_name, last_name, display_name, email, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', 
@@ -175,7 +189,6 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
         
-        // --- SCHEMALÄGGNING & PUBLICERING ---
         if (action === 'assign_shift') {
             await pool.query(`
                 INSERT INTO schedule_assignments (work_date, user_id, station_id, shift_id, is_published) 
@@ -202,7 +215,6 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // --- STATIONER & PASS ---
         if (action === 'save_station') {
             if (payload.id) {
                 await pool.query('UPDATE stations SET name=$1, color=$2, is_spacer=$3 WHERE id=$4 AND workplace_id=$5', 
@@ -249,7 +261,6 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // --- LEGACY (Teman, Meddelanden) ---
         if (type && data) {
             await pool.query('DELETE FROM app_storage WHERE key = $1 AND workplace_id = $2', [type, currentWorkplace]);
             await pool.query('INSERT INTO app_storage (key, data, workplace_id) VALUES ($1, $2, $3)', [type, JSON.stringify(data), currentWorkplace]);
