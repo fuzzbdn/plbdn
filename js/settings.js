@@ -1,10 +1,11 @@
 import { fetchData, saveData, apiAction } from './service.js';
-import { showToast, showConfirm, isLight, escapeHTML } from './utils.js';
+import { showToast, showConfirm, isLight, escapeHTML, buildWeeklyGridHTML } from './utils.js';
+import { DAYS } from './config.js'; // NYTT: Behövs för export-kalendern
 
 let globalStations = [], globalShifts = [], globalCustomThemes = [], globalScheduleData = {};
 let globalAdmins = []; 
-let globalUserList = []; // NYTT: Behövs för frånvaro-rullgardinen
-let globalAbsences = []; // NYTT: Behövs för att rita ut listan
+let globalUserList = []; 
+let globalAbsences = []; 
 let editingStationId = null, editingShiftId = null, editingAdminId = null;
 
 export async function initSettings() {
@@ -27,7 +28,6 @@ export async function initSettings() {
     try {
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // Lade till users och absences i laddningen
         const [settings, themes, stations, shifts, scheduleData, users, absences] = await Promise.all([
             fetchData('settings'),
             fetchData('custom_themes'),
@@ -58,15 +58,13 @@ export async function initSettings() {
         initStationsSettings();
         initShiftsSettings();
         initAdminSettings();
-        initAbsenceSettings(); // Initiera nya frånvarofliken
+        initAbsenceSettings(); 
         initThemeTab(settings);
-        initExportTab();
+        initExportTab(); // NYTT: Aktiverar utskriftsmotorn
     } catch (e) {
         showToast("Kunde inte ladda alla inställningar", "error");
     }
 }
-
-// ... Behåll alla andra init-funktioner fram till initAbsenceSettings (initGeneralTab, initWeatherTab, initStationsSettings, initShiftsSettings, initAdminSettings)
 
 function initGeneralTab() {
     const msgIn = document.getElementById('displayMessageInput');
@@ -460,18 +458,15 @@ function initAdminSettings() {
     renderAdmins();
 }
 
-// --- NYTT: Logik för frånvarofliken i Inställningar ---
 function initAbsenceSettings() {
     const saveBtn = document.getElementById('saveAbsenceBtn');
     const userSelect = document.getElementById('absUser');
     if(!saveBtn || !userSelect) return;
 
-    // Fyll på rullgardinen med personal
     userSelect.innerHTML = globalUserList.map(u => 
         `<option value="${u.id}">${escapeHTML(u.display_name || u.first_name || u.username)}</option>`
     ).join('');
 
-    // Sätt standard-datum till idag
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('absStart').value = today;
     document.getElementById('absEnd').value = today;
@@ -751,9 +746,169 @@ function initThemeTab(currentSettings) {
     }
 }
 
+// --- NYTT: UTSKRIFTS OCH BILDEXPORT-MOTORN ---
 function initExportTab() {
+    const btnToday = document.getElementById('btnSetToday');
+    const btnWeek = document.getElementById('btnSetWeek');
+    const btnNextWeek = document.getElementById('btnSetNextWeek');
+    const startInp = document.getElementById('printStartDate');
+    const endInp = document.getElementById('printEndDate');
     const printBtn = document.getElementById('doPrintBtn');
-    if(printBtn) {
-        printBtn.onclick = () => window.print();
-    }
+    const imgBtn = document.getElementById('doImageBtn');
+
+    if(!startInp || !endInp) return;
+
+    // Hjälpfunktion för att sätta datum i input-fälten
+    const setDates = (start, end) => {
+        const tz = start.getTimezoneOffset() * 60000;
+        startInp.value = new Date(start.getTime() - tz).toISOString().split('T')[0];
+        endInp.value = new Date(end.getTime() - tz).toISOString().split('T')[0];
+    };
+
+    if(btnToday) btnToday.onclick = () => {
+        const d = new Date();
+        setDates(d, d);
+    };
+    if(btnWeek) btnWeek.onclick = () => {
+        const d = new Date();
+        const day = d.getDay() === 0 ? 6 : d.getDay() - 1;
+        const start = new Date(d); start.setDate(d.getDate() - day);
+        const end = new Date(start); end.setDate(start.getDate() + 6);
+        setDates(start, end);
+    };
+    if(btnNextWeek) btnNextWeek.onclick = () => {
+        const d = new Date();
+        const day = d.getDay() === 0 ? 6 : d.getDay() - 1;
+        const start = new Date(d); start.setDate(d.getDate() - day + 7);
+        const end = new Date(start); end.setDate(start.getDate() + 6);
+        setDates(start, end);
+    };
+
+    // Sätt standard till "Denna vecka"
+    if(btnWeek) btnWeek.click();
+
+    // Funktionen som hämtar datan och bygger ihop schemat i HTML
+    const generateExportHTML = async () => {
+        if(!startInp.value || !endInp.value) return null;
+        
+        showToast("Hämtar schema för utskrift...", "info");
+        
+        // Hämta allt som behövs från databasen för just dessa datum
+        const [users, stations, shifts, absences, schedule] = await Promise.all([
+            fetchData('users'), fetchData('stations'), fetchData('shifts'), fetchData('absences'),
+            fetchData('schedule', `&start_date=${startInp.value}&end_date=${endInp.value}`)
+        ]);
+        
+        if(!schedule) {
+            showToast("Kunde inte hämta schemat.", "error");
+            return null;
+        }
+
+        // Räkna ut vilka datum som ingår i spannet
+        const dates = [];
+        let curr = new Date(startInp.value);
+        const end = new Date(endInp.value);
+        while(curr <= end) {
+            const tz = curr.getTimezoneOffset() * 60000;
+            dates.push(new Date(curr.getTime() - tz).toISOString().split('T')[0]);
+            curr.setDate(curr.getDate() + 1);
+        }
+
+        // Metod för att plocka ut passen
+        const getAssignments = (userId, dateStr) => {
+            const assigned = schedule.filter(r => r.is_published && String(r.user_id) === String(userId) && r.work_date.split('T')[0] === dateStr);
+            return assigned.map(a => {
+                const st = stations.find(s => s.id === a.station_id);
+                const sh = shifts.find(s => s.id === a.shift_id);
+                if(st && sh) return { stationName: st.name, stationColor: st.color, shiftLabel: sh.label };
+                return null;
+            }).filter(Boolean);
+        };
+
+        // Metod för frånvaro
+        const getAbsence = (userId, dateStr) => {
+            return (absences||[]).find(a => String(a.user_id) === String(userId) && dateStr >= a.start_date.split('T')[0] && dateStr <= a.end_date.split('T')[0]);
+        };
+
+        // Bygg det generella HTML-schemat med vår "skapa-allt"-funktion
+        let gridHTML = buildWeeklyGridHTML(users || [], dates, getAssignments, true, DAYS, getAbsence);
+        
+        // Packa in det i en container med ren CSS som tvingar det att bli snyggt i PDF:en
+        const wrapper = document.createElement('div');
+        wrapper.className = 'print-wrapper';
+        wrapper.style.padding = '20px';
+        wrapper.style.background = '#fff';
+        wrapper.style.color = '#000';
+        wrapper.innerHTML = `
+            <style>
+                .print-wrapper .weekly-grid { display: grid; grid-template-columns: 150px repeat(${dates.length}, minmax(100px, 1fr)); border: 1px solid #ccc; font-family: sans-serif; }
+                .print-wrapper .weekly-header-row { display: contents; }
+                .print-wrapper .weekly-header-row > div { background: #f5f5f5; font-weight: bold; padding: 10px; border-bottom: 2px solid #ccc; border-right: 1px solid #ccc; text-align: center; }
+                .print-wrapper .weekly-user-row { display: contents; }
+                .print-wrapper .weekly-user-name { font-weight: bold; padding: 10px; border-bottom: 1px solid #ccc; border-right: 1px solid #ccc; background: #fafafa; display:flex; align-items:center; }
+                .print-wrapper .weekly-cell { padding: 5px; border-bottom: 1px solid #ccc; border-right: 1px solid #ccc; background: #fff; min-height: 50px; }
+                .print-wrapper .weekly-badge { padding: 4px 6px; border-radius: 4px; margin-bottom: 4px; font-size: 0.85rem; font-weight: bold; text-align: center; border: 1px solid #ddd; }
+                .print-wrapper .free-text { color: #aaa; font-style: italic; font-size: 0.85rem; display:block; text-align:center; margin-top:10px; }
+            </style>
+            <h2 style="text-align:center; color:#333; margin-bottom:20px; font-family: sans-serif;">Schema: ${startInp.value} till ${endInp.value}</h2>
+            ${gridHTML}
+        `;
+        return wrapper;
+    };
+
+    // Skriv ut till papper/PDF
+    if(printBtn) printBtn.onclick = async () => {
+        const wrapper = await generateExportHTML();
+        if(!wrapper) return;
+        
+        let printContainer = document.getElementById('print-container');
+        if(!printContainer) {
+            printContainer = document.createElement('div');
+            printContainer.id = 'print-container';
+            document.body.appendChild(printContainer);
+        }
+        
+        // Lägger till CSS-regler så att BARA utskriftscontainern syns när pappersutskriften startar
+        let printStyle = document.getElementById('print-style-rules');
+        if(!printStyle) {
+            printStyle = document.createElement('style');
+            printStyle.id = 'print-style-rules';
+            printStyle.innerHTML = '@media print { body > *:not(#print-container) { display: none !important; } #print-container { display: block !important; position: absolute; top:0; left:0; width:100%; } }';
+            document.head.appendChild(printStyle);
+        }
+
+        printContainer.innerHTML = '';
+        printContainer.appendChild(wrapper);
+        
+        // Öppna utskriftsmenyn
+        setTimeout(() => {
+            window.print();
+        }, 500);
+    };
+
+    // Spara ner som PNG-bild
+    if(imgBtn) imgBtn.onclick = async () => {
+        const wrapper = await generateExportHTML();
+        if(!wrapper) return;
+        
+        // Tvinga fönstret att ritas upp utanför skärmen för att bilden ska bli rätt storlek
+        wrapper.style.position = 'absolute';
+        wrapper.style.top = '-9999px';
+        wrapper.style.left = '0';
+        wrapper.style.width = '1400px'; 
+        document.body.appendChild(wrapper);
+        
+        try {
+            const canvas = await html2canvas(wrapper, { backgroundColor: '#ffffff', scale: 2 });
+            const link = document.createElement('a');
+            link.download = `Schema_${startInp.value}_till_${endInp.value}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch(e) {
+            showToast("Kunde inte skapa bild", "error");
+        } finally {
+            // Rensa upp efter oss
+            document.body.removeChild(wrapper);
+        }
+    };
 }
