@@ -3,33 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Schema - STRUL</title>
+    <title>Mitt Schema - STRUL</title>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="base.css">
     <link rel="stylesheet" href="admin.css">
+    
     <script type="module" src="js/main.js"></script>
 </head>
-<body class="admin-view" id="page-user">
+<body class="user-view admin-view" id="page-user">
 
 <div class="admin-wrapper">
     <header class="admin-header">
         <div class="header-content">
             <div style="display:flex; align-items:center; gap:20px;">
-                <h1>Arbetsschema</h1>
-                <div class="header-datepicker" style="display:flex; align-items:center; gap:10px;">
-                    <label for="userDatePicker" style="font-size:0.9rem; opacity:0.7;">Välj datum:</label>
-                    <input type="date" id="userDatePicker">
-                    <button id="toggleUserViewBtn" class="export-button" style="background-color: #0277bd; margin-left: 20px;">📅 Byt till Veckovy</button>
-                </div>
-            </div>
-
-            <div class="date-navigation">
-                <button id="prevDayBtn" class="nav-arrow" title="Föregående dag">◀</button>
-                <div id="currentDateDisplay"></div>
-                <button id="nextDayBtn" class="nav-arrow" title="Nästa dag">▶</button>
+                <h1>Schema</h1>
             </div>
             
             <div style="display:flex; align-items:center; gap:15px;">
+                <button id="toggleMyScheduleBtn" class="export-button" style="background-color: #0277bd;">👤 Visa endast mitt schema</button>
+                
                 <span id="currentUserDisplay" style="font-weight:500; opacity:0.8;"></span>
                 <button id="logoutBtn" class="logout-btn">Logga ut</button>
             </div>
@@ -39,12 +32,12 @@
     <div class="admin-layout" style="margin-top: 20px;">
         <main class="schedule-card-wrapper">
             <div class="schedule-card">
-                <div class="grid-container" id="scheduleContainer"></div>
-                <div id="weeklyContainer" style="display:none; overflow-x: auto;"></div>
+                <div id="userWeeklyContainer" style="overflow-x: auto;">Laddar schema...</div>
             </div>
         </main>
     </div>
 </div>
 
+<div id="toast-container"></div> 
 </body>
 </html>
