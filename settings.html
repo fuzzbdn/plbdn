@@ -37,7 +37,8 @@
                 <button class="tab-btn" onclick="openTab('tab-stations')">🚉 Platser / Stationer</button>
                 <button class="tab-btn" onclick="openTab('tab-shifts')">⏰ Arbetspass</button>
                 <button class="tab-btn" onclick="openTab('tab-theme')">🎨 Utseende & Tema</button>
-                <button class="tab-btn" onclick="openTab('tab-admins')">🔐 Administratörer</button>
+                
+                <button class="tab-btn" onclick="openTab('tab-admins')">👥 Användare & Konton</button>
                 
                 <button class="tab-btn" id="tabBtnWorkplaces" onclick="openTab('tab-workplaces')" style="display:none; border-left: 4px solid #ff9800;">🏢 Arbetsplatser</button>
                 
@@ -160,31 +161,40 @@
 
                 <div id="tab-admins" class="tab-pane">
                     <div class="setting-card">
-                        <h3>👤 Administratörer</h3>
-                        <div class="form-group" style="background:var(--bg-color); padding:15px; border-radius:6px; border:1px solid var(--border-color);">
-                            <label style="margin-bottom:10px; display:block;">Hantera admin:</label>
-                            <input type="text" id="newAdminDisplayName" placeholder="Visningsnamn (t.ex. Ancha)" style="width:100%; margin-bottom:10px;">
+                        <h3>👥 Användare & Konton</h3>
+                        <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">Här hanterar du all personal och alla som har tillgång till systemet.</p>
+                        
+                        <div class="form-group" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e0e0e0;">
+                            <label style="margin-bottom:10px; display:block; font-weight:800; color:#333;">Skapa eller redigera konto:</label>
+                            
+                            <input type="text" id="newAdminDisplayName" placeholder="Visningsnamn (t.ex. Ancha - Hur personen ska visas på schemat)" style="width:100%; margin-bottom:10px; border: 2px solid #90caf9;">
+                            
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-                                <input type="text" id="newAdminFirstName" placeholder="Förnamn">
-                                <input type="text" id="newAdminLastName" placeholder="Efternamn">
+                                <input type="text" id="newAdminFirstName" placeholder="Riktigt Förnamn">
+                                <input type="text" id="newAdminLastName" placeholder="Riktigt Efternamn">
                             </div>
-                            <input type="email" id="newAdminEmail" placeholder="E-post" style="width:100%; margin-bottom:10px;">
+                            <input type="email" id="newAdminEmail" placeholder="E-postadress" style="width:100%; margin-bottom:10px;">
+                            
                             <div style="display:flex; gap:10px; margin-bottom:10px;">
-                                <input type="text" id="newAdminUser" placeholder="Användarnamn" style="flex:1;">
+                                <input type="text" id="newAdminUser" placeholder="Användarnamn (för inloggning)" style="flex:1;">
                                 <input type="password" id="newAdminPass" placeholder="Lösenord" style="flex:1;">
                             </div>
-                            <select id="newAdminRole" style="width:100%; margin-bottom:10px;">
-                                <option value="user">Användare</option>
-                                <option value="admin">Administratör</option>
-                                <option value="superadmin">Super-Admin</option>
+                            
+                            <select id="newAdminRole" style="width:100%; margin-bottom:15px; border-color:#ccc; background:#fff;">
+                                <option value="user">🧍‍♂️ Användare (Syns på schemat, kan ej redigera)</option>
+                                <option value="admin">🔧 Administratör (Kan schemalägga och redigera alla)</option>
+                                <option value="superadmin">👑 Super-Admin (Dold på schemat, tillgång till allt)</option>
                             </select>
+                            
                             <div style="display:flex; gap:10px;">
-                                <button id="addAdminBtn" class="save-btn">Spara / Skapa konto</button>
-                                <button id="cancelAdminEditBtn" class="cancel-edit-btn" style="display:none;">Avbryt</button>
+                                <button id="addAdminBtn" class="save-btn" style="flex:1;">💾 Spara / Skapa konto</button>
+                                <button id="cancelAdminEditBtn" class="cancel-edit-btn" style="display:none; flex:1;">Avbryt</button>
                             </div>
                         </div>
-                        <div style="margin-top:20px;">
-                            <div id="adminListContainer" class="list-container">Laddar...</div>
+                        
+                        <div style="margin-top:30px;">
+                            <h4 style="font-size:0.95rem; margin-bottom:10px; color:#333; font-weight:800;">Kontoöversikt:</h4>
+                            <div id="adminListContainer" class="list-container" style="max-height: 500px; overflow-y: auto; background:#fff;">Laddar...</div>
                         </div>
                     </div>
                 </div>
