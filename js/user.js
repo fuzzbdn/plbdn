@@ -1,5 +1,5 @@
 import { fetchData } from './service.js';
-import { getISOWeek, isLight, escapeHTML, buildWeeklyGridHTML } from './utils.js'; // Importerar bygg-funktionen
+import { getISOWeek, isLight, escapeHTML, buildWeeklyGridHTML } from './utils.js'; 
 import { DAYS } from './config.js';
 
 let allScheduleRows = [];
@@ -15,25 +15,23 @@ let isWeeklyView = false;
 let currentSelectedDateStr = '';
 
 export async function initUserView() {
-    const userId = sessionStorage.getItem('userId');
-    const name = sessionStorage.getItem('adminName');
+    const userId = localStorage.getItem('userId');
+    const name = localStorage.getItem('adminName');
 
-    if (!sessionStorage.getItem('jwtToken')) {
+    if (!localStorage.getItem('jwtToken')) {
         window.location.href = "index.html"; return;
     }
 
-    // Tvinga användare att logga in igen om de surfar med en jättegammal session
     if (!userId) {
-        sessionStorage.clear();
+        localStorage.clear();
         alert("Systemet har uppdaterats! Vänligen logga in på nytt för att se ditt personliga schema.");
         window.location.href = "index.html";
         return;
     }
 
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (name || 'Användare');
-    document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href = "index.html"; };
+    document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = "index.html"; };
 
-    // --- FILTER KNAPPEN ---
     const filterBtn = document.getElementById('toggleMyScheduleBtn');
     if (filterBtn) {
         filterBtn.onclick = () => {
@@ -43,7 +41,6 @@ export async function initUserView() {
             
             const toggleBtn = document.getElementById('toggleViewBtn');
             
-            // Om man filtrerar på sig själv, tvinga in i Veckovy (7-dagars)
             if (showOnlyMe) {
                 isWeeklyView = true;
                 document.getElementById('scheduleContainer').style.display = 'none';
@@ -62,7 +59,6 @@ export async function initUserView() {
         };
     }
 
-    // Initiera datumväljaren
     const picker = document.getElementById('userDatePicker');
     picker.value = new Date().toISOString().split('T')[0];
     picker.onchange = (e) => updateGrid(e.target.value);
@@ -79,7 +75,6 @@ export async function initUserView() {
         updateGrid(picker.value);
     }
 
-    // Hantera växling mellan Dagsvy / Veckovy
     const toggleBtn = document.getElementById('toggleViewBtn');
     if (toggleBtn) {
         toggleBtn.onclick = () => {
@@ -97,7 +92,6 @@ export async function initUserView() {
         };
     }
 
-    // Hämta in data och starta systemet
     try {
         const [users, stations, shifts] = await Promise.all([
             fetchData('users'),
@@ -114,7 +108,6 @@ export async function initUserView() {
     }
 }
 
-// Hämtar schemat för de dagar som ska visas
 async function updateGrid(dateStr) {
     currentSelectedDateStr = dateStr; 
     const d = new Date(dateStr);
@@ -125,9 +118,7 @@ async function updateGrid(dateStr) {
 
     datesToShow = [];
 
-    // --- LOGIK: Bygg datumlistan (Rullande eller Statisk) ---
     if (showOnlyMe) {
-        // Rullande 7 dagar framåt från det valda datumet
         for(let i=0; i<7; i++) {
             const temp = new Date(d);
             temp.setDate(d.getDate() + i);
@@ -136,7 +127,6 @@ async function updateGrid(dateStr) {
         }
         document.getElementById('currentDateDisplay').innerText = `Mitt schema (7 dagar framåt)`;
     } else {
-        // Fast kalendervecka (Måndag -> Söndag)
         const start = new Date(d);
         start.setDate(d.getDate() - currentDayIndex);
         for(let i=0; i<7; i++) {
@@ -148,7 +138,6 @@ async function updateGrid(dateStr) {
         document.getElementById('currentDateDisplay').innerText = `${DAYS[currentDayIndex]} v.${selectedWeek}, ${selectedYear}`;
     }
 
-    // Hämtar data från servern. OBS: Filtrerar direkt bort allt som inte är publicerat.
     const scheduleRaw = await fetchData('schedule', `&start_date=${datesToShow[0]}&end_date=${datesToShow[6]}`);
     allScheduleRows = Array.isArray(scheduleRaw) ? scheduleRaw.filter(r => r.is_published) : [];
 
@@ -160,13 +149,12 @@ function renderViews() {
     else renderDailyView();
 }
 
-// Ritar Dagsvyn (Använder alltid currentSelectedDateStr)
 function renderDailyView() {
     const cont = document.getElementById('scheduleContainer');
     if(!cont) return;
 
     const currentDateStr = currentSelectedDateStr; 
-    const myId = sessionStorage.getItem('userId');
+    const myId = localStorage.getItem('userId');
 
     let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
 
@@ -185,7 +173,6 @@ function renderDailyView() {
                 r.shift_id === sh.id
             );
 
-            // Filtrera passet om "Visa bara mig" är valt
             if (showOnlyMe) {
                 assignedRows = assignedRows.filter(r => String(r.user_id) === String(myId));
             }
@@ -193,7 +180,6 @@ function renderDailyView() {
             const hasUsers = assignedRows.length > 0;
             const textVal = assignedRows.map(a => a.display_name || `${a.first_name} ${a.last_name||''}`.trim()).join(' / ');
             
-            // Renderar ett låst kort (pointer-events: none)
             html += `
             <div class="shift-block ${hasUsers?'':'empty'}" style="pointer-events: none;">
                 <span class="shift-text">${escapeHTML(textVal)}</span>
@@ -204,31 +190,23 @@ function renderDailyView() {
     cont.innerHTML = html;
 }
 
-// ==========================================
-// DRY REFACTORING: Använd vår gemensamma HTML-byggare för veckovyn
-// ==========================================
 function renderWeeklyView() {
     const cont = document.getElementById('userWeeklyContainer');
     if (!cont) return;
 
-    const myId = sessionStorage.getItem('userId');
+    const myId = localStorage.getItem('userId');
     
-    // Lista ut vilka användare vi ska rita upp
     let usersToShow = showOnlyMe 
         ? globalUserList.filter(u => String(u.id) === String(myId))
         : globalUserList;
 
-    // Om Super-Admin testar filtret, och därmed inte finns i personalistan
     if (usersToShow.length === 0 && showOnlyMe) {
-        usersToShow.push({ id: myId, display_name: sessionStorage.getItem('adminName'), first_name: '', last_name: '' });
+        usersToShow.push({ id: myId, display_name: localStorage.getItem('adminName'), first_name: '', last_name: '' });
     }
 
-    // Skapa en funktion som vår hjälpfunktion i utils.js kan använda för att hämta pass
     const getAssignments = (userId, dateStr) => {
-        // Leta i vår lokala data array
         const assignments = allScheduleRows.filter(r => String(r.user_id) === String(userId) && r.work_date.split('T')[0] === dateStr);
         
-        // Formatera till exakt det format som buildWeeklyGridHTML vill ha det
         return assignments.map(a => {
             const st = globalStations.find(s => s.id === a.station_id);
             const sh = globalShifts.find(s => s.id === a.shift_id);
@@ -236,10 +214,8 @@ function renderWeeklyView() {
                 return { stationName: st.name, stationColor: st.color, shiftLabel: sh.label };
             }
             return null;
-        }).filter(Boolean); // Rensar bort eventuella trasiga rader
+        }).filter(Boolean);
     };
 
-    // Anropa vår gemensamma funktion. 
-    // Om showOnlyMe är sant, skickar vi med "true" så att funktionen lägger till datum (t.ex. 12/4) i rubriken.
     cont.innerHTML = buildWeeklyGridHTML(usersToShow, datesToShow, getAssignments, showOnlyMe, DAYS);
 }
