@@ -87,10 +87,9 @@ export function escapeHTML(str) {
 // ==========================================
 // Denna funktion tar emot rådata och spottar ut färdig HTML för veckovyn.
 // Används av både admin.js och user.js för att slippa duplicerad kod.
-export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersWithDates, daysArray) {
+export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersWithDates, daysArray, getAbsenceFn = null) {
     let html = '<div class="weekly-grid"><div class="weekly-header-row"><div class="weekly-user-name">Personal</div>';
     
-    // 1. Bygg datumrubrikerna i toppen (t.ex. "Måndag" eller "Måndag 12/4")
     dates.forEach(dateStr => {
         const d = new Date(dateStr);
         const dayName = daysArray[d.getDay() === 0 ? 6 : d.getDay() - 1];
@@ -103,27 +102,31 @@ export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersW
     });
     html += `</div>`;
 
-    // 2. Loopa igenom varje användare och bygg deras rad
     users.forEach(user => {
-        // Prioritera Display-namn, annars förnamn+efternamn
         const nameToShow = user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
         html += `<div class="weekly-user-row"><div class="weekly-user-name">${escapeHTML(nameToShow)}</div>`;
 
-        // 3. Loopa igenom dagarna för denna användare
         dates.forEach(dateStr => {
-            // Använd funktionen vi skickade med för att hämta just denna persons pass för denna dag
             const assignments = getAssignmentsFn(user.id, dateStr);
+            // NYTT: Kolla om personen är sjuk denna dag
+            const absence = getAbsenceFn ? getAbsenceFn(user.id, dateStr) : null;
+            
             html += `<div class="weekly-cell">`;
             
-            // Är listan tom? Skriv "Ledig"
-            if (!assignments || assignments.length === 0) {
+            if (absence) {
+                // Ritar ut en röd badge för frånvaro
+                let icon = '✈️';
+                if(absence.type === 'Sjuk') icon = '🤒';
+                if(absence.type === 'VAB') icon = '🧸';
+                if(absence.type === 'Semester') icon = '🌴';
+                html += `<div class="weekly-badge" style="background:#ffebee; color:#c62828; border: 1px solid #ffcdd2;">${icon} ${absence.type}</div>`;
+            } 
+            else if (!assignments || assignments.length === 0) {
                 html += `<span class="free-text">Ledig</span>`;
             } else {
-                // Skapa en färgkodad badge för varje pass
                 assignments.forEach(a => {
                     const bg = a.stationColor || '#ccc';
                     const fg = isLight(bg) ? '#000' : '#fff';
-                    // Förkorta "Förmiddag" till "FM" för att spara plats
                     let shortLabel = a.shiftLabel.toLowerCase() === 'förmiddag' ? 'FM' : (a.shiftLabel.toLowerCase() === 'eftermiddag' ? 'EM' : a.shiftLabel);
                     html += `<div class="weekly-badge" style="background:${escapeHTML(bg)}; color:${fg};">${escapeHTML(a.stationName)} <span style="opacity:0.8; font-weight:normal;">(${escapeHTML(shortLabel)})</span></div>`;
                 });
@@ -133,7 +136,5 @@ export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersW
         html += `</div>`;
     });
     html += '</div>';
-    
-    // Returnera den färdiga HTML-koden
     return html;
 }
