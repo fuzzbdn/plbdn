@@ -6,6 +6,7 @@ let allScheduleRows = [];
 let globalUserList = [];
 let globalStations = [];
 let globalShifts = [];
+let globalAbsences = []; // NYTT
 let showOnlyMe = false;
 let datesToShow = []; 
 let selectedWeek = 0;
@@ -93,14 +94,17 @@ export async function initUserView() {
     }
 
     try {
-        const [users, stations, shifts] = await Promise.all([
+        // Lade till absences i databasladdningen
+        const [users, stations, shifts, absences] = await Promise.all([
             fetchData('users'),
             fetchData('stations'),
-            fetchData('shifts')
+            fetchData('shifts'),
+            fetchData('absences')
         ]);
         globalUserList = users || [];
         globalStations = stations || [];
         globalShifts = shifts || [];
+        globalAbsences = absences || [];
         
         await updateGrid(picker.value);
     } catch (e) {
@@ -217,5 +221,14 @@ function renderWeeklyView() {
         }).filter(Boolean);
     };
 
-    cont.innerHTML = buildWeeklyGridHTML(usersToShow, datesToShow, getAssignments, showOnlyMe, DAYS);
+    // NYTT: Funktion som ser om personen är borta
+    const getAbsence = (userId, dateStr) => {
+        return globalAbsences.find(a => 
+            String(a.user_id) === String(userId) && 
+            dateStr >= a.start_date.split('T')[0] && 
+            dateStr <= a.end_date.split('T')[0]
+        );
+    };
+
+    cont.innerHTML = buildWeeklyGridHTML(usersToShow, datesToShow, getAssignments, showOnlyMe, DAYS, getAbsence);
 }
