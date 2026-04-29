@@ -37,11 +37,11 @@
                 <button class="tab-btn" onclick="openTab('tab-stations')">🚉 Platser / Stationer</button>
                 <button class="tab-btn" onclick="openTab('tab-shifts')">⏰ Arbetspass</button>
                 <button class="tab-btn" onclick="openTab('tab-theme')">🎨 Utseende & Tema</button>
-                
                 <button class="tab-btn" onclick="openTab('tab-admins')">👥 Användare & Konton</button>
                 
-                <button class="tab-btn" id="tabBtnWorkplaces" onclick="openTab('tab-workplaces')" style="display:none; border-left: 4px solid #ff9800;">🏢 Arbetsplatser</button>
+                <button class="tab-btn" onclick="openTab('tab-absences')">🏖️ Hantera Frånvaro</button>
                 
+                <button class="tab-btn" id="tabBtnWorkplaces" onclick="openTab('tab-workplaces')" style="display:none; border-left: 4px solid #ff9800;">🏢 Arbetsplatser</button>
                 <button class="tab-btn tab-btn-manual" onclick="openTab('tab-manual')">📖 Manual</button>
             </aside>
 
@@ -148,7 +148,6 @@
                     <div class="setting-card">
                         <h3>🎨 Utseende & Tema</h3>
                         <div style="display:flex; gap:40px; align-items: flex-start; flex-wrap: wrap;">
-                            
                             <div style="width: 280px; flex-shrink: 0;">
                                 <div class="form-group">
                                     <label>Aktivt tema på skärmen:</label>
@@ -158,9 +157,7 @@
 
                                 <h4 style="margin-top:0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; font-size: 1rem;">🛠 Skapa / Redigera Tema</h4>
                                 <div class="form-group">
-                                    <select id="editThemeSelect">
-                                        <option value="">-- Välj tema att redigera --</option>
-                                    </select>
+                                    <select id="editThemeSelect"><option value="">-- Välj tema att redigera --</option></select>
                                 </div>
                                 <input type="hidden" id="customThemeId">
                                 <div class="form-group">
@@ -182,7 +179,6 @@
                                     <iframe id="themePreviewIframe" style="border:none; position:absolute; top:0; left:0;"></iframe>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -194,26 +190,21 @@
                         
                         <div class="form-group" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e0e0e0;">
                             <label style="margin-bottom:10px; display:block; font-weight:800; color:#333;">Skapa eller redigera konto:</label>
-                            
                             <input type="text" id="newAdminDisplayName" placeholder="Visningsnamn (t.ex. Ancha - Hur personen ska visas på schemat)" style="width:100%; margin-bottom:10px; border: 2px solid #90caf9;">
-                            
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
                                 <input type="text" id="newAdminFirstName" placeholder="Riktigt Förnamn">
                                 <input type="text" id="newAdminLastName" placeholder="Riktigt Efternamn">
                             </div>
                             <input type="email" id="newAdminEmail" placeholder="E-postadress" style="width:100%; margin-bottom:10px;">
-                            
                             <div style="display:flex; gap:10px; margin-bottom:10px;">
                                 <input type="text" id="newAdminUser" placeholder="Användarnamn (för inloggning)" style="flex:1;">
                                 <input type="password" id="newAdminPass" placeholder="Lösenord" style="flex:1;">
                             </div>
-                            
                             <select id="newAdminRole" style="width:100%; margin-bottom:15px; border-color:#ccc; background:#fff;">
                                 <option value="user">🧍‍♂️ Användare (Syns på schemat, kan ej redigera)</option>
                                 <option value="admin">🔧 Administratör (Kan schemalägga och redigera alla)</option>
                                 <option value="superadmin">👑 Super-Admin (Dold på schemat, tillgång till allt)</option>
                             </select>
-                            
                             <div style="display:flex; gap:10px;">
                                 <button id="addAdminBtn" class="save-btn" style="flex:1;">💾 Spara / Skapa konto</button>
                                 <button id="cancelAdminEditBtn" class="cancel-edit-btn" style="display:none; flex:1;">Avbryt</button>
@@ -223,6 +214,45 @@
                         <div style="margin-top:30px;">
                             <h4 style="font-size:0.95rem; margin-bottom:10px; color:#333; font-weight:800;">Kontoöversikt:</h4>
                             <div id="adminListContainer" class="list-container" style="max-height: 500px; overflow-y: auto; background:#fff;">Laddar...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-absences" class="tab-pane">
+                    <div class="setting-card">
+                        <h3 style="color:#0277bd;">🏖️ Hantera Frånvaro</h3>
+                        <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">Lägg in sjukdom, semester, VAB etc. Personen plockas automatiskt bort från krockande pass och kan inte schemaläggas under perioden.</p>
+                        
+                        <div class="form-group" style="background:#e3f2fd; padding:20px; border-radius:8px; border:1px solid #90caf9;">
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom: 15px;">
+                                <div class="form-group" style="margin:0;">
+                                    <label>Vem?</label>
+                                    <select id="absUser" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;"></select>
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>Typ av frånvaro:</label>
+                                    <select id="absType" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;">
+                                        <option value="Sjuk">🤒 Sjuk</option>
+                                        <option value="VAB">🧸 VAB</option>
+                                        <option value="Semester">🌴 Semester</option>
+                                        <option value="Tjänstledig">✈️ Tjänstledig</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>Från datum:</label>
+                                    <input type="date" id="absStart" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>Till datum:</label>
+                                    <input type="date" id="absEnd" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;">
+                                </div>
+                            </div>
+                            <button id="saveAbsenceBtn" class="save-btn" style="width:100%; background-color:#0277bd;">Spara Frånvaro</button>
+                        </div>
+                        
+                        <div style="margin-top:30px;">
+                            <h4 style="font-size:0.95rem; margin-bottom:10px; color:#333; font-weight:800;">Aktuell frånvaro:</h4>
+                            <div id="absenceListContainer" class="list-container" style="max-height: 400px; overflow-y: auto; background:#fff; padding:10px;">Laddar...</div>
                         </div>
                     </div>
                 </div>
@@ -257,5 +287,16 @@
     </div>
 
     <div id="toast-container"></div> 
+    
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 style="margin-top:0;">Bekräfta</h3>
+            <p id="confirmMessage" style="font-size:1.1rem;">Är du säker?</p>
+            <div class="modal-buttons">
+                <button id="btnConfirmNo" class="modal-btn cancel">Avbryt</button>
+                <button id="btnConfirmYes" class="modal-btn confirm">Ja, kör!</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
