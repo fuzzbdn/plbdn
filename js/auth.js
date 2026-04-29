@@ -34,9 +34,9 @@ export function initLogin() {
             const d = await res.json();
             
             if(d.success) {
-                // FIX: Ändrat till localStorage
+                // Säker inloggning som överlever att webbläsaren stängs
                 localStorage.setItem('jwtToken', d.token); 
-                localStorage.setItem('userId', d.userId); 
+                localStorage.setItem('userId', d.userId);
                 localStorage.setItem('adminName', d.name);
                 localStorage.setItem('userRole', d.role); 
                 
