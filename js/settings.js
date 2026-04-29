@@ -22,7 +22,6 @@ export async function initSettings() {
     }
 
     try {
-        // Hämta dagens datum så att förhandsgranskningen av temat får lite test-data
         const todayStr = new Date().toISOString().split('T')[0];
 
         const [settings, themes, stations, shifts, scheduleData] = await Promise.all([
@@ -37,7 +36,6 @@ export async function initSettings() {
         globalStations = Array.isArray(stations) ? stations : [];
         globalShifts = Array.isArray(shifts) ? shifts : [];
         
-        // Anpassa schemat för snabb läsning i iframen
         globalScheduleData = {};
         if (Array.isArray(scheduleData)) {
             scheduleData.forEach(row => {
@@ -332,32 +330,53 @@ function initAdminSettings() {
     const admRole = document.getElementById('newAdminRole');
     if (!admBtn) return;
 
+    // --- NY OCH TYDLIGARE ANVÄNDARLISTA (TABELL-LAYOUT) ---
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
         if (!Array.isArray(admins)) admins = []; 
         
-        document.getElementById('adminListContainer').innerHTML = admins.map(a => {
-            let roleBadge = '<span style="background:#4CAF50; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">User</span>';
-            if(a.role === 'admin') roleBadge = '<span style="background:#ff9800; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">Admin</span>';
-            if(a.role === 'superadmin') roleBadge = '<span style="background:#9c27b0; color:#fff; padding:2px 5px; border-radius:3px; font-size:0.7em;">Super-Admin</span>';
-            
-            const fullName = `${a.first_name || ''} ${a.last_name || ''}`.trim() || "Namn saknas";
-            const displayNameSub = a.display_name ? ` [Visa: ${a.display_name}]` : "";
-            
-            return `
-            <div class="admin-list-item">
-                <div class="list-info-left">
-                    <strong>${escapeHTML(fullName)}</strong> ${roleBadge}
-                    <span style="color:#666; margin-left:5px; font-size:0.9em;">
-                        (@${escapeHTML(a.username)})${escapeHTML(displayNameSub)}
-                    </span>
-                </div>
-                <div class="list-actions-right">
-                    <button class="list-btn" onclick='startEditAdmin(${JSON.stringify(a).replace(/'/g, "&#39;")})'>✏️</button>
-                    <button class="list-btn" onclick="deleteAdmin('${escapeHTML(a.username)}')">🗑️</button>
-                </div>
-            </div>`;
-        }).join('');
+        let html = `
+        <div style="display:flex; padding: 10px 15px; background: #f5f5f5; border-bottom: 2px solid #ddd; font-weight: 600; font-size: 0.85rem; color: #555; text-transform: uppercase; position: sticky; top: 0; z-index: 10;">
+            <div style="flex: 2; min-width: 150px;">Namn / Visningsnamn</div>
+            <div style="flex: 1.5; min-width: 120px;">Användarnamn</div>
+            <div style="flex: 1; min-width: 100px;">Roll</div>
+            <div style="width: 80px; text-align: right;">Åtgärd</div>
+        </div>
+        `;
+
+        if (admins.length === 0) {
+            html += `<div style="padding: 15px; text-align: center; color: #666;">Inga konton hittades.</div>`;
+        } else {
+            html += admins.map(a => {
+                // Tydligare badges för roller
+                let roleBadge = '<span style="background:#e0e0e0; color:#333; padding:3px 8px; border-radius:12px; font-size:0.75em; font-weight:bold;">🧍 Användare</span>';
+                if(a.role === 'admin') roleBadge = '<span style="background:#fff3e0; color:#e65100; padding:3px 8px; border-radius:12px; border: 1px solid #ffe0b2; font-size:0.75em; font-weight:bold;">🔧 Admin</span>';
+                if(a.role === 'superadmin') roleBadge = '<span style="background:#f3e5f5; color:#4a148c; padding:3px 8px; border-radius:12px; border: 1px solid #e1bee7; font-size:0.75em; font-weight:bold;">👑 Super-Admin</span>';
+                
+                const fullName = `${a.first_name || ''} ${a.last_name || ''}`.trim() || "<em style='color:#999'>Namn saknas</em>";
+                const displayNameSub = a.display_name ? `<br><span style="font-size:0.85em; color:#0277bd; font-weight: 600;">➔ Visas som: ${escapeHTML(a.display_name)}</span>` : "";
+                
+                return `
+                <div class="admin-list-item" style="display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #eee; transition: background 0.2s; background: #fff;">
+                    <div style="flex: 2; min-width: 150px; line-height: 1.5;">
+                        <strong style="font-size: 1rem; color: #333;">${fullName}</strong>
+                        ${displayNameSub}
+                    </div>
+                    <div style="flex: 1.5; min-width: 120px; color: #555; font-family: monospace; font-size: 0.95em;">
+                        @${escapeHTML(a.username)}
+                    </div>
+                    <div style="flex: 1; min-width: 100px;">
+                        ${roleBadge}
+                    </div>
+                    <div style="width: 80px; display: flex; justify-content: flex-end; gap: 8px;">
+                        <button class="list-btn" onclick='startEditAdmin(${JSON.stringify(a).replace(/'/g, "&#39;")})' title="Redigera" style="background:#f5f5f5;">✏️</button>
+                        <button class="list-btn" onclick="deleteAdmin('${escapeHTML(a.username)}')" title="Ta bort" style="background:#ffebee; color: #d32f2f;">🗑️</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        
+        document.getElementById('adminListContainer').innerHTML = html;
     };
 
     window.startEditAdmin = (u) => {
@@ -373,6 +392,9 @@ function initAdminSettings() {
         admBtn.innerText = "Spara Ändringar";
         admBtn.style.background = "#2196F3";
         admCancel.style.display = "inline-flex";
+        
+        // Scrolla upp till formuläret om man klickat redigera långt ner i listan
+        document.getElementById('newAdminDisplayName').scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
     const resetAdm = () => {
@@ -461,7 +483,6 @@ function initWorkplaceSettings() {
     renderWorkplaces();
 }
 
-// --- TEMA-FÖRHANDSGRANSKNING (UPPDATERAD FÖR V2) ---
 function initThemeTab(currentSettings) {
     const themeSelect = document.getElementById('themeSelect');
     const editSelect = document.getElementById('editThemeSelect');
