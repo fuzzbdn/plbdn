@@ -1,5 +1,5 @@
 import { fetchData, saveData, apiAction } from './service.js';
-import { showToast, showConfirm, isLight, escapeHTML } from './utils.js';
+import { showToast, showConfirm, isLight, escapeHTML, getISOWeek } from './utils.js';
 import { DAYS } from './config.js'; 
 
 let globalStations = [], globalShifts = [], globalCustomThemes = [], globalScheduleData = {};
@@ -606,6 +606,7 @@ function initThemeTab(currentSettings) {
         const dayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1; 
         const dayName = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"][dayIndex];
         const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
+        const iso = getISOWeek(now);
 
         let html = `
         <div class="display-wrapper">
@@ -636,10 +637,11 @@ function initThemeTab(currentSettings) {
             html += `<div class="display-row" ${vars}><div class="station-label">${escapeHTML(st.name)}</div>`;
             
             globalShifts.forEach(sh => {
-                const key = `${st.id}_${sh.id}`;
-                const assignments = globalScheduleData[key] || [];
+                const targetDateStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                const assignedRows = globalScheduleData[`${st.id}_${sh.id}`] || [];
+                const validRows = assignedRows.filter(r => r.is_published && r.work_date.split('T')[0] === targetDateStr);
                 
-                const val = assignments.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
+                const val = validRows.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
                 const safeVal = escapeHTML(val);
                 
                 html += `<div class="shift-card ${safeVal?'':'empty'}" data-label="${escapeHTML(sh.label)}">${safeVal}</div>`;
@@ -784,139 +786,220 @@ function initExportTab() {
         setDates(start, end);
     };
 
-    // Sätt standard till "Denna vecka"
     if(btnWeek) btnWeek.click();
 
-    // Denna funktion bygger utskriften genom att använda de klassiska v1.4 "Display"-klasserna från base.css
-    const generateExportHTML = async () => {
-        if(!startInp.value || !endInp.value) return null;
-        
-        showToast("Hämtar schema för export...", "info");
-        
+    // EXAKT EXPORTFUNKTION FRÅN v1.4 (Papper)
+    function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
+        const iso = getISOWeek(dateObj);
+        const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1;
+        const dayName = DAYS[dayIndex];
+        const dateStr = dateObj.toLocaleDateString('sv-SE');
+        const targetDateStr = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+        let html = `
+        <div class="print-page" style="padding: 10px; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box;">
+            <div style="text-align:center; margin-bottom:15px;">
+                <h1 style="margin:0; font-size: 1.8rem;">Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
+            </div>
+            <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px; justify-content: space-between;">
+                <div style="display:grid; grid-template-columns: 200px repeat(${shifts.length}, 1fr); gap: 10px;">
+                    <div></div>
+                    ${shifts.map(s => `
+                        <div style="text-align:center; font-weight:800; text-transform:uppercase; color:#555; font-size:0.85rem;">
+                            ${escapeHTML(s.label)}<br><small style="font-weight:400;">${escapeHTML(s.time_range || s.time || '')}</small>
+                        </div>`).join('')}
+                </div>`;
+
+        stations.forEach(st => {
+            if (st.is_spacer) {
+                html += `<div style="flex-grow: 0.2;"></div>`;
+                return;
+            }
+
+            const bg = st.color;
+            const fg = isLight(bg) ? '#000' : '#fff';
+
+            html += `
+            <div style="display:grid; grid-template-columns: 200px repeat(${shifts.length}, 1fr); gap: 10px; flex: 1;">
+                <div style="background:${escapeHTML(bg)}; color:${fg}; padding:10px; border-radius:6px; font-weight:800; font-size:1.1rem; display:flex; align-items:center; border: 1px solid #ddd; justify-content: center;">
+                    ${escapeHTML(st.name)}
+                </div>`;
+
+            shifts.forEach(sh => {
+                const assignedRows = schedule.filter(r =>
+                    r.is_published &&
+                    r.work_date.split('T')[0] === targetDateStr &&
+                    r.station_id === st.id &&
+                    r.shift_id === sh.id
+                );
+                const val = assignedRows.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
+
+                html += `
+                <div style="background:#fff; border: 1px solid #ccc; border-radius:6px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:700; font-size:1.2rem;">
+                    ${escapeHTML(val)}
+                </div>`;
+            });
+            html += `</div>`;
+        });
+
+        html += `</div></div>`;
+        return html;
+    }
+
+    // EXAKT EXPORTFUNKTION FRÅN v1.4 (Bilder via Iframe)
+    function generateDisplayHtmlForImage(dateObj, stations, shifts, schedule) {
+        const iso = getISOWeek(dateObj);
+        const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1;
+        const dayName = DAYS[dayIndex];
+        const dateStr = `${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
+        const targetDateStr = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+        let html = `
+        <div class="display-wrapper">
+            <div class="top-bar">
+                <h1 id="mainTitle">Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
+            </div>
+
+            <div id="mainContainer">
+                <div class="time-header-row">
+                    <div></div>
+                    ${shifts.map(s => `<div class="time-header">${escapeHTML(s.label)}</div>`).join('')}
+                </div>
+        `;
+
+        stations.forEach(st => {
+            if (st.is_spacer) {
+                html += `<div class="display-row spacer-row"></div>`;
+                return;
+            }
+
+            const contrast = isLight(st.color) ? '#000' : '#fff';
+            const vars = `style="--station-color:${escapeHTML(st.color)}; --contrast-color:${contrast};"`;
+
+            html += `<div class="display-row" ${vars}><div class="station-label">${escapeHTML(st.name)}</div>`;
+
+            shifts.forEach(sh => {
+                const assignedRows = schedule.filter(r =>
+                    r.is_published &&
+                    r.work_date.split('T')[0] === targetDateStr &&
+                    r.station_id === st.id &&
+                    r.shift_id === sh.id
+                );
+                const val = assignedRows.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
+
+                html += `<div class="shift-card ${val ? '' : 'empty'}" data-label="${escapeHTML(sh.label)}">${escapeHTML(val)}</div>`;
+            });
+
+            html += `</div>`;
+        });
+
+        html += `
+            </div>
+        </div>`;
+
+        return html;
+    }
+
+    const runExport = async (mode) => {
+        const sDate = new Date(startInp.value);
+        const eDate = new Date(endInp.value);
+        if (sDate > eDate) return showToast("Startdatum måste vara före slutdatum", "error");
+
+        showToast("Hämtar data för export...", "info");
+
         const [stations, shifts, schedule] = await Promise.all([
             fetchData('stations'), fetchData('shifts'),
             fetchData('schedule', `&start_date=${startInp.value}&end_date=${endInp.value}`)
         ]);
-        
-        if(!schedule) {
-            showToast("Kunde inte hämta schemat.", "error");
-            return null;
-        }
 
-        const dates = [];
-        let curr = new Date(startInp.value);
-        const end = new Date(endInp.value);
-        while(curr <= end) {
-            const tz = curr.getTimezoneOffset() * 60000;
-            dates.push(new Date(curr.getTime() - tz).toISOString().split('T')[0]);
-            curr.setDate(curr.getDate() + 1);
-        }
+        if(!schedule) return showToast("Kunde inte hämta schemat.", "error");
 
-        const wrapper = document.createElement('div');
-        wrapper.className = 'print-wrapper display-view'; // 'display-view' för att base.css ska veta vad som gäller
-        wrapper.style.padding = '20px';
-        wrapper.style.background = '#fff';
-        wrapper.style.color = '#333';
-        wrapper.style.fontFamily = "'Inter', sans-serif";
+        if (mode === 'print') {
+            const pc = document.getElementById('print-container') || document.createElement('div');
+            pc.id = 'print-container';
+            if(!document.body.contains(pc)) document.body.appendChild(pc);
 
-        let html = `<h2 style="text-align:center; color:#0277bd; margin-bottom:30px;">Schema: ${startInp.value} till ${endInp.value}</h2>`;
+            let html = "";
+            let loopDate = new Date(sDate);
+            while (loopDate <= eDate) {
+                html += generateSingleDayPrintHtml(new Date(loopDate), stations, shifts, schedule);
+                loopDate.setDate(loopDate.getDate() + 1);
+            }
+            pc.innerHTML = html;
+            window.print();
+            setTimeout(() => pc.innerHTML = '', 1000);
+        } else {
+            if(typeof html2canvas === 'undefined') return showToast("html2canvas saknas.", "error");
 
-        dates.forEach(dateStr => {
-            const d = new Date(dateStr);
-            const dayName = DAYS[d.getDay() === 0 ? 6 : d.getDay() - 1];
-            const shortDate = `${d.getDate()}/${d.getMonth() + 1}`;
-            
-            // Varje dag får en egen sektion som undviker att brytas mitt itu vid pappersutskrift
-            html += `<div style="margin-bottom: 40px; page-break-inside: avoid;">`;
-            html += `<h3 style="margin: 0 0 10px 0; padding: 10px; background: #f0f2f5; border-left: 5px solid #0277bd; color: #333;">${dayName} ${shortDate}</h3>`;
-            
-            // Här börjar magin: Vi använder "time-header-row" och "display-row" exakt som skärmen!
-            html += `<div style="padding: 15px; background: #f4f4f9; border: 1px solid #ddd; border-radius: 8px;">`;
-            
-            html += `<div class="time-header-row"><div></div>${shifts.map(s => `<div class="time-header">${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
+            const btn = document.getElementById('doImageBtn');
+            const txt = btn.innerText;
+            btn.innerText = "Genererar...";
 
-            stations.forEach(st => {
-                if(st.is_spacer) { 
-                    html += `<div class="display-row spacer-row"></div>`; 
-                    return; 
-                }
+            let customCss = "";
+            const themeSelect = document.getElementById('themeSelect');
+            if (themeSelect && themeSelect.value && themeSelect.value !== 'light') {
+                const t = globalCustomThemes.find(x => x.id === themeSelect.value);
+                if (t) customCss = t.css;
+            }
 
-                const contrast = isLight(st.color) ? '#000' : '#fff';
-                const vars = `style="--station-color:${escapeHTML(st.color)}; --contrast-color:${contrast};"`;
+            const iframe = document.createElement('iframe');
+            iframe.style.cssText = "position:absolute; top:-9999px; left:0; width:1920px; height:1080px; border:none;";
+            document.body.appendChild(iframe);
 
-                html += `<div class="display-row" ${vars}><div class="station-label">${escapeHTML(st.name)}</div>`;
+            let loopDate = new Date(sDate);
+            let count = 0;
 
-                shifts.forEach(sh => {
-                    let assignedRows = schedule.filter(r =>
-                        r.is_published &&
-                        r.work_date.split('T')[0] === dateStr &&
-                        r.station_id === st.id &&
-                        r.shift_id === sh.id
-                    );
+            while (loopDate <= eDate) {
+                const doc = iframe.contentDocument;
+                doc.open();
+                doc.write(`
+                    <!DOCTYPE html>
+                    <html lang="sv">
+                    <head>
+                        <base href="${window.location.href}">
+                        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+                        <link rel="stylesheet" href="base.css">
+                        <link rel="stylesheet" href="display.css">
+                        <style>
+                            ${customCss}
+                            * { transition: none !important; animation: none !important; }
+                            body { margin: 0; overflow: hidden; background-color: var(--bg-color, #f0f2f5); }
+                            ::-webkit-scrollbar { display: none; }
+                        </style>
+                    </head>
+                    <body class="display-view" id="page-display">
+                        ${generateDisplayHtmlForImage(new Date(loopDate), stations, shifts, schedule)}
+                    </body>
+                    </html>
+                `);
+                doc.close();
 
-                    const hasUsers = assignedRows.length > 0;
-                    const textVal = assignedRows.map(a => a.display_name || `${a.first_name} ${a.last_name||''}`.trim()).join(' / ');
-                    
-                    html += `<div class="shift-card ${hasUsers?'':'empty'}" data-label="${escapeHTML(sh.label)}">${escapeHTML(textVal)}</div>`;
-                });
-                html += `</div>`;
-            });
-            html += `</div></div>`;
-        });
+                await new Promise(r => setTimeout(r, 1000));
 
-        wrapper.innerHTML = html;
-        return wrapper;
-    };
+                try {
+                    const canvas = await html2canvas(doc.body, {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: doc.body.style.backgroundColor || '#f0f2f5'
+                    });
 
-    // Pappersutskrift
-    if(printBtn) printBtn.onclick = async () => {
-        const wrapper = await generateExportHTML();
-        if(!wrapper) return;
-        
-        let printContainer = document.getElementById('print-container');
-        if(!printContainer) {
-            printContainer = document.createElement('div');
-            printContainer.id = 'print-container';
-            document.body.appendChild(printContainer);
-        }
-        
-        // Denna stil döljer inställningsmenyn när print-fönstret öppnas och tvingar fram bakgrundsfärger
-        let printStyle = document.getElementById('print-style-rules');
-        if(!printStyle) {
-            printStyle = document.createElement('style');
-            printStyle.id = 'print-style-rules';
-            printStyle.innerHTML = '@media print { body > *:not(#print-container) { display: none !important; } #print-container { display: block !important; position: absolute; top:0; left:0; width:100%; } .print-wrapper > div { break-inside: avoid; page-break-inside: avoid; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }';
-            document.head.appendChild(printStyle);
-        }
+                    const link = document.createElement('a');
+                    const lDateStr = new Date(loopDate.getTime() - (loopDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                    link.download = `Schema-${lDateStr}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    count++;
+                } catch (e) { console.error("Kunde inte skapa bild:", e); }
 
-        printContainer.innerHTML = '';
-        printContainer.appendChild(wrapper);
-        
-        setTimeout(() => { window.print(); }, 500);
-    };
+                loopDate.setDate(loopDate.getDate() + 1);
+            }
 
-    // Bildexport
-    if(imgBtn) imgBtn.onclick = async () => {
-        const wrapper = await generateExportHTML();
-        if(!wrapper) return;
-        
-        // Placerar den osynligt utanför skärmen för att fota den med 1200px bredd
-        wrapper.style.position = 'absolute';
-        wrapper.style.top = '-9999px';
-        wrapper.style.left = '0';
-        wrapper.style.width = '1200px'; 
-        document.body.appendChild(wrapper);
-        
-        try {
-            const canvas = await html2canvas(wrapper, { backgroundColor: '#ffffff', scale: 2 });
-            const link = document.createElement('a');
-            link.download = `Schema_${startInp.value}_till_${endInp.value}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        } catch(e) {
-            showToast("Kunde inte skapa bild", "error");
-        } finally {
-            document.body.removeChild(wrapper);
+            document.body.removeChild(iframe);
+            btn.innerText = txt;
+            showToast(`Klar! ${count} bild(er).`, "success");
         }
     };
+
+    if(printBtn) printBtn.onclick = () => runExport('print');
+    if(imgBtn) imgBtn.onclick = () => runExport('image');
 }
