@@ -7,11 +7,12 @@ let globalUserList = [];
 let globalStations = [];
 let globalShifts = [];
 let showOnlyMe = false;
-let datesToShow = []; // Innehåller de 7 datumen som ska visas
+let datesToShow = []; 
 let selectedWeek = 0;
 let selectedYear = 0;
 let currentDayIndex = 0;
 let isWeeklyView = false;
+let currentSelectedDateStr = ''; // NYTT: Håller koll på exakt vald dag
 
 export async function initUserView() {
     const userId = sessionStorage.getItem('userId');
@@ -31,7 +32,7 @@ export async function initUserView() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (name || 'Användare');
     document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href = "index.html"; };
 
-    // --- FILTER KNAPPEN (UPPDATERAD LOGIK) ---
+    // --- FILTER KNAPPEN ---
     const filterBtn = document.getElementById('toggleMyScheduleBtn');
     if (filterBtn) {
         filterBtn.onclick = () => {
@@ -39,7 +40,6 @@ export async function initUserView() {
             filterBtn.innerText = showOnlyMe ? "👥 Visa alla pass" : "👤 Visa endast mitt";
             filterBtn.style.backgroundColor = showOnlyMe ? "#455a64" : "#4CAF50";
             
-            // När vi byter filter, uppdatera gridens datumintervall
             const picker = document.getElementById('userDatePicker');
             updateGrid(picker.value);
         };
@@ -97,6 +97,7 @@ export async function initUserView() {
 }
 
 async function updateGrid(dateStr) {
+    currentSelectedDateStr = dateStr; // FIX: Sparar exakt vilket datum som klickats på
     const d = new Date(dateStr);
     const iso = getISOWeek(d);
     selectedWeek = iso.week;
@@ -106,7 +107,7 @@ async function updateGrid(dateStr) {
     datesToShow = [];
 
     if (showOnlyMe) {
-        // --- LÄGE: KOMMANDE 7 DAGAR (Från valt datum) ---
+        // Läge: Kommande 7 dagar
         for(let i=0; i<7; i++) {
             const temp = new Date(d);
             temp.setDate(d.getDate() + i);
@@ -115,7 +116,7 @@ async function updateGrid(dateStr) {
         }
         document.getElementById('currentDateDisplay').innerText = `Mitt schema (7 dagar framåt)`;
     } else {
-        // --- LÄGE: KLASSISK VECKA (Mån-Sön) ---
+        // Läge: Klassisk kalendervecka
         const start = new Date(d);
         start.setDate(d.getDate() - currentDayIndex);
         for(let i=0; i<7; i++) {
@@ -127,7 +128,6 @@ async function updateGrid(dateStr) {
         document.getElementById('currentDateDisplay').innerText = `${DAYS[currentDayIndex]} v.${selectedWeek}, ${selectedYear}`;
     }
 
-    // Hämta schemat för det valda intervallet
     const scheduleRaw = await fetchData('schedule', `&start_date=${datesToShow[0]}&end_date=${datesToShow[6]}`);
     allScheduleRows = Array.isArray(scheduleRaw) ? scheduleRaw.filter(r => r.is_published) : [];
 
@@ -143,8 +143,8 @@ function renderDailyView() {
     const cont = document.getElementById('scheduleContainer');
     if(!cont) return;
 
-    // I dagsvyn visar vi alltid bara den valda dagen (första datumet i listan)
-    const currentDateStr = datesToShow[0];
+    // FIX: Tvinga Dagsvyn att använda exakt det valda datumet!
+    const currentDateStr = currentSelectedDateStr; 
     const myId = sessionStorage.getItem('userId');
 
     let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
@@ -190,14 +190,12 @@ function renderWeeklyView() {
         ? globalUserList.filter(u => String(u.id) === String(myId))
         : globalUserList;
 
-    // Dummy för Super-Admin test
     if (usersToShow.length === 0 && showOnlyMe) {
         usersToShow.push({ id: myId, display_name: sessionStorage.getItem('adminName'), first_name: '', last_name: '' });
     }
 
     let html = '<div class="weekly-grid"><div class="weekly-header-row"><div class="weekly-user-name">Personal</div>';
     
-    // Bygg rubrikerna dynamiskt (Visar datum om vi kör rullande 7-dagars)
     datesToShow.forEach(dateStr => {
         const d = new Date(dateStr);
         const dayName = DAYS[d.getDay() === 0 ? 6 : d.getDay() - 1];
