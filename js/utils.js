@@ -1,3 +1,8 @@
+// ==========================================
+// UTILS.JS - Hjälpfunktioner för hela systemet
+// ==========================================
+
+// Visar en popup (toast) med ett meddelande nere i hörnet
 export function showToast(message, type = 'success') {
     let container = document.getElementById('toast-container');
     if (!container) {
@@ -18,6 +23,7 @@ export function showToast(message, type = 'success') {
     }, 3000);
 }
 
+// Visar en snyggare bekräftelse-ruta istället för webbläsarens inbyggda
 export function showConfirm(message) {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');
@@ -44,6 +50,7 @@ export function showConfirm(message) {
     });
 }
 
+// Räknar ut vilket Veckonummer ett specifikt datum tillhör (Svensk standard ISO-8601)
 export function getISOWeek(d) {
     const date = new Date(d.getTime());
     date.setHours(0, 0, 0, 0);
@@ -55,6 +62,7 @@ export function getISOWeek(d) {
     };
 }
 
+// Avgör om en färg är ljus eller mörk (för att veta om texten ska vara vit eller svart)
 export function isLight(color) {
     if(!color) return true;
     const h = color.replace('#','');
@@ -62,7 +70,7 @@ export function isLight(color) {
     return ((r*299 + g*587 + b*114)/1000) >= 128;
 }
 
-// NY FUNKTION: Förhindrar XSS (Cross-Site Scripting)
+// Skyddar mot XSS (Hackare som försöker skriva in kod i namnfält)
 export function escapeHTML(str) {
     if (typeof str !== 'string') return str;
     return str.replace(/[&<>'"]/g, tag => ({
@@ -72,4 +80,60 @@ export function escapeHTML(str) {
         "'": '&#39;',
         '"': '&quot;'
     }[tag] || tag));
+}
+
+// ==========================================
+// DRY REFACTORING: Bygg Veckoschemat
+// ==========================================
+// Denna funktion tar emot rådata och spottar ut färdig HTML för veckovyn.
+// Används av både admin.js och user.js för att slippa duplicerad kod.
+export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersWithDates, daysArray) {
+    let html = '<div class="weekly-grid"><div class="weekly-header-row"><div class="weekly-user-name">Personal</div>';
+    
+    // 1. Bygg datumrubrikerna i toppen (t.ex. "Måndag" eller "Måndag 12/4")
+    dates.forEach(dateStr => {
+        const d = new Date(dateStr);
+        const dayName = daysArray[d.getDay() === 0 ? 6 : d.getDay() - 1];
+        if (showHeadersWithDates) {
+            const shortDate = `${d.getDate()}/${d.getMonth() + 1}`;
+            html += `<div>${dayName} <br><small>${shortDate}</small></div>`;
+        } else {
+            html += `<div>${dayName}</div>`;
+        }
+    });
+    html += `</div>`;
+
+    // 2. Loopa igenom varje användare och bygg deras rad
+    users.forEach(user => {
+        // Prioritera Display-namn, annars förnamn+efternamn
+        const nameToShow = user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
+        html += `<div class="weekly-user-row"><div class="weekly-user-name">${escapeHTML(nameToShow)}</div>`;
+
+        // 3. Loopa igenom dagarna för denna användare
+        dates.forEach(dateStr => {
+            // Använd funktionen vi skickade med för att hämta just denna persons pass för denna dag
+            const assignments = getAssignmentsFn(user.id, dateStr);
+            html += `<div class="weekly-cell">`;
+            
+            // Är listan tom? Skriv "Ledig"
+            if (!assignments || assignments.length === 0) {
+                html += `<span class="free-text">Ledig</span>`;
+            } else {
+                // Skapa en färgkodad badge för varje pass
+                assignments.forEach(a => {
+                    const bg = a.stationColor || '#ccc';
+                    const fg = isLight(bg) ? '#000' : '#fff';
+                    // Förkorta "Förmiddag" till "FM" för att spara plats
+                    let shortLabel = a.shiftLabel.toLowerCase() === 'förmiddag' ? 'FM' : (a.shiftLabel.toLowerCase() === 'eftermiddag' ? 'EM' : a.shiftLabel);
+                    html += `<div class="weekly-badge" style="background:${escapeHTML(bg)}; color:${fg};">${escapeHTML(a.stationName)} <span style="opacity:0.8; font-weight:normal;">(${escapeHTML(shortLabel)})</span></div>`;
+                });
+            }
+            html += `</div>`;
+        });
+        html += `</div>`;
+    });
+    html += '</div>';
+    
+    // Returnera den färdiga HTML-koden
+    return html;
 }
