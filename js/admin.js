@@ -1,5 +1,5 @@
 import { fetchData, apiAction } from './service.js';
-import { showToast, showConfirm, getISOWeek, isLight, escapeHTML, buildWeeklyGridHTML } from './utils.js'; // Importerar bygg-funktionen
+import { showToast, showConfirm, getISOWeek, isLight, escapeHTML, buildWeeklyGridHTML } from './utils.js';
 import { DAYS } from './config.js';
 
 let globalScheduleData = {}; 
@@ -13,14 +13,12 @@ let isWeeklyView = false;
 let datesOfWeek = [];
 let hasUnpublishedChanges = false;
 
-// Returnerar det namn som ska visas i gränssnittet
 function getFriendlyName(u) {
     if (u.display_name) return u.display_name;
     if (u.first_name) return `${u.first_name} ${u.last_name || ''}`.trim();
     return u.username;
 }
 
-// Hämtar en array med alla 7 datum för veckan som ett visst datum tillhör
 function getDatesOfWeek(dateStr) {
     const d = new Date(dateStr);
     const day = d.getDay();
@@ -37,15 +35,13 @@ function getDatesOfWeek(dateStr) {
 }
 
 export async function initAdmin() {
-    // Säkerhetskontroll: Endast Admins och Super-Admins kommer in
-    if (sessionStorage.getItem('userRole') !== 'admin' && sessionStorage.getItem('userRole') !== 'superadmin') {
+    if (localStorage.getItem('userRole') !== 'admin' && localStorage.getItem('userRole') !== 'superadmin') {
         window.location.href = "user.html"; return;
     }
 
-    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (sessionStorage.getItem('adminName')||'Admin');
+    document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (localStorage.getItem('adminName')||'Admin');
     
-    // --- SUPER-ADMIN: Hantera arbetsplats-rullgardinen ---
-    if (sessionStorage.getItem('userRole') === 'superadmin') {
+    if (localStorage.getItem('userRole') === 'superadmin') {
         const saContainer = document.getElementById('superAdminContainer');
         if (saContainer) saContainer.style.display = 'flex';
         loadWorkplaces();
@@ -56,16 +52,15 @@ export async function initAdmin() {
         const select = document.getElementById('workplaceSelect');
         if (workplaces && select) {
             select.innerHTML = workplaces.map(w => `<option value="${w.id}">${escapeHTML(w.name)}</option>`).join('');
-            const active = sessionStorage.getItem('activeWorkplace') || 'default';
+            const active = localStorage.getItem('activeWorkplace') || 'default';
             select.value = active;
             select.onchange = (e) => {
-                sessionStorage.setItem('activeWorkplace', e.target.value);
+                localStorage.setItem('activeWorkplace', e.target.value);
                 window.location.reload(); 
             };
         }
     }
     
-    // Hämta grunddata från databasen
     try {
         const [users, stations, shifts] = await Promise.all([
             fetchData('users'), fetchData('stations'), fetchData('shifts')
@@ -77,7 +72,6 @@ export async function initAdmin() {
         showToast("Fel vid hämtning av grunddata", "error");
     }
 
-    // Sätt dagens datum i datumväljaren
     const picker = document.getElementById('adminDatePicker');
     picker.value = new Date().toISOString().split('T')[0];
     picker.onchange = (e) => updateGrid(e.target.value);
@@ -94,7 +88,6 @@ export async function initAdmin() {
         updateGrid(picker.value);
     }
 
-    // Publicera-knappen
     document.getElementById('publishBtn').onclick = async () => {
         const currentDateStr = datesOfWeek[currentAdminDayIndex];
         let start = currentDateStr, end = currentDateStr;
@@ -116,9 +109,8 @@ export async function initAdmin() {
         }
     };
 
-    document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
+    document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href="index.html"; };
     
-    // Hantera Drag and Drop
     window.handleDrop = async (e) => {
         e.preventDefault(); 
         const date = e.currentTarget.getAttribute('data-date');
@@ -131,7 +123,6 @@ export async function initAdmin() {
         updateGrid(picker.value);
     };
 
-    // Hantera klick (Ta bort kryss) och "skriv in namn" i schemat
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
         scheduleContainer.addEventListener('click', async (e) => {
@@ -156,12 +147,10 @@ export async function initAdmin() {
             }
         });
 
-        // Autocomplete när man skriver
         scheduleContainer.addEventListener('input', (e) => {
             if (e.target.classList.contains('shift-text')) showAutocomplete(e.target);
         });
 
-        // Spara när man klickar utanför textrutan
         scheduleContainer.addEventListener('focusout', (e) => {
             if (e.target.classList.contains('shift-text')) {
                 setTimeout(async () => {
@@ -176,7 +165,6 @@ export async function initAdmin() {
 
     setupSidebarAddUser();
 
-    // Hantera Växling mellan Dag och Veckovy
     const toggleBtn = document.getElementById('toggleViewBtn');
     if (toggleBtn) {
         toggleBtn.onclick = () => {
@@ -198,12 +186,10 @@ export async function initAdmin() {
     updateGrid(picker.value);
 }
 
-// Synkar manuellt inskriven text med databasen ("Ancha-metoden")
 async function syncShiftTextToDB(date, stationId, shiftId, text) {
     const key = `${date}_${stationId}_${shiftId}`;
     const currentAssignments = globalScheduleData[key] || [];
     
-    // Rensa gamla pass
     for (let a of currentAssignments) {
         await apiAction('remove_shift', { date, user_id: a.user_id, station_id: stationId, shift_id: shiftId });
     }
@@ -212,7 +198,6 @@ async function syncShiftTextToDB(date, stationId, shiftId, text) {
     for (let name of names) {
         let u = globalUserList.find(u => getFriendlyName(u).toLowerCase() === name.toLowerCase());
         if (!u) {
-            // Om användaren inte finns, skapa den i databasen automatiskt
             await apiAction('quick_add_user', { fullName: name });
             const newUsers = await fetchData('users');
             if (newUsers) globalUserList = newUsers;
@@ -225,7 +210,6 @@ async function syncShiftTextToDB(date, stationId, shiftId, text) {
     updateGrid(document.getElementById('adminDatePicker').value);
 }
 
-// Laddar schemat för hela den aktuella veckan
 async function updateGrid(dateStr) {
     const d = new Date(dateStr);
     const iso = getISOWeek(d);
@@ -252,7 +236,6 @@ async function updateGrid(dateStr) {
     updatePublishBanner();
 }
 
-// Visar en varningsbanner om man har opublicerade ändringar
 function updatePublishBanner() {
     hasUnpublishedChanges = false;
     const currentDateStr = datesOfWeek[currentAdminDayIndex];
@@ -281,7 +264,6 @@ function renderViews() {
     renderRoster();
 }
 
-// Ritar upp Dagsvyn (Grid) för editering
 function renderAdminGrid() {
     const cont = document.getElementById('scheduleContainer');
     if(!cont) return;
@@ -319,7 +301,6 @@ function renderAdminGrid() {
     cont.innerHTML = html;
 }
 
-// Hanterar rullgardinsmenyn som dyker upp när man klickar på [+] i schemat
 function manualAdd(e, date, stationId, shiftId) {
     e.stopPropagation();
     const existing = document.getElementById('quick-dropdown');
@@ -369,7 +350,6 @@ function manualAdd(e, date, stationId, shiftId) {
     }, { once: true });
 }
 
-// Förslår namn medan du skriver
 function showAutocomplete(element) {
     closeAutocomplete(); 
     const text = element.innerText;
@@ -414,15 +394,10 @@ document.addEventListener('click', (e) => {
     if (!e.target.classList.contains('shift-text')) closeAutocomplete();
 });
 
-// ==========================================
-// DRY REFACTORING: Använd vår gemensamma HTML-byggare för veckovyn
-// ==========================================
 function renderWeeklyView() {
     const cont = document.getElementById('weeklyContainer');
     if(!cont) return;
 
-    // Skapa en funktion som plockar fram rätt pass baserat på användare och datum.
-    // Vi formaterar datan exakt så som buildWeeklyGridHTML förväntar sig.
     const getAssignments = (userId, dateStr) => {
         let userAssignments = [];
         Object.keys(globalScheduleData).forEach(key => {
@@ -441,11 +416,9 @@ function renderWeeklyView() {
         return userAssignments;
     };
 
-    // Anropa vår gemensamma funktion (Skicka "false" för att inte skriva ut datumrubriker)
     cont.innerHTML = buildWeeklyGridHTML(globalUserList, datesOfWeek, getAssignments, false, DAYS);
 }
 
-// Ritar upp personal-listan till vänster
 function renderRoster() {
     const list = document.getElementById('draggableUserList');
     if(!list) return;
@@ -453,7 +426,6 @@ function renderRoster() {
     const currentDateStr = datesOfWeek[currentAdminDayIndex];
     const workingTodayUserIds = new Set();
     
-    // Hitta vilka som jobbar idag (för att gråa ut dem)
     Object.keys(globalScheduleData).forEach(k => { 
         if(k.startsWith(currentDateStr)) { 
             globalScheduleData[k].forEach(a => workingTodayUserIds.add(a.user_id));
