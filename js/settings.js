@@ -748,7 +748,7 @@ function initThemeTab(currentSettings) {
     }
 }
 
-// --- UTSKRIFT & BILDEXPORT (Återställd till v1.4 Display Design) ---
+// --- UTSKRIFT OCH ZIP-BILDEXPORT (Med v1.4 Design) ---
 function initExportTab() {
     const btnToday = document.getElementById('btnSetToday');
     const btnWeek = document.getElementById('btnSetWeek');
@@ -760,7 +760,6 @@ function initExportTab() {
 
     if(!startInp || !endInp) return;
 
-    // Hjälpfunktion för att sätta datum i fälten
     const setDates = (start, end) => {
         const tz = start.getTimezoneOffset() * 60000;
         startInp.value = new Date(start.getTime() - tz).toISOString().split('T')[0];
@@ -788,7 +787,6 @@ function initExportTab() {
 
     if(btnWeek) btnWeek.click();
 
-    // EXAKT EXPORTFUNKTION FRÅN v1.4 (Papper)
     function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
         const iso = getISOWeek(dateObj);
         const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1;
@@ -846,7 +844,6 @@ function initExportTab() {
         return html;
     }
 
-    // EXAKT EXPORTFUNKTION FRÅN v1.4 (Bilder via Iframe)
     function generateDisplayHtmlForImage(dateObj, stations, shifts, schedule) {
         const iso = getISOWeek(dateObj);
         const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1;
@@ -930,6 +927,7 @@ function initExportTab() {
             setTimeout(() => pc.innerHTML = '', 1000);
         } else {
             if(typeof html2canvas === 'undefined') return showToast("html2canvas saknas.", "error");
+            if(typeof JSZip === 'undefined') return showToast("JSZip saknas. Uppdatera settings.html", "error"); 
 
             const btn = document.getElementById('doImageBtn');
             const txt = btn.innerText;
@@ -948,6 +946,9 @@ function initExportTab() {
 
             let loopDate = new Date(sDate);
             let count = 0;
+            const zip = new JSZip(); 
+            let singleImageBase64 = null; 
+            let singleImageName = "";
 
             while (loopDate <= eDate) {
                 const doc = iframe.contentDocument;
@@ -983,11 +984,17 @@ function initExportTab() {
                         backgroundColor: doc.body.style.backgroundColor || '#f0f2f5'
                     });
 
-                    const link = document.createElement('a');
                     const lDateStr = new Date(loopDate.getTime() - (loopDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                    link.download = `Schema-${lDateStr}.png`;
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
+                    const base64Img = canvas.toDataURL('image/png');
+
+                    if (count === 0) {
+                        singleImageBase64 = base64Img;
+                        singleImageName = `Schema-${lDateStr}.png`;
+                    }
+
+                    const base64Data = base64Img.split('base64,')[1];
+                    zip.file(`Schema-${lDateStr}.png`, base64Data, {base64: true});
+
                     count++;
                 } catch (e) { console.error("Kunde inte skapa bild:", e); }
 
@@ -996,7 +1003,28 @@ function initExportTab() {
 
             document.body.removeChild(iframe);
             btn.innerText = txt;
-            showToast(`Klar! ${count} bild(er).`, "success");
+
+            if (count === 1) {
+                const link = document.createElement('a');
+                link.download = singleImageName;
+                link.href = singleImageBase64;
+                link.click();
+                showToast("Bild sparad!", "success");
+            } else if (count > 1) {
+                showToast("Packar ZIP-fil...", "info");
+                try {
+                    const content = await zip.generateAsync({type: "blob"});
+                    const link = document.createElement('a');
+                    link.download = `Scheman_${startInp.value}_till_${endInp.value}.zip`;
+                    const url = URL.createObjectURL(content);
+                    link.href = url;
+                    link.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000); 
+                    showToast(`Klar! ${count} bilder sparade i en ZIP.`, "success");
+                } catch(e) {
+                    showToast("Kunde inte skapa ZIP", "error");
+                }
+            }
         }
     };
 
