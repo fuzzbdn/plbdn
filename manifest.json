@@ -2,7 +2,7 @@
   "name": "STRUL Schema",
   "short_name": "STRUL",
   "description": "Bemanningsschema för personal",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f0f2f5",
   "theme_color": "#0277bd",
