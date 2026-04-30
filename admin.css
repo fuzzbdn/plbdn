@@ -426,3 +426,89 @@
     transform: none;
     box-shadow: none;
 }
+/* --- MOBILANPASSNING FÖR APP-KÄNSLA (PWA) --- */
+.mobile-date-label {
+    display: none;
+    font-weight: 800;
+    color: #555;
+    font-size: 0.95rem;
+}
+
+.weekly-cell-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+@media (max-width: 768px) {
+    /* Dölj toppraden */
+    .weekly-header-row {
+        display: none !important;
+    }
+    
+    /* Konvertera grid till vertikal lista */
+    .weekly-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        border: none;
+        background: transparent;
+    }
+    
+    /* Varje användare blir ett "kort" */
+    .weekly-user-row {
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border: 1px solid #e0e0e0;
+        overflow: hidden;
+    }
+    
+    .weekly-user-name {
+        background: #0277bd;
+        color: #fff;
+        padding: 15px;
+        font-size: 1.1rem;
+        text-align: center;
+        border: none;
+    }
+    
+    .weekly-cell {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid #f0f0f0;
+        border-right: none;
+        min-height: 60px;
+    }
+    
+    .weekly-cell:last-child {
+        border-bottom: none;
+    }
+    
+    /* Visa datumet inne i cellen istället */
+    .mobile-date-label {
+        display: block;
+    }
+    
+    .weekly-cell-content {
+        align-items: flex-end;
+    }
+    
+    .weekly-badge {
+        margin: 0;
+        font-size: 0.9rem;
+        padding: 6px 10px;
+        text-align: right;
+        max-width: 150px;
+        white-space: normal;
+        line-height: 1.3;
+    }
+    
+    .free-text {
+        margin: 0;
+    }
+}
