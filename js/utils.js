@@ -1,92 +1,69 @@
-// ==========================================
-// UTILS.JS - Hjälpfunktioner för hela systemet
-// ==========================================
-
-// Visar en popup (toast) med ett meddelande nere i hörnet
-export function showToast(message, type = 'success') {
-    let container = document.getElementById('toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        document.body.appendChild(container);
-    }
+export function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
     const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    let icon = type === 'error' ? '❌' : (type === 'info' ? 'ℹ️' : '✅');
-    toast.innerHTML = `<span>${icon}</span> <span>${escapeHTML(message)}</span>`;
+    toast.className = `toast toast-${type}`;
+    toast.innerText = message;
     container.appendChild(toast);
-    
-    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; }, 10);
     setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => { if(container.contains(toast)) container.removeChild(toast); }, 300);
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
 
-// Visar en snyggare bekräftelse-ruta istället för webbläsarens inbyggda
 export function showConfirm(message) {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');
-        if(!modal) { resolve(confirm(message)); return; }
-
         const msgEl = document.getElementById('confirmMessage');
         const btnYes = document.getElementById('btnConfirmYes');
         const btnNo = document.getElementById('btnConfirmNo');
-
+        if(!modal || !msgEl || !btnYes || !btnNo) {
+            resolve(confirm(message)); return;
+        }
         msgEl.innerText = message;
         modal.classList.add('show');
-
+        
         const cleanup = () => {
             modal.classList.remove('show');
-            btnYes.removeEventListener('click', handleYes);
-            btnNo.removeEventListener('click', handleNo);
+            btnYes.onclick = null;
+            btnNo.onclick = null;
         };
-
-        const handleYes = () => { cleanup(); resolve(true); };
-        const handleNo = () => { cleanup(); resolve(false); };
-
-        btnYes.addEventListener('click', handleYes);
-        btnNo.addEventListener('click', handleNo);
+        
+        btnYes.onclick = () => { cleanup(); resolve(true); };
+        btnNo.onclick = () => { cleanup(); resolve(false); };
     });
 }
 
-// Räknar ut vilket Veckonummer ett specifikt datum tillhör (Svensk standard ISO-8601)
-export function getISOWeek(d) {
-    const date = new Date(d.getTime());
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
-    const w1 = new Date(date.getFullYear(), 0, 4);
+export function getISOWeek(date) {
+    const target = new Date(date.valueOf());
+    const dayNr = (date.getDay() + 6) % 7;
+    target.setDate(target.getDate() - dayNr + 3);
+    const firstThursday = target.valueOf();
+    target.setMonth(0, 1);
+    if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
     return {
-        week: 1 + Math.round(((date.getTime() - w1.getTime()) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7),
-        year: date.getFullYear()
+        year: target.getFullYear(),
+        week: 1 + Math.ceil((firstThursday - target) / 604800000)
     };
 }
 
-// Avgör om en färg är ljus eller mörk (för att veta om texten ska vara vit eller svart)
 export function isLight(color) {
-    if(!color) return true;
-    const h = color.replace('#','');
-    const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
-    return ((r*299 + g*587 + b*114)/1000) >= 128;
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    return ((r * 299) + (g * 587) + (b * 114)) / 1000 > 155;
 }
 
-// Skyddar mot XSS (Hackare som försöker skriva in kod i namnfält)
 export function escapeHTML(str) {
-    if (typeof str !== 'string') return str;
+    if (!str) return "";
     return str.replace(/[&<>'"]/g, tag => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        "'": '&#39;',
-        '"': '&quot;'
-    }[tag] || tag));
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[tag]));
 }
 
-// ==========================================
-// DRY REFACTORING: Bygg Veckoschemat
-// ==========================================
-// Denna funktion tar emot rådata och spottar ut färdig HTML för veckovyn.
-// Används av både admin.js och user.js för att slippa duplicerad kod.
 export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersWithDates, daysArray, getAbsenceFn = null) {
     let html = '<div class="weekly-grid"><div class="weekly-header-row"><div class="weekly-user-name">Personal</div>';
     
@@ -107,14 +84,18 @@ export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersW
         html += `<div class="weekly-user-row"><div class="weekly-user-name">${escapeHTML(nameToShow)}</div>`;
 
         dates.forEach(dateStr => {
+            const d = new Date(dateStr);
+            const dayName = daysArray[d.getDay() === 0 ? 6 : d.getDay() - 1];
+            const shortDate = `${d.getDate()}/${d.getMonth() + 1}`;
+
             const assignments = getAssignmentsFn(user.id, dateStr);
-            // NYTT: Kolla om personen är sjuk denna dag
             const absence = getAbsenceFn ? getAbsenceFn(user.id, dateStr) : null;
             
             html += `<div class="weekly-cell">`;
-            
+            html += `<div class="mobile-date-label">${dayName} ${shortDate}</div>`; 
+            html += `<div class="weekly-cell-content">`; 
+
             if (absence) {
-                // Ritar ut en röd badge för frånvaro
                 let icon = '✈️';
                 if(absence.type === 'Sjuk') icon = '🤒';
                 if(absence.type === 'VAB') icon = '🧸';
@@ -131,7 +112,7 @@ export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersW
                     html += `<div class="weekly-badge" style="background:${escapeHTML(bg)}; color:${fg};">${escapeHTML(a.stationName)} <span style="opacity:0.8; font-weight:normal;">(${escapeHTML(shortLabel)})</span></div>`;
                 });
             }
-            html += `</div>`;
+            html += `</div></div>`;
         });
         html += `</div>`;
     });
