@@ -2,49 +2,55 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mitt Schema - STRUL</title>
     
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0277bd">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="base.css">
     <link rel="stylesheet" href="admin.css">
-    
     <script type="module" src="js/main.js"></script>
 </head>
-<body class="user-view admin-view" id="page-user">
+<body class="admin-view" id="page-user">
 
 <div class="admin-wrapper">
     <header class="admin-header">
-        <div class="header-content">
-            <div style="display:flex; align-items:center; gap:20px;">
-                <h1>Schema</h1>
-                
-                <div class="header-datepicker" style="display:flex; align-items:center; gap:10px;">
-                    <label for="userDatePicker" style="font-size:0.9rem; opacity:0.7;">Startdatum:</label>
-                    <input type="date" id="userDatePicker">
-                    <button id="toggleViewBtn" class="export-button" style="background-color: #0277bd; margin-left: 20px;">📅 Byt till Veckovy</button>
-                </div>
+        <div class="header-content" style="flex-wrap: wrap;">
+            
+            <div style="display:flex; align-items:center; justify-content: space-between; width: 100%;">
+                <h1 style="font-size: 1.5rem;">STRUL</h1>
+                <button id="logoutBtn" class="list-btn" style="background:#e3f2fd; color:#0277bd; font-weight:bold;">Logga ut</button>
             </div>
 
-            <div class="date-navigation">
-                <button id="prevDayBtn" class="nav-arrow" title="Bakåt">◀</button>
-                <div id="currentDateDisplay"></div>
-                <button id="nextDayBtn" class="nav-arrow" title="Framåt">▶</button>
+            <div class="date-navigation" style="width: 100%; justify-content: space-between; margin-top: 10px;">
+                <button id="prevDayBtn" class="nav-arrow" title="Föregående">◀</button>
+                <div id="currentDateDisplay" style="font-size: 1.1rem;">Laddar...</div>
+                <button id="nextDayBtn" class="nav-arrow" title="Nästa">▶</button>
             </div>
             
-            <div style="display:flex; align-items:center; gap:15px;">
-                <button id="toggleMyScheduleBtn" class="export-button" style="background-color: #4CAF50;">👤 Visa endast mitt</button>
-                <span id="currentUserDisplay" style="font-weight:500; opacity:0.8;"></span>
-                <button id="logoutBtn" class="logout-btn">Logga ut</button>
+            <div style="display:none;">
+                <span id="currentUserDisplay"></span>
+                <input type="date" id="userDatePicker">
             </div>
+
         </div>
     </header>
 
-    <div class="admin-layout" style="margin-top: 20px; justify-content: center;">
-        <main class="schedule-card-wrapper" style="max-width: 1400px; width: 100%;">
-            <div class="schedule-card">
-                <div class="grid-container" id="scheduleContainer"></div>
-                <div id="userWeeklyContainer" style="display:none; overflow-x: auto;"></div>
+    <div class="admin-layout" style="margin-top: 20px; display: block;">
+        <main class="schedule-card-wrapper" style="width: 100%; max-width: 800px; margin: 0 auto;">
+            
+            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <button id="toggleMyScheduleBtn" class="export-button" style="background-color: #4CAF50; width: 100%; padding: 14px; font-size: 1.1rem; border-radius: 8px;">👤 Visa endast mitt schema</button>
+                <button id="toggleViewBtn" class="export-button" style="background-color: #0277bd; display: none; width: 100%; padding: 14px; border-radius: 8px;">📅 Byt till Veckovy</button>
+            </div>
+
+            <div class="schedule-card" style="padding: 0; background: transparent; box-shadow: none; border: none;">
+                <div class="grid-container" id="scheduleContainer" style="background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding: 10px;"></div>
+                <div id="userWeeklyContainer" style="display:none; width: 100%;"></div>
             </div>
         </main>
     </div>
