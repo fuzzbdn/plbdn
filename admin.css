@@ -444,16 +444,6 @@
    MOBILANPASSNING ENBART FÖR "MITT SCHEMA" (user.html)
    ======================================================== */
 
-#page-user .mobile-date-label {
-    display: none;
-    font-weight: 800;
-    color: #555;
-    font-size: 1rem;
-    margin-bottom: 10px;
-    border-bottom: 2px solid #f0f2f5;
-    padding-bottom: 5px;
-}
-
 /* Tvingar bort eventuella gamla dolda text-etiketter (spök-text) */
 #page-user .weekly-cell::before,
 #page-user .weekly-cell::after {
@@ -463,45 +453,52 @@
 
 /* När skärmen är mindre än 768px (Mobiltelefoner) */
 @media (max-width: 768px) {
+    
+    /* Göm dator-headern för tabellen */
     #page-user .weekly-header-row { 
         display: none !important; 
     }
     
+    /* Hela schemats bakgrund och avstånd */
     #page-user .weekly-grid { 
         display: flex !important; 
         flex-direction: column !important; 
-        gap: 20px !important; 
+        gap: 24px !important; 
         border: none !important; 
         background: transparent !important; 
+        padding: 5px !important;
     }
     
+    /* Person-kortet (Själva huvudbehållaren) */
     #page-user .weekly-user-row { 
         display: flex !important; 
         flex-direction: column !important; 
-        background: #fff !important; 
-        border-radius: 12px !important; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08) !important; 
-        border: 1px solid #e0e0e0 !important; 
+        background: #ffffff !important; 
+        border-radius: 20px !important; /* Mjukare hörn */
+        box-shadow: 0 10px 25px rgba(0,0,0,0.06) !important; /* Djupare, lyxigare skugga */
+        border: 1px solid rgba(0,0,0,0.04) !important; 
         overflow: hidden !important; 
     }
     
+    /* Namn-rubriken (Toppen av kortet) */
     #page-user .weekly-user-name { 
-        background: #0277bd !important; 
-        color: #fff !important; 
-        padding: 15px !important; 
-        font-size: 1.1rem !important; 
-        text-align: left !important; 
+        background: linear-gradient(135deg, #0277bd 0%, #01579b 100%) !important; /* Snygg färgtoning */
+        color: #ffffff !important; 
+        padding: 18px 20px !important; 
+        font-size: 1.25rem !important; 
+        text-align: center !important; 
         border: none !important; 
         font-weight: 800 !important; 
+        letter-spacing: 0.5px !important;
     }
     
+    /* Själva dagen (En rad inuti kortet) */
     #page-user .weekly-cell { 
         display: flex !important; 
         flex-direction: column !important;
-        padding: 15px !important; 
-        border-bottom: 1px solid #f0f0f0 !important; 
-        border-right: none !important; 
-        background: #fff !important; 
+        padding: 18px 20px !important; 
+        border-bottom: 1px solid #f0f4f8 !important; 
+        background: #ffffff !important; 
         min-height: auto !important;
     }
     
@@ -509,31 +506,72 @@
         border-bottom: none !important; 
     }
     
+    /* Datum-etiketten (t.ex. MÅNDAG 27/4) */
     #page-user .mobile-date-label { 
         display: block !important; 
+        font-weight: 800 !important;
+        color: #0277bd !important; 
+        font-size: 0.85rem !important;
+        text-transform: uppercase !important; /* Gör det till snygga versaler */
+        letter-spacing: 1px !important;
+        margin-bottom: 12px !important;
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
     }
     
+    /* Behållare för själva arbetspasset */
     #page-user .weekly-cell-content { 
         width: 100% !important; 
         display: flex !important; 
         flex-direction: column !important; 
-        gap: 8px !important;
+        gap: 10px !important;
     }
     
+    /* Färg-pillret för arbetspasset */
     #page-user .weekly-badge { 
         margin: 0 !important; 
-        font-size: 1rem !important; 
-        padding: 10px 15px !important; 
+        font-size: 1.05rem !important; 
+        font-weight: 700 !important;
+        padding: 14px 18px !important; 
         text-align: left !important; 
         width: 100% !important; 
         box-sizing: border-box !important; 
         white-space: normal !important; 
-        border-radius: 8px !important;
+        border-radius: 12px !important; /* App-liknande hörn på passet */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important; /* Egen skugga på passet */
     }
     
+    /* Texten för de som är lediga (Snyggt grått piller istället för lös text) */
     #page-user .free-text { 
         margin: 0 !important; 
-        color: #aaa !important;
-        font-style: italic !important;
+        color: #64748b !important;
+        background: #f1f5f9 !important; 
+        padding: 14px 18px !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        font-style: normal !important;
+        text-align: center !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+
+    /* --- Extra putsning för knapparna i toppen av sidan --- */
+    #page-user #toggleMyScheduleBtn {
+        width: 100% !important;
+        padding: 16px !important;
+        border-radius: 14px !important;
+        font-size: 1.1rem !important;
+        font-weight: 800 !important;
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+    }
+    #page-user .date-navigation {
+        background: #fff !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+        padding: 10px !important;
+        margin-bottom: 20px !important;
+        display: flex !important;
+        justify-content: space-between !important;
     }
 }
