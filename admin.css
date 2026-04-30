@@ -474,15 +474,15 @@
         display: flex !important; 
         flex-direction: column !important; 
         background: #ffffff !important; 
-        border-radius: 20px !important; /* Mjukare hörn */
-        box-shadow: 0 10px 25px rgba(0,0,0,0.06) !important; /* Djupare, lyxigare skugga */
+        border-radius: 20px !important; 
+        box-shadow: 0 10px 25px rgba(0,0,0,0.06) !important; 
         border: 1px solid rgba(0,0,0,0.04) !important; 
         overflow: hidden !important; 
     }
     
     /* Namn-rubriken (Toppen av kortet) */
     #page-user .weekly-user-name { 
-        background: linear-gradient(135deg, #0277bd 0%, #01579b 100%) !important; /* Snygg färgtoning */
+        background: linear-gradient(135deg, #0277bd 0%, #01579b 100%) !important; 
         color: #ffffff !important; 
         padding: 18px 20px !important; 
         font-size: 1.25rem !important; 
@@ -492,71 +492,76 @@
         letter-spacing: 0.5px !important;
     }
     
-    /* Själva dagen (En rad inuti kortet) */
+    /* NYTT: Layout för Datum och Pass Sida-vid-sida */
     #page-user .weekly-cell { 
         display: flex !important; 
-        flex-direction: column !important;
-        padding: 18px 20px !important; 
+        flex-direction: row !important; /* Lägger dem på rad */
+        justify-content: space-between !important; /* Trycker isär dem */
+        align-items: center !important; /* Centrerar vertikalt */
+        padding: 16px 20px !important; 
         border-bottom: 1px solid #f0f4f8 !important; 
         background: #ffffff !important; 
         min-height: auto !important;
+        gap: 10px !important;
     }
     
     #page-user .weekly-cell:last-child { 
         border-bottom: none !important; 
     }
     
-    /* Datum-etiketten (t.ex. MÅNDAG 27/4) */
+    /* Datum-etiketten (Till vänster) */
     #page-user .mobile-date-label { 
         display: block !important; 
         font-weight: 800 !important;
         color: #0277bd !important; 
         font-size: 0.85rem !important;
-        text-transform: uppercase !important; /* Gör det till snygga versaler */
+        text-transform: uppercase !important; 
         letter-spacing: 1px !important;
-        margin-bottom: 12px !important;
-        border-bottom: none !important;
-        padding-bottom: 0 !important;
+        margin-bottom: 0 !important; /* Tog bort botten-marginalen */
+        flex-shrink: 0 !important; /* Förhindrar att datumet kläms ihop */
+        width: 40% !important; /* Reserverar 40% av bredden för datumet */
     }
     
-    /* Behållare för själva arbetspasset */
+    /* Behållare för själva arbetspasset (Till höger) */
     #page-user .weekly-cell-content { 
-        width: 100% !important; 
+        width: 60% !important; /* Reserverar 60% för passet */
         display: flex !important; 
-        flex-direction: column !important; 
-        gap: 10px !important;
+        flex-direction: column !important; /* Om man har två pass samma dag staplas de snyggt */
+        align-items: flex-end !important; /* Trycker ut pillret mot högerkanten */
+        gap: 8px !important;
     }
     
     /* Färg-pillret för arbetspasset */
     #page-user .weekly-badge { 
         margin: 0 !important; 
-        font-size: 1.05rem !important; 
+        font-size: 0.95rem !important; 
         font-weight: 700 !important;
-        padding: 14px 18px !important; 
-        text-align: left !important; 
-        width: 100% !important; 
+        padding: 10px 14px !important; 
+        text-align: right !important; /* Justerar texten åt höger */
+        width: auto !important; /* Låter pillret anpassa sig efter textlängden */
+        max-width: 100% !important;
         box-sizing: border-box !important; 
         white-space: normal !important; 
-        border-radius: 12px !important; /* App-liknande hörn på passet */
-        box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important; /* Egen skugga på passet */
+        border-radius: 12px !important; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important; 
     }
     
-    /* Texten för de som är lediga (Snyggt grått piller istället för lös text) */
+    /* Texten för de som är lediga (Grått piller) */
     #page-user .free-text { 
         margin: 0 !important; 
         color: #64748b !important;
         background: #f1f5f9 !important; 
-        padding: 14px 18px !important;
+        padding: 10px 14px !important;
         border-radius: 12px !important;
         font-weight: 600 !important;
         font-style: normal !important;
-        text-align: center !important;
-        width: 100% !important;
+        text-align: right !important;
+        width: auto !important;
         box-sizing: border-box !important;
         border: 1px solid #e2e8f0 !important;
     }
 
-    /* --- Extra putsning för knapparna i toppen av sidan --- */
+    /* Extra putsning för knapparna i toppen av sidan */
     #page-user #toggleMyScheduleBtn {
         width: 100% !important;
         padding: 16px !important;
