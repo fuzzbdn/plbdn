@@ -450,7 +450,10 @@
     display: none !important;
     content: none !important;
 }
-
+/* Göm namnet inuti "Visa endast mitt"-knappen på mobilen */
+    #page-user #toggleMyScheduleBtn .user-name-label {
+        display: none !important;
+    }
 /* När skärmen är mindre än 768px (Mobiltelefoner) */
 @media (max-width: 768px) {
     
