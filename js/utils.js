@@ -67,6 +67,7 @@ export function escapeHTML(str) {
 export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersWithDates, daysArray, getAbsenceFn = null) {
     let html = '<div class="weekly-grid"><div class="weekly-header-row"><div class="weekly-user-name">Personal</div>';
     
+    // 1. Bygger datorns topp-rubrik
     dates.forEach(dateStr => {
         const d = new Date(dateStr);
         const dayName = daysArray[d.getDay() === 0 ? 6 : d.getDay() - 1];
@@ -79,6 +80,7 @@ export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersW
     });
     html += `</div>`;
 
+    // 2. Bygger raderna (eller korten på mobilen) för varje person
     users.forEach(user => {
         const nameToShow = user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
         html += `<div class="weekly-user-row"><div class="weekly-user-name">${escapeHTML(nameToShow)}</div>`;
@@ -91,7 +93,10 @@ export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersW
             const assignments = getAssignmentsFn(user.id, dateStr);
             const absence = getAbsenceFn ? getAbsenceFn(user.id, dateStr) : null;
             
+            // Ren cell utan gamla data-taggar som kan orsaka spök-text
             html += `<div class="weekly-cell">`;
+            
+            // DEN ENDA utskriften av datumet för mobilen
             html += `<div class="mobile-date-label">${dayName} ${shortDate}</div>`; 
             html += `<div class="weekly-cell-content">`; 
 
