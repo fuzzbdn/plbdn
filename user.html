@@ -2,6 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
+    <!-- PWA & Mobil-viewport (Förhindrar inzoomning på mobil) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mitt Schema - STRUL</title>
     
@@ -10,50 +11,52 @@
     <meta name="theme-color" content="#0277bd">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="base.css">
     <link rel="stylesheet" href="admin.css">
+    
     <script type="module" src="js/main.js"></script>
 </head>
-<body class="admin-view" id="page-user">
+<body class="user-view admin-view" id="page-user">
 
-    <div class="admin-wrapper">
-        <header class="admin-header">
-            <div class="header-content">
-                <div style="display:flex; align-items:center; gap:20px;">
-                    <h1>STRUL - Veckoschema</h1>
-                </div>
-                <div style="display:flex; align-items:center;">
-                    <span id="currentUserDisplay">Laddar...</span>
-                    <button id="logoutBtn" class="logout-btn">Logga ut</button>
+<div class="admin-wrapper">
+    <header class="admin-header">
+        <div class="header-content">
+            <div style="display:flex; align-items:center; gap:20px;">
+                <h1>Schema</h1>
+                
+                <div class="header-datepicker" style="display:flex; align-items:center; gap:10px;">
+                    <label for="userDatePicker" style="font-size:0.9rem; opacity:0.7;">Startdatum:</label>
+                    <input type="date" id="userDatePicker">
+                    <button id="toggleViewBtn" class="export-button" style="background-color: #0277bd; margin-left: 20px;">📅 Byt till Veckovy</button>
                 </div>
             </div>
-        </header>
 
-        <div class="admin-layout">
-            <main class="admin-main">
-                
-                <!-- Navigering för veckor -->
-                <div class="date-navigation" style="justify-content: center; margin-bottom: 20px;">
-                    <button id="prevDayBtn" class="nav-arrow" title="Föregående">◀</button>
-                    <div id="currentDateDisplay" style="font-size: 1.2rem; font-weight: bold; margin: 0 20px;">Laddar...</div>
-                    <button id="nextDayBtn" class="nav-arrow" title="Nästa">▶</button>
-                    <!-- Osynlig datepicker som js letar efter -->
-                    <input type="date" id="userDatePicker" style="display:none;">
-                </div>
-
-                <!-- Det breda original-schemat -->
-                <div class="schedule-card">
-                    <div class="grid-container" id="scheduleContainer">
-                        <!-- Här ritar js/utils.js upp tabellen -->
-                    </div>
-                </div>
-
-            </main>
+            <div class="date-navigation">
+                <button id="prevDayBtn" class="nav-arrow" title="Bakåt">◀</button>
+                <div id="currentDateDisplay"></div>
+                <button id="nextDayBtn" class="nav-arrow" title="Framåt">▶</button>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:15px;">
+                <button id="toggleMyScheduleBtn" class="export-button" style="background-color: #4CAF50;">👤 Visa endast mitt</button>
+                <span id="currentUserDisplay" style="font-weight:500; opacity:0.8;"></span>
+                <button id="logoutBtn" class="logout-btn">Logga ut</button>
+            </div>
         </div>
-    </div>
+    </header>
 
-    <div id="toast-container"></div> 
+    <div class="admin-layout" style="margin-top: 20px; justify-content: center;">
+        <main class="schedule-card-wrapper" style="max-width: 1400px; width: 100%;">
+            <div class="schedule-card">
+                <div class="grid-container" id="scheduleContainer"></div>
+                <div id="userWeeklyContainer" style="display:none; overflow-x: auto;"></div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div id="toast-container"></div> 
 </body>
 </html>
