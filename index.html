@@ -95,5 +95,13 @@
             }
         });
     </script>
+    <!-- Registrera Service Worker för Android Chrome -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js');
+            });
+        }
+    </script>
 </body>
 </html>
