@@ -454,10 +454,143 @@
 /* När skärmen är mindre än 768px (Mobiltelefoner) */
 @media (max-width: 768px) {
     
-    /* Göm dator-headern för tabellen */
-    #page-user .weekly-header-row { 
-        display: none !important; 
+    /* ==========================================
+       1. FIX AV TOPP-MENYN (Header)
+       ========================================== */
+    #page-user .admin-header {
+        padding: 20px 15px !important;
+        position: relative !important;
+        height: auto !important;
     }
+
+    #page-user .header-content {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 15px !important;
+        width: 100% !important;
+        padding: 0 !important;
+    }
+
+    /* Behållare 1: Rubrik och Datumväljare */
+    #page-user .header-content > div:nth-child(1) {
+        flex-direction: column !important;
+        align-items: stretch !important; /* Låter elementen ta hela bredden */
+        gap: 15px !important;
+        width: 100% !important;
+    }
+    
+    #page-user h1 {
+        font-size: 2.2rem !important;
+        margin: 0 !important;
+        color: #0277bd !important;
+        text-align: left !important;
+        padding-right: 90px !important; /* Gör plats för Logga ut-knappen */
+    }
+
+    /* Gör datumväljaren och Byt-knappen till en snygg inramad ruta */
+    #page-user .header-datepicker {
+        width: 100% !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+        background: #f8fafc !important;
+        padding: 15px !important;
+        border-radius: 14px !important;
+        border: 1px solid #e2e8f0 !important;
+        box-sizing: border-box !important;
+    }
+
+    #page-user .header-datepicker label {
+        font-weight: 700 !important;
+        color: #475569 !important;
+        opacity: 1 !important;
+        margin: 0 !important;
+        font-size: 0.95rem !important;
+    }
+
+    #page-user #userDatePicker {
+        width: 100% !important;
+        padding: 12px 15px !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 10px !important;
+        font-size: 1.05rem !important;
+        background: #ffffff !important;
+        box-sizing: border-box !important;
+        font-family: inherit !important;
+        color: #333 !important;
+    }
+
+    #page-user #toggleViewBtn {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 14px !important;
+        border-radius: 10px !important;
+        font-weight: 800 !important;
+        font-size: 1.05rem !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Behållare 2: Pilarna för datum */
+    #page-user .date-navigation {
+        width: 100% !important;
+        margin: 5px 0 !important;
+        box-sizing: border-box !important;
+        background: #ffffff !important;
+        border-radius: 14px !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+        padding: 12px 15px !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* Behållare 3: Visa endast mitt, Användare och Logga ut */
+    #page-user .header-content > div:nth-child(3) {
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+        margin-bottom: 5px !important;
+    }
+
+    #page-user #toggleMyScheduleBtn {
+        width: 100% !important;
+        padding: 16px !important;
+        border-radius: 14px !important;
+        font-size: 1.15rem !important;
+        font-weight: 800 !important;
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+        margin: 0 !important;
+    }
+
+    #page-user #currentUserDisplay {
+        font-size: 0.9rem !important;
+        color: #64748b !important;
+        font-weight: 600 !important;
+    }
+
+    /* Flytta logga ut-knappen till toppen av skärmen (App-stil) */
+    #page-user #logoutBtn {
+        position: absolute !important;
+        top: 25px !important;
+        right: 15px !important;
+        margin: 0 !important;
+        background: #fee2e2 !important;
+        color: #dc2626 !important;
+        border: none !important;
+        padding: 8px 16px !important;
+        border-radius: 20px !important;
+        font-weight: 800 !important;
+        font-size: 0.85rem !important;
+        box-shadow: none !important;
+    }
+
+    /* ==========================================
+       2. SCHEMAT (Datum och Pass)
+       ========================================== */
+    /* Göm dator-headern för tabellen */
+    #page-user .weekly-header-row { display: none !important; }
     
     /* Hela schemats bakgrund och avstånd */
     #page-user .weekly-grid { 
@@ -492,12 +625,12 @@
         letter-spacing: 0.5px !important;
     }
     
-    /* NYTT: Layout för Datum och Pass Sida-vid-sida */
+    /* Layout för Datum och Pass Sida-vid-sida */
     #page-user .weekly-cell { 
         display: flex !important; 
-        flex-direction: row !important; /* Lägger dem på rad */
-        justify-content: space-between !important; /* Trycker isär dem */
-        align-items: center !important; /* Centrerar vertikalt */
+        flex-direction: row !important; 
+        justify-content: space-between !important; 
+        align-items: center !important; 
         padding: 16px 20px !important; 
         border-bottom: 1px solid #f0f4f8 !important; 
         background: #ffffff !important; 
@@ -517,17 +650,17 @@
         font-size: 0.85rem !important;
         text-transform: uppercase !important; 
         letter-spacing: 1px !important;
-        margin-bottom: 0 !important; /* Tog bort botten-marginalen */
-        flex-shrink: 0 !important; /* Förhindrar att datumet kläms ihop */
-        width: 40% !important; /* Reserverar 40% av bredden för datumet */
+        margin-bottom: 0 !important; 
+        flex-shrink: 0 !important; 
+        width: 40% !important; 
     }
     
     /* Behållare för själva arbetspasset (Till höger) */
     #page-user .weekly-cell-content { 
-        width: 60% !important; /* Reserverar 60% för passet */
+        width: 60% !important; 
         display: flex !important; 
-        flex-direction: column !important; /* Om man har två pass samma dag staplas de snyggt */
-        align-items: flex-end !important; /* Trycker ut pillret mot högerkanten */
+        flex-direction: column !important; 
+        align-items: flex-end !important; 
         gap: 8px !important;
     }
     
@@ -537,8 +670,8 @@
         font-size: 0.95rem !important; 
         font-weight: 700 !important;
         padding: 10px 14px !important; 
-        text-align: right !important; /* Justerar texten åt höger */
-        width: auto !important; /* Låter pillret anpassa sig efter textlängden */
+        text-align: right !important; 
+        width: auto !important; 
         max-width: 100% !important;
         box-sizing: border-box !important; 
         white-space: normal !important; 
@@ -559,24 +692,5 @@
         width: auto !important;
         box-sizing: border-box !important;
         border: 1px solid #e2e8f0 !important;
-    }
-
-    /* Extra putsning för knapparna i toppen av sidan */
-    #page-user #toggleMyScheduleBtn {
-        width: 100% !important;
-        padding: 16px !important;
-        border-radius: 14px !important;
-        font-size: 1.1rem !important;
-        font-weight: 800 !important;
-        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
-    }
-    #page-user .date-navigation {
-        background: #fff !important;
-        border-radius: 16px !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
-        padding: 10px !important;
-        margin-bottom: 20px !important;
-        display: flex !important;
-        justify-content: space-between !important;
     }
 }
