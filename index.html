@@ -2,7 +2,6 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <!-- PWA / App inställningar som förhindrar inzoomning -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inloggning - STRUL</title>
     
@@ -18,28 +17,42 @@
 </head>
 <body>
     <div class="login-container">
+        
+        <!-- Tillbaka till DIV så att din login.css fungerar perfekt på datorn -->
         <div id="loginForm" class="login-card">
-            <h1>STRUL</h1>
-            <p class="subtitle">Bemanningssystem</p>
-            <div class="input-group">
-                <input type="text" id="usernameInput" placeholder="Användarnamn" autocomplete="username">
-            </div>
-            <div class="input-group">
-                <input type="password" id="passwordInput" placeholder="Lösenord" autocomplete="current-password">
-            </div>
-            <button id="loginBtn" class="login-btn">Logga in</button>
-            <a href="#" id="forgotPassLink" class="forgot-link">Glömt lösenord?</a>
+            
+            <!-- En osynlig form-tagg löser mobilens tangentbordsproblem utan att krascha designen -->
+            <form onsubmit="event.preventDefault(); document.getElementById('loginBtn').click();" style="display: contents;">
+                <h1>STRUL</h1>
+                <p class="subtitle">Bemanningssystem</p>
+                
+                <div class="input-group">
+                    <!-- Stänger av stor bokstav och auto-rättning -->
+                    <input type="text" id="usernameInput" placeholder="Användarnamn" autocomplete="username" autocapitalize="none" autocorrect="off">
+                </div>
+                
+                <div class="input-group">
+                    <input type="password" id="passwordInput" placeholder="Lösenord" autocomplete="current-password">
+                </div>
+                
+                <button type="submit" id="loginBtn" class="login-btn">Logga in</button>
+                <a href="#" id="forgotPassLink" class="forgot-link">Glömt lösenord?</a>
+            </form>
         </div>
         
+        <!-- Samma sak för Återställnings-rutan -->
         <div id="forgotForm" class="login-card" style="display:none;">
-            <h1>Återställ</h1>
-            <p class="subtitle">Skriv in din e-postadress</p>
-            <div class="input-group">
-                <input type="email" id="resetEmailInput" placeholder="Din E-post">
-            </div>
-            <button id="sendResetBtn" class="login-btn">Skicka länk</button>
-            <a href="#" id="backToLoginLink" class="forgot-link">Tillbaka till inloggning</a>
+            <form onsubmit="event.preventDefault(); document.getElementById('sendResetBtn').click();" style="display: contents;">
+                <h1>Återställ</h1>
+                <p class="subtitle">Skriv in din e-postadress</p>
+                <div class="input-group">
+                    <input type="email" id="resetEmailInput" placeholder="Din E-post" autocapitalize="none" autocorrect="off">
+                </div>
+                <button type="submit" id="sendResetBtn" class="login-btn">Skicka länk</button>
+                <a href="#" id="backToLoginLink" class="forgot-link">Tillbaka till inloggning</a>
+            </form>
         </div>
+        
     </div>
     <div id="toast-container"></div>
 </body>
