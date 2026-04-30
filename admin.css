@@ -440,75 +440,100 @@
     gap: 4px;
 }
 
+/* ========================================================
+   MOBILANPASSNING ENBART FÖR "MITT SCHEMA" (user.html)
+   ======================================================== */
+
+#page-user .mobile-date-label {
+    display: none;
+    font-weight: 800;
+    color: #555;
+    font-size: 1rem;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #f0f2f5;
+    padding-bottom: 5px;
+}
+
+/* Tvingar bort eventuella gamla dolda text-etiketter (spök-text) */
+#page-user .weekly-cell::before,
+#page-user .weekly-cell::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* När skärmen är mindre än 768px (Mobiltelefoner) */
 @media (max-width: 768px) {
-    /* Dölj toppraden */
-    .weekly-header-row {
-        display: none !important;
+    #page-user .weekly-header-row { 
+        display: none !important; 
     }
     
-    /* Konvertera grid till vertikal lista */
-    .weekly-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        border: none;
-        background: transparent;
+    #page-user .weekly-grid { 
+        display: flex !important; 
+        flex-direction: column !important; 
+        gap: 20px !important; 
+        border: none !important; 
+        background: transparent !important; 
     }
     
-    /* Varje användare blir ett "kort" */
-    .weekly-user-row {
-        display: flex;
-        flex-direction: column;
-        background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        border: 1px solid #e0e0e0;
-        overflow: hidden;
+    #page-user .weekly-user-row { 
+        display: flex !important; 
+        flex-direction: column !important; 
+        background: #fff !important; 
+        border-radius: 12px !important; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08) !important; 
+        border: 1px solid #e0e0e0 !important; 
+        overflow: hidden !important; 
     }
     
-    .weekly-user-name {
-        background: #0277bd;
-        color: #fff;
-        padding: 15px;
-        font-size: 1.1rem;
-        text-align: center;
-        border: none;
+    #page-user .weekly-user-name { 
+        background: #0277bd !important; 
+        color: #fff !important; 
+        padding: 15px !important; 
+        font-size: 1.1rem !important; 
+        text-align: left !important; 
+        border: none !important; 
+        font-weight: 800 !important; 
     }
     
-    .weekly-cell {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px;
-        border-bottom: 1px solid #f0f0f0;
-        border-right: none;
-        min-height: 60px;
+    #page-user .weekly-cell { 
+        display: flex !important; 
+        flex-direction: column !important;
+        padding: 15px !important; 
+        border-bottom: 1px solid #f0f0f0 !important; 
+        border-right: none !important; 
+        background: #fff !important; 
+        min-height: auto !important;
     }
     
-    .weekly-cell:last-child {
-        border-bottom: none;
+    #page-user .weekly-cell:last-child { 
+        border-bottom: none !important; 
     }
     
-    /* Visa datumet inne i cellen istället */
-    .mobile-date-label {
-        display: block;
+    #page-user .mobile-date-label { 
+        display: block !important; 
     }
     
-    .weekly-cell-content {
-        align-items: flex-end;
+    #page-user .weekly-cell-content { 
+        width: 100% !important; 
+        display: flex !important; 
+        flex-direction: column !important; 
+        gap: 8px !important;
     }
     
-    .weekly-badge {
-        margin: 0;
-        font-size: 0.9rem;
-        padding: 6px 10px;
-        text-align: right;
-        max-width: 150px;
-        white-space: normal;
-        line-height: 1.3;
+    #page-user .weekly-badge { 
+        margin: 0 !important; 
+        font-size: 1rem !important; 
+        padding: 10px 15px !important; 
+        text-align: left !important; 
+        width: 100% !important; 
+        box-sizing: border-box !important; 
+        white-space: normal !important; 
+        border-radius: 8px !important;
     }
     
-    .free-text {
-        margin: 0;
+    #page-user .free-text { 
+        margin: 0 !important; 
+        color: #aaa !important;
+        font-style: italic !important;
     }
 }
