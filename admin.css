@@ -618,7 +618,10 @@
         box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important; 
         border: 1px solid rgba(0,0,0,0.04) !important; overflow: hidden !important; 
     }
-    
+    /* Gömmer namnrutan BARA när du tittar på "Mitt schema" (när det bara finns ett schema i listan) */
+    #page-user .weekly-grid .weekly-user-row:only-child .weekly-user-name {
+        display: none !important;
+    }
     #page-user .weekly-user-name { 
         background: linear-gradient(135deg, #0277bd 0%, #01579b 100%) !important; 
         color: #ffffff !important; padding: 14px 20px !important; 
