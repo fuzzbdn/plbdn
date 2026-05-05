@@ -160,7 +160,11 @@ function renderDailyView() {
     const currentDateStr = currentSelectedDateStr; 
     const myId = localStorage.getItem('userId');
 
-    let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
+let html = `<div class="header-row"><div></div>${globalShifts.map(s => `
+    <div>
+        <span class="mobile-label">${escapeHTML(s.label)}</span>
+        <span class="desktop-label">${escapeHTML(s.time_range || s.label)}</span>
+    </div>`).join('')}</div>`;
 
     globalStations.forEach(st => {
         if(st.is_spacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; return; }
