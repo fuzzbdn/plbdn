@@ -618,10 +618,21 @@
         box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important; 
         border: 1px solid rgba(0,0,0,0.04) !important; overflow: hidden !important; 
     }
-    /* Gömmer namnrutan BARA när du tittar på "Mitt schema" (när det bara finns ett schema i listan) */
-    #page-user .weekly-grid .weekly-user-row:only-child .weekly-user-name {
-        display: none !important;
-    }
+/* Dölj namnrutan BARA när data-only-me är "true" */
+#page-user #userWeeklyContainer[data-only-me="true"] .weekly-user-name {
+    display: none !important;
+}
+
+/* Behåll namnrutan snygg när vi visar alla (data-only-me="false") */
+#page-user #userWeeklyContainer[data-only-me="false"] .weekly-user-name {
+    display: block !important;
+    background: linear-gradient(135deg, #0277bd 0%, #01579b 100%) !important;
+    color: #ffffff !important;
+    padding: 14px 20px !important;
+    font-size: 1.15rem !important;
+    text-align: center !important;
+    font-weight: 800 !important;
+}
     #page-user .weekly-user-name { 
         background: linear-gradient(135deg, #0277bd 0%, #01579b 100%) !important; 
         color: #ffffff !important; padding: 14px 20px !important; 
