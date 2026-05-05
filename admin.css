@@ -301,21 +301,35 @@
         width: 100%; height: auto; min-height: 45px; justify-content: center; border-left: none;
         margin-bottom: 5px; box-sizing: border-box; border-radius: 6px;
     }
+
+    /* --- ÄNDRINGAR HÄR FÖR STORT PASSNAMN --- */
     .shift-block {
         width: 100%; min-height: 50px; display: flex; align-items: center; justify-content: space-between;
         border: 1px solid var(--border-color); background: #f8f9fa; box-sizing: border-box; padding: 8px 12px; position: relative;
     }
     .shift-block::before {
-        content: attr(data-label); font-size: 0.85rem; font-weight: 800; color: #0277bd;
-        text-transform: uppercase; width: 100px; flex-shrink: 0;
+        content: attr(data-label); 
+        font-size: 1.8rem; /* Gör texten större enligt bilden */
+        font-weight: 800; 
+        color: #ff4d4d; /* Röd färg enligt bilden */
+        text-transform: capitalize; 
+        width: 100px; 
+        flex-shrink: 0;
     }
-    .shift-text { flex-grow: 1; text-align: right; }
+    .shift-text { 
+        flex-grow: 1; 
+        text-align: right; 
+        font-size: 1.1rem; /* Lite tydligare text */
+        color: #333;
+    }
+
     .shift-controls { background: #fff; border-radius: 4px; padding: 2px; margin-left: 10px; }
 
     .shift-block.empty::after {
-        content: "Obemannat"; color: #aaa; font-style: italic; font-size: 0.9rem; flex-grow: 1; text-align: right;
+        content: "Obemannat"; color: #aaa; font-style: italic; font-size: 1.1rem; flex-grow: 1; text-align: right;
     }
     .shift-block.empty .shift-text { display: none; }
+    /* --- SLUT PÅ ÄNDRINGAR FÖR PASSNAMN --- */
 
     /* VECKOVYN */
     .weekly-grid { min-width: 100%; }
