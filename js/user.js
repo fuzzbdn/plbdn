@@ -160,7 +160,7 @@ function renderDailyView() {
     const currentDateStr = currentSelectedDateStr; 
     const myId = localStorage.getItem('userId');
 
-let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
+let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${escapeHTML(s.label)}</div>`).join('')}</div>`;
 
     globalStations.forEach(st => {
         if(st.is_spacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; return; }
@@ -185,10 +185,10 @@ let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${e
             const textVal = assignedRows.map(a => a.display_name || `${a.first_name} ${a.last_name||''}`.trim()).join(' / ');
             
             // ÄNDRING HÄR: Lade till data-label
-            html += `
-            <div class="shift-block ${hasUsers?'':'empty'}" data-label="${escapeHTML(sh.time_range || sh.label)}" style="pointer-events: none;">
-                <span class="shift-text">${escapeHTML(textVal)}</span>
-            </div>`;
+html += `
+<div class="shift-block ${hasUsers?'':'empty'}" data-label="${escapeHTML(sh.label)}" style="pointer-events: none;">
+    <span class="shift-text">${escapeHTML(textVal)}</span>
+</div>`;
         });
         html += `</div>`;
     });
