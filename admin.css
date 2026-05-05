@@ -309,11 +309,11 @@
     }
     .shift-block::before {
         content: attr(data-label); 
-        font-size: 1.8rem; /* Gör texten större enligt bilden */
+        font-size: 1.5rem; /* Gör texten större enligt bilden */
         font-weight: 800; 
-        color: #ff4d4d; /* Röd färg enligt bilden */
+        color: #455a64; /* Röd färg enligt bilden */
         text-transform: capitalize; 
-        width: 100px; 
+        width: 70px; 
         flex-shrink: 0;
     }
     .shift-text { 
