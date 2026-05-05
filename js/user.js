@@ -197,7 +197,8 @@ function renderDailyView() {
 function renderWeeklyView() {
     const cont = document.getElementById('userWeeklyContainer');
     if (!cont) return;
-
+// LÄGG TILL DENNA RAD: Denna talar om för CSS om vi bara visar dig
+    cont.setAttribute('data-only-me', showOnlyMe);
     const myId = localStorage.getItem('userId');
     
     let usersToShow = showOnlyMe 
