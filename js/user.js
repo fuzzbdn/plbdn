@@ -6,7 +6,7 @@ let allScheduleRows = [];
 let globalUserList = [];
 let globalStations = [];
 let globalShifts = [];
-let globalAbsences = []; // NYTT
+let globalAbsences = []; 
 let showOnlyMe = false;
 let datesToShow = []; 
 let selectedWeek = 0;
@@ -30,17 +30,38 @@ export async function initUserView() {
         return;
     }
 
+    // --- NYTT: Känn av om det är en mobilskärm vid inloggning ---
+    if (window.innerWidth <= 850) {
+        showOnlyMe = true;
+        isWeeklyView = true;
+    } else {
+        showOnlyMe = false;
+        isWeeklyView = false;
+    }
+
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (name || 'Användare');
     document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = "index.html"; };
 
     const filterBtn = document.getElementById('toggleMyScheduleBtn');
+    const toggleBtn = document.getElementById('toggleViewBtn');
+
+    // Sätt initialt utseende på knapparna och vyerna baserat på enhet
+    if (filterBtn) {
+        filterBtn.innerText = showOnlyMe ? "👥 Visa alla pass" : "👤 Visa endast mitt";
+        filterBtn.style.backgroundColor = showOnlyMe ? "#455a64" : "#4CAF50";
+    }
+
+    if (showOnlyMe) {
+        document.getElementById('scheduleContainer').style.display = 'none';
+        document.getElementById('userWeeklyContainer').style.display = 'block';
+        if (toggleBtn) toggleBtn.style.display = 'none';
+    }
+
     if (filterBtn) {
         filterBtn.onclick = () => {
             showOnlyMe = !showOnlyMe;
             filterBtn.innerText = showOnlyMe ? "👥 Visa alla pass" : "👤 Visa endast mitt";
             filterBtn.style.backgroundColor = showOnlyMe ? "#455a64" : "#4CAF50";
-            
-            const toggleBtn = document.getElementById('toggleViewBtn');
             
             if (showOnlyMe) {
                 isWeeklyView = true;
@@ -76,7 +97,6 @@ export async function initUserView() {
         updateGrid(picker.value);
     }
 
-    const toggleBtn = document.getElementById('toggleViewBtn');
     if (toggleBtn) {
         toggleBtn.onclick = () => {
             isWeeklyView = !isWeeklyView;
@@ -94,7 +114,6 @@ export async function initUserView() {
     }
 
     try {
-        // Lade till absences i databasladdningen
         const [users, stations, shifts, absences] = await Promise.all([
             fetchData('users'),
             fetchData('stations'),
@@ -160,7 +179,8 @@ function renderDailyView() {
     const currentDateStr = currentSelectedDateStr; 
     const myId = localStorage.getItem('userId');
 
-let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${escapeHTML(s.label)}</div>`).join('')}</div>`;
+    // Tvingar kortnamn (Fm, Em)
+    let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
 
     globalStations.forEach(st => {
         if(st.is_spacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; return; }
@@ -184,11 +204,11 @@ let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${e
             const hasUsers = assignedRows.length > 0;
             const textVal = assignedRows.map(a => a.display_name || `${a.first_name} ${a.last_name||''}`.trim()).join(' / ');
             
-            // ÄNDRING HÄR: Lade till data-label
-html += `
-<div class="shift-block ${hasUsers?'':'empty'}" data-label="${escapeHTML(sh.label)}" style="pointer-events: none;">
-    <span class="shift-text">${escapeHTML(textVal)}</span>
-</div>`;
+            // Tvingar in kortnamnet (Fm, Em) i data-label för mobilen
+            html += `
+            <div class="shift-block ${hasUsers?'':'empty'}" data-label="${escapeHTML(sh.time_range || sh.label)}" style="pointer-events: none;">
+                <span class="shift-text">${escapeHTML(textVal)}</span>
+            </div>`;
         });
         html += `</div>`;
     });
@@ -198,7 +218,7 @@ html += `
 function renderWeeklyView() {
     const cont = document.getElementById('userWeeklyContainer');
     if (!cont) return;
-// LÄGG TILL DENNA RAD: Denna talar om för CSS om vi bara visar dig
+
     cont.setAttribute('data-only-me', showOnlyMe);
     const myId = localStorage.getItem('userId');
     
@@ -217,13 +237,13 @@ function renderWeeklyView() {
             const st = globalStations.find(s => s.id === a.station_id);
             const sh = globalShifts.find(s => s.id === a.shift_id);
             if (st && sh) {
-                return { stationName: st.name, stationColor: st.color, shiftLabel: sh.label };
+                // Tvingar kortnamn i veckovyn också
+                return { stationName: st.name, stationColor: st.color, shiftLabel: sh.time_range || sh.label };
             }
             return null;
         }).filter(Boolean);
     };
 
-    // NYTT: Funktion som ser om personen är borta
     const getAbsence = (userId, dateStr) => {
         return globalAbsences.find(a => 
             String(a.user_id) === String(userId) && 
