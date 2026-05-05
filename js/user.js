@@ -184,8 +184,9 @@ let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${e
             const hasUsers = assignedRows.length > 0;
             const textVal = assignedRows.map(a => a.display_name || `${a.first_name} ${a.last_name||''}`.trim()).join(' / ');
             
+            // ÄNDRING HÄR: Lade till data-label
             html += `
-            <div class="shift-block ${hasUsers?'':'empty'}" style="pointer-events: none;">
+            <div class="shift-block ${hasUsers?'':'empty'}" data-label="${escapeHTML(sh.time_range || sh.label)}" style="pointer-events: none;">
                 <span class="shift-text">${escapeHTML(textVal)}</span>
             </div>`;
         });
