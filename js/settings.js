@@ -69,55 +69,22 @@ export async function initSettings() {
 function initGeneralTab() {
     const msgIn = document.getElementById('displayMessageInput');
     const msgCheck = document.getElementById('showMessageCheckbox');
-    if (!msgIn || !msgCheck) return;
+    const saveBtn = document.getElementById('saveMessageBtn');
     
-    fetchData('message').then(msg => {
-        if (msg) {
-            msgIn.value = msg.text || "";
-            msgCheck.checked = msg.show || false;
+    if (msgIn && msgCheck) {
+        fetchData('message').then(msg => {
+            if (msg) {
+                msgIn.value = msg.text || "";
+                msgCheck.checked = msg.show || false;
+            }
+        });
+        
+        if (saveBtn) {
+            saveBtn.onclick = async () => {
+                await saveData('message', { text: msgIn.value, show: msgCheck.checked });
+                showToast("Meddelande uppdaterat!", "success");
+            };
         }
-    });
-    document.getElementById('saveMessageBtn').onclick = async () => {
-        await saveData('message', { text: msgIn.value, show: msgCheck.checked });
-        showToast("Meddelande uppdaterat!", "success");
-    };
-
-    // --- NY KOD FÖR DISPLAYLÄNK HÄR UNDER ---
-    const generateBtn = document.getElementById('generateDisplayLinkBtn');
-    const secretInput = document.getElementById('displaySecretInput');
-    const linkContainer = document.getElementById('displayLinkContainer');
-    const linkOutput = document.getElementById('generatedDisplayLink');
-    const copyBtn = document.getElementById('copyDisplayLinkBtn');
-
-    if (generateBtn) {
-        generateBtn.onclick = () => {
-            const secret = secretInput.value.trim();
-            if (!secret) return showToast("Vänligen ange display-nyckeln", "error");
-            
-            // Hämtar ID för arbetsplatsen admin är inloggad på just nu
-            const workplace = localStorage.getItem('activeWorkplace') || 'default';
-            
-            // Bygger ihop den kompletta URL:en för display.html
-            const currentUrl = window.location.origin;
-            const link = `${currentUrl}/display.html?token=${encodeURIComponent(secret)}&workplace=${encodeURIComponent(workplace)}`;
-            
-            linkOutput.value = link;
-            linkContainer.style.display = 'block';
-        };
-    }
-
-    if (copyBtn) {
-        copyBtn.onclick = () => {
-            linkOutput.select();
-            linkOutput.setSelectionRange(0, 99999); // För mobila enheter
-            navigator.clipboard.writeText(linkOutput.value).then(() => {
-                showToast("Länk kopierad till urklipp!", "success");
-            }).catch(() => {
-                // Fallback om clipboard API inte fungerar
-                document.execCommand('copy');
-                showToast("Länk kopierad till urklipp!", "success");
-            });
-        };
     }
 }
 
@@ -786,7 +753,6 @@ function initThemeTab(currentSettings) {
     }
 }
 
-// --- UTSKRIFT OCH ZIP-BILDEXPORT (Med v1.4 Design) ---
 function initExportTab() {
     const btnToday = document.getElementById('btnSetToday');
     const btnWeek = document.getElementById('btnSetWeek');
@@ -1069,3 +1035,55 @@ function initExportTab() {
     if(printBtn) printBtn.onclick = () => runExport('print');
     if(imgBtn) imgBtn.onclick = () => runExport('image');
 }
+
+// --- GLOBAL EVENT LISTENER FÖR DISPLAYLÄNK (Event Delegation) ---
+// Säkerställer att knapparna fungerar oavsett om sidan uppdateras dynamiskt
+document.addEventListener('click', function(e) {
+    
+    if (e.target && e.target.id === 'generateDisplayLinkBtn') {
+        e.preventDefault();
+        
+        const secretInput = document.getElementById('displaySecretInput');
+        const linkContainer = document.getElementById('displayLinkContainer');
+        const linkOutput = document.getElementById('generatedDisplayLink');
+        
+        const secret = secretInput ? secretInput.value.trim() : '';
+        
+        if (!secret) {
+            if (typeof showToast === 'function') showToast("Vänligen ange display-nyckeln", "error");
+            else alert("Vänligen ange display-nyckeln");
+            return;
+        }
+        
+        const workplace = localStorage.getItem('activeWorkplace') || 'default';
+        const currentUrl = window.location.origin;
+        let pathname = window.location.pathname;
+        
+        pathname = pathname.replace('settings.html', '').replace('admin.html', '');
+        if (!pathname.endsWith('/')) pathname += '/';
+        
+        const link = `${currentUrl}${pathname}display.html?token=${encodeURIComponent(secret)}&workplace=${encodeURIComponent(workplace)}`;
+        
+        if (linkOutput) linkOutput.value = link;
+        if (linkContainer) linkContainer.style.display = 'block';
+    }
+
+    if (e.target && e.target.id === 'copyDisplayLinkBtn') {
+        e.preventDefault();
+        
+        const linkOutput = document.getElementById('generatedDisplayLink');
+        if (!linkOutput) return;
+
+        linkOutput.select();
+        linkOutput.setSelectionRange(0, 99999); 
+        
+        navigator.clipboard.writeText(linkOutput.value).then(() => {
+            if (typeof showToast === 'function') showToast("Länk kopierad till urklipp!", "success");
+            else alert("Länk kopierad till urklipp!");
+        }).catch(() => {
+            document.execCommand('copy'); 
+            if (typeof showToast === 'function') showToast("Länk kopierad till urklipp!", "success");
+            else alert("Länk kopierad till urklipp!");
+        });
+    }
+});
