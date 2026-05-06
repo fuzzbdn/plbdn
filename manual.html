@@ -56,8 +56,9 @@
         <a href="#anvandare">2. För Anställda (Mitt Schema)</a>
         <a href="#admin-planering">3. För Administratörer (Planering)</a>
         <a href="#franvaro">4. Sjukdom & Frånvaro</a>
-        <a href="#installningar">5. Inställningar & Konton</a>
-        <a href="#superadmin">6. Super-Admin (Flera arbetsplatser)</a>
+        <a href="#installningar">5. Inställningar & Systemhantering</a>
+        <a href="#skarm">6. TV-skärm & Displaylänk</a>
+        <a href="#superadmin">7. Super-Admin (Flera arbetsplatser)</a>
     </div>
 
     <h2 id="roller">1. Användarroller & Rättigheter</h2>
@@ -71,7 +72,7 @@
     <h2 id="anvandare">2. För Anställda (Mitt Schema)</h2>
     <p>När du loggar in med ett Användar-konto landar du direkt i <strong>Mitt Schema</strong>. Denna vy är optimerad för mobilen.</p>
     <ul>
-        <li><strong>👤 Visa endast mitt schema:</strong> Genom att klicka på denna knapp döljer du alla kollegor och ser dina egna pass <em>rullande 7 dagar framåt</em> räknat från idag.</li>
+        <li><strong>👤 Visa endast mitt schema:</strong> Genom att klicka på denna knapp döljer du alla kollegor och ser dina egna pass <em>rullande 7 dagar framåt</em> räknat från valt startdatum.</li>
         <li><strong>👥 Visa alla pass:</strong> Visar en klassisk kalendervecka (Mån-Sön) där du ser vilka kollegor du jobbar med.</li>
         <li><strong>Frånvaro:</strong> Om du är schemalagd under en period men blir sjuk, kommer administratören att lägga in det, och en röd/gul ikon (t.ex. 🤒 Sjuk eller 🌴 Semester) syns istället för dina pass.</li>
     </ul>
@@ -86,12 +87,12 @@
         <h3>Metod 2: Menyn (+) 📋</h3>
         <p>Håll muspekaren över ett pass och klicka på <kbd>+</kbd>-knappen som dyker upp. En rullgardin visas där du kan klicka på valfri person i databasen för att snabbt lägga till dem. Om personen inte finns, klicka på <em>"+ Skriv in eget namn..."</em> så skapas ett nytt konto åt dem automatiskt.</p>
         
-        <h3>Metod 3: Snabb inmatning (Tangentbord) ⌨️</h3>
+        <h3>Metod 3: Snabb inmatning (Tangentbord & Autocomplete) ⌨️</h3>
         <p>Klicka direkt på texten i ett tomt (eller bemannat) pass. Rutan blir nu en textruta!</p>
         <ul>
             <li>Börja skriva ett namn. Systemet föreslår automatiskt namn från personal-listan.</li>
-            <li>Tryck på förslaget för att autokomplettera.</li>
-            <li>Om du vill ha två personer på samma pass, skriv ett snedstreck <kbd>/</kbd> mellan namnen (ex: <code>Anna / Kalle</code>).</li>
+            <li>Klicka på förslaget för att autokomplettera (fylla i resten av namnet).</li>
+            <li>Om du vill ha flera personer på samma pass, skriv ett snedstreck <kbd>/</kbd> mellan namnen (ex: <code>Anna / Kalle</code>).</li>
             <li>Klicka utanför rutan när du är klar – systemet sparar direkt till databasen! <em>(Om du skrev ett namn som inte fanns förut, läggs personen till i personal-listan automatiskt).</em></li>
         </ul>
     </div>
@@ -103,43 +104,53 @@
     </ul>
 
     <h3>📡 Publicera schemat</h3>
-    <p>Ändringar du gör i schemat är <strong>Dolda (Utkast)</strong> fram till att du publicerar dem. Detta är för att personalen inte ska se dig flytta runt dem i realtid. När du är nöjd, klicka på den gröna knappen <span class="highlight">📡 Publicera</span> i botten av skärmen för att skicka utkastet till TV-skärmarna och de anställdas inloggning.</p>
+    <p>Ändringar du gör i schemat är <strong>Dolda (Utkast)</strong> fram till att du publicerar dem. Det visas en gul varningsbanner om det finns opublicerade ändringar. När du är nöjd, klicka på den gröna knappen <span class="highlight">📡 Publicera</span> i botten av skärmen för att skicka utkastet till TV-skärmarna och de anställdas inloggning.</p>
 
     <h2 id="franvaro">4. Sjukdom & Frånvaro</h2>
-    <p>Om någon blir sjuk eller ska ha semester ska du <strong>inte</strong> bara radera deras pass. Använd Frånvarohanteraren för att undvika schemakrockar!</p>
+    <p>Om någon blir sjuk eller ska ha semester ska du <strong>inte</strong> bara radera deras pass manuellt. Använd Frånvarohanteraren för att undvika schemakrockar!</p>
     <ol>
         <li>Gå till <strong>Inställningar ⚙️</strong> och klicka på fliken <strong>🏖️ Hantera Frånvaro</strong>.</li>
-        <li>Välj person, typ av frånvaro (Sjuk, VAB, Semester) och ett datumintervall.</li>
-        <li><strong>Krock-Systemet:</strong> När du sparar kommer systemet automatiskt att radera personen från alla eventuella pass de var inbokade på under den perioden.</li>
-        <li>I Planeringsvyn blir personens "piller" nu rödmarkerat, och det är omöjligt att schemalägga personen av misstag under sjukperioden.</li>
+        <li>Välj person, typ av frånvaro (Sjuk, VAB, Semester, Tjänstledig) och ett datumintervall.</li>
+        <li><strong>Krock-Systemet:</strong> När du sparar kommer systemet automatiskt att radera personen från alla pass de var inbokade på under den perioden.</li>
+        <li>I Planeringsvyn blir personens "piller" i sidopanelen nu rödmarkerat, och det är omöjligt att schemalägga personen av misstag under denna period.</li>
     </ol>
 
-    <h2 id="installningar">5. Inställningar & Konton</h2>
+    <h2 id="installningar">5. Inställningar & Systemhantering</h2>
     <p>Under Inställningar styr du hur systemet fungerar och ser ut.</p>
     
     <div class="box">
         <ul>
-            <li><strong>Allmänt & Meddelanden:</strong> Skriv en textrad som ska rulla på display-skärmen (t.ex. "Välkommen!").</li>
-            <li><strong>Platser & Pass:</strong> Skapa arbetsstationer (med färgkoder) och tider. Dra och släpp dem i listan för att byta ordning på hur de visas i schemat. Du kan även lägga in "Mellanrum" för att gruppera stationer.</li>
-            <li><strong>Utseende & Tema:</strong> Välj hur TV-skärmen ska se ut. Du kan även skriva din egen CSS-kod för att skapa unika teman (t.ex. Mörkt tema eller sommartema). Live-preview låter dig testa innan du aktiverar!</li>
-            <li><strong>Utskrift:</strong> Välj ett datumintervall och skriv ut schemat till en fysisk pappersskrivare eller spara som PDF.</li>
+            <li><strong>Allmänt & Meddelanden:</strong> Skriv en textrad som ska rulla på display-skärmen (t.ex. "Välkommen till jobbet!").</li>
+            <li><strong>Väder & Plats:</strong> Sök efter din stad för att visa lokalt väder uppe i hörnet på TV-skärmen.</li>
+            <li><strong>Utskrift & Export:</strong> Välj ett datumintervall och skriv ut schemat till en pappersskrivare (PDF), eller spara schemat som en färdig <strong>Bild / ZIP-fil</strong> som kan mailas eller läggas upp på intranätet.</li>
+            <li><strong>Platser & Pass:</strong> Skapa arbetsstationer (med färgkoder) och tider. Dra och släpp dem i listan för att byta ordning. Du kan även lägga in "Mellanrum" för att gruppera stationer snyggt på skärmen.</li>
+            <li><strong>Utseende & Tema:</strong> Välj hur TV-skärmen ska se ut. Du kan även skriva din egen CSS-kod för att skapa unika teman. Live-preview låter dig testa direkt i webbläsaren!</li>
         </ul>
     </div>
 
-    <h3>👥 Användare & Konton</h3>
-    <p>I denna flik skapar du inloggningar för din personal.</p>
+    <h3>👥 Användare, Konton & Lösenord</h3>
+    <p>I fliken Användare & Konton skapar du inloggningar för din personal.</p>
     <ul>
-        <li><strong>Visningsnamn:</strong> Om du fyller i detta fält, är det detta namn som kommer visas på schemat. (Perfekt för smeknamn).</li>
-        <li><strong>Återställa lösenord:</strong> Om en person har glömt sitt lösenord kan du söka upp dem här och skriva in ett nytt lösenord direkt åt dem, alternativt be dem klicka på "Glömt lösenord" på inloggningsskärmen (om de har en giltig e-postadress registrerad).</li>
+        <li><strong>Visningsnamn:</strong> Det namn som visas externt på schemat (perfekt för smeknamn eller för att skilja på två "Johan").</li>
+        <li><strong>Återställa lösenord:</strong> Om en person har glömt sitt lösenord kan du som Admin redigera deras konto och skriva in ett nytt lösenord direkt.</li>
+        <li><strong>E-poståterställning:</strong> Om användaren har sin E-post inlagd på kontot kan de själva klicka på "Glömt lösenord" på inloggningssidan för att få en återställningslänk skickad till sig.</li>
     </ul>
 
-    <h2 id="superadmin">6. Super-Admin (Flera arbetsplatser)</h2>
-    <p>Ett Super-Admin konto hanterar hela organisationen. Om ni t.ex. har en anläggning i Boden och en i Stockholm, vill de inte dela schema och personal.</p>
-    <p>I inställningarna har en Super-Admin en orange flik som heter <strong>🏢 Arbetsplatser</strong>. Här kan du skapa hur många oberoende arbetsplatser som helst. Varje arbetsplats får en helt egen, isolerad miljö (med egna stationer, teman och personal).</p>
-    <p>I Planeringsvyn får Super-Admins fram en rullgardin i menyraden där de snabbt kan hoppa mellan de olika anläggningarna för att administrera dem.</p>
+    <h2 id="skarm">6. TV-skärm & Displaylänk</h2>
+    <p>Display-vyn är gjord för att rulla dygnet runt på en TV i lunchrummet. Den uppdaterar sig själv automatiskt var 15:e sekund.</p>
+    <ul>
+        <li>Gå till <strong>Inställningar ⚙️ > Allmänt & Meddelanden</strong>.</li>
+        <li>Skriv in er hemliga display-nyckel (konfigurerad av IT/Super-Admin) i fältet och klicka på "Skapa displaylänk".</li>
+        <li>En säker länk genereras som är låst till er specifika arbetsplats. Kopiera länken och klistra in den i webbläsaren på TV-skärmen.</li>
+    </ul>
+
+    <h2 id="superadmin">7. Super-Admin (Flera arbetsplatser)</h2>
+    <p>Ett Super-Admin konto hanterar hela organisationen. Om ni t.ex. har en anläggning i Boden och en i Stockholm, vill de inte dela schema, inställningar och personal.</p>
+    <p>I inställningarna har en Super-Admin en orange flik som heter <strong>🏢 Arbetsplatser</strong>. Här kan du skapa hur många oberoende arbetsplatser som helst. Varje arbetsplats får en helt egen, isolerad miljö i databasen.</p>
+    <p>I Planeringsvyn får Super-Admins fram en rullgardin i toppmenyn där de snabbt kan hoppa mellan de olika anläggningarna för att administrera dem.</p>
 
     <div style="text-align: center; margin-top: 50px; color: #888; border-top: 1px solid #ddd; padding-top: 20px;">
-        <em>STRUL Bemanningssystem v2.0 - Optimerad för Vercel och PostgreSQL.</em>
+        <em>STRUL Bemanningssystem v2.0 - Optimerad för molnet och PostgreSQL.</em>
     </div>
 </div>
 
