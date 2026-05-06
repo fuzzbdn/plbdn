@@ -81,6 +81,44 @@ function initGeneralTab() {
         await saveData('message', { text: msgIn.value, show: msgCheck.checked });
         showToast("Meddelande uppdaterat!", "success");
     };
+
+    // --- NY KOD FÖR DISPLAYLÄNK HÄR UNDER ---
+    const generateBtn = document.getElementById('generateDisplayLinkBtn');
+    const secretInput = document.getElementById('displaySecretInput');
+    const linkContainer = document.getElementById('displayLinkContainer');
+    const linkOutput = document.getElementById('generatedDisplayLink');
+    const copyBtn = document.getElementById('copyDisplayLinkBtn');
+
+    if (generateBtn) {
+        generateBtn.onclick = () => {
+            const secret = secretInput.value.trim();
+            if (!secret) return showToast("Vänligen ange display-nyckeln", "error");
+            
+            // Hämtar ID för arbetsplatsen admin är inloggad på just nu
+            const workplace = localStorage.getItem('activeWorkplace') || 'default';
+            
+            // Bygger ihop den kompletta URL:en för display.html
+            const currentUrl = window.location.origin;
+            const link = `${currentUrl}/display.html?token=${encodeURIComponent(secret)}&workplace=${encodeURIComponent(workplace)}`;
+            
+            linkOutput.value = link;
+            linkContainer.style.display = 'block';
+        };
+    }
+
+    if (copyBtn) {
+        copyBtn.onclick = () => {
+            linkOutput.select();
+            linkOutput.setSelectionRange(0, 99999); // För mobila enheter
+            navigator.clipboard.writeText(linkOutput.value).then(() => {
+                showToast("Länk kopierad till urklipp!", "success");
+            }).catch(() => {
+                // Fallback om clipboard API inte fungerar
+                document.execCommand('copy');
+                showToast("Länk kopierad till urklipp!", "success");
+            });
+        };
+    }
 }
 
 function initWeatherTab() {
