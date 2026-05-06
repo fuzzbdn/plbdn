@@ -48,28 +48,42 @@
 
             <main class="settings-content">
                 
-<div id="tab-general" class="tab-pane active">
-    <div class="setting-card">
-        <h3>📢 Meddelande (Display)</h3>
-        <button id="saveMessageBtn" class="save-btn">Uppdatera Meddelande</button>
-    </div>
+                <div id="tab-general" class="tab-pane active">
+                    <!-- KORT 1: Meddelande (Display) -->
+                    <div class="setting-card">
+                        <h3>📢 Meddelande (Display)</h3>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; color: #333;">
+                                <input type="checkbox" id="showMessageCheckbox"> 
+                                <span>Visa meddelande på skärmen</span>
+                            </label>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <textarea id="displayMessageInput" rows="3" placeholder="Skriv ditt meddelande här..." style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                        </div>
+                        
+                        <button id="saveMessageBtn" class="save-btn">Uppdatera Meddelande</button>
+                    </div>
 
-    <div class="setting-card">
-        <h3 style="color:#0277bd;">📺 Skapa Displaylänk</h3>
-        <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">Skapa en unik länk för att visa schemat på en TV-skärm. För att obehöriga inte ska komma åt skärmen krävs systemets hemliga display-nyckel (samma som <code>DISPLAY_SECRET</code> i serverns miljövariabler).</p>
-        
-        <div class="form-group">
-            <input type="text" id="displaySecretInput" placeholder="Ange hemlig display-nyckel">
-            <button id="generateDisplayLinkBtn" class="save-btn" style="margin-top: 10px; width: fit-content;">Skapa displaylänk</button>
-        </div>
-        
-        <div id="displayLinkContainer" style="display:none; margin-top:20px; padding:15px; background:#e3f2fd; border:1px solid #90caf9; border-radius:8px;">
-            <p style="margin-top:0; font-weight:bold; color:#0277bd; font-size:0.95rem;">✅ Länk genererad för aktuell arbetsplats!</p>
-            <input type="text" id="generatedDisplayLink" readonly style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; margin-bottom:10px; background:#fff; color:#333;">
-            <button id="copyDisplayLinkBtn" class="save-btn" style="background:#4CAF50;">📋 Kopiera länk</button>
-        </div>
-    </div>
-</div>
+                    <!-- KORT 2: Skapa Displaylänk -->
+                    <div class="setting-card">
+                        <h3 style="color:#0277bd;">📺 Skapa Displaylänk</h3>
+                        <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">Skapa en unik länk för att visa schemat på en TV-skärm. För att obehöriga inte ska komma åt skärmen krävs systemets hemliga display-nyckel (samma som <code>DISPLAY_SECRET</code> i serverns miljövariabler).</p>
+                        
+                        <div class="form-group">
+                            <input type="text" id="displaySecretInput" placeholder="Ange hemlig display-nyckel" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; margin-bottom: 10px;">
+                            <button id="generateDisplayLinkBtn" class="save-btn" style="margin-top: 10px; width: fit-content;">Skapa displaylänk</button>
+                        </div>
+                        
+                        <div id="displayLinkContainer" style="display:none; margin-top:20px; padding:15px; background:#e3f2fd; border:1px solid #90caf9; border-radius:8px;">
+                            <p style="margin-top:0; font-weight:bold; color:#0277bd; font-size:0.95rem; margin-bottom: 10px;">✅ Länk genererad för aktuell arbetsplats!</p>
+                            <input type="text" id="generatedDisplayLink" readonly style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; margin-bottom:10px; background:#fff; color:#333; box-sizing: border-box;">
+                            <button id="copyDisplayLinkBtn" class="save-btn" style="background:#4CAF50;">📋 Kopiera länk</button>
+                        </div>
+                    </div>
+                </div>
 
                 <div id="tab-weather" class="tab-pane">
                     <div class="setting-card">
