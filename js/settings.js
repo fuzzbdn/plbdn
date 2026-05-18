@@ -11,6 +11,7 @@ let editingStationId = null, editingShiftId = null, editingAdminId = null;
 export async function initSettings() {
     const role = (localStorage.getItem('userRole') || '').trim().toLowerCase();
     
+    // Säkerställ att endast admin/superadmin kommer åt sidan
     if (role !== 'admin' && role !== 'superadmin') {
         window.location.href = "user.html";
         return;
@@ -19,6 +20,7 @@ export async function initSettings() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (localStorage.getItem('adminName') || 'Admin');
     document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = "index.html"; };
 
+    // Super-admin specifika flikar
     if (role === 'superadmin') {
         const tabBtn = document.getElementById('tabBtnWorkplaces');
         if (tabBtn) tabBtn.style.display = 'flex';
@@ -28,6 +30,7 @@ export async function initSettings() {
     try {
         const todayStr = new Date().toISOString().split('T')[0];
 
+        // Ladda ner all data från databasen parallellt för snabbhet
         const [settings, themes, stations, shifts, scheduleData, users, absences] = await Promise.all([
             fetchData('settings'),
             fetchData('custom_themes'),
@@ -53,6 +56,7 @@ export async function initSettings() {
             });
         }
 
+        // Initiera alla flikar
         initGeneralTab();
         initWeatherTab();
         initStationsSettings();
@@ -121,6 +125,7 @@ function initStationsSettings() {
     const stCancel = document.getElementById('cancelStationEditBtn');
     if (!stName) return;
 
+    // Drag-and-drop logik för sortering av platser
     let dragSrcStationEl = null;
     window.handleStationDragStart = (e) => {
         dragSrcStationEl = e.target.closest('.draggable-station');
@@ -242,6 +247,7 @@ function initShiftsSettings() {
     const shCancel = document.getElementById('cancelShiftEditBtn');
     if (!shLabel) return;
 
+    // Drag-and-drop logik för sortering av pass
     let dragSrcShiftEl = null;
     window.handleShiftDragStart = (e) => {
         dragSrcShiftEl = e.target.closest('.draggable-shift');
@@ -342,6 +348,8 @@ function initAdminSettings() {
     const admUser = document.getElementById('newAdminUser');
     const admPass = document.getElementById('newAdminPass');
     const admRole = document.getElementById('newAdminRole');
+    const searchInput = document.getElementById('adminSearchInput'); 
+    
     if (!admBtn) return;
 
     // --- UX-SPÄRR: Ta bort Super-admin-valet helt för vanliga admins ---
@@ -349,15 +357,27 @@ function initAdminSettings() {
     if (admRole && loggedInRole !== 'superadmin') {
         const superAdminOption = admRole.querySelector('option[value="superadmin"]');
         if (superAdminOption) {
-            superAdminOption.remove(); // Raderar alternativet från rullgardinsmenyn
+            superAdminOption.remove(); 
         }
     }
     // ------------------------------------------------------------------
 
-    const renderAdmins = async () => {
-        let admins = await fetchData('admins');
-        if (!Array.isArray(admins)) admins = []; 
-        globalAdmins = admins; 
+    const renderAdmins = async (skipFetch = false) => {
+        if (!skipFetch) {
+            let admins = await fetchData('admins');
+            if (!Array.isArray(admins)) admins = []; 
+            globalAdmins = admins; 
+        }
+        
+        const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        
+        let displayList = globalAdmins;
+        if (searchTerm) {
+            displayList = globalAdmins.filter(a => {
+                const combinedText = `${a.first_name || ''} ${a.last_name || ''} ${a.display_name || ''} ${a.username || ''} ${a.role || ''}`.toLowerCase();
+                return combinedText.includes(searchTerm);
+            });
+        }
         
         let html = `
         <div style="display:flex; padding: 10px 15px; background: #f5f5f5; border-bottom: 2px solid #ddd; font-weight: 600; font-size: 0.85rem; color: #555; text-transform: uppercase; position: sticky; top: 0; z-index: 10;">
@@ -368,10 +388,10 @@ function initAdminSettings() {
         </div>
         `;
 
-        if (admins.length === 0) {
-            html += `<div style="padding: 15px; text-align: center; color: #666;">Inga konton hittades.</div>`;
+        if (displayList.length === 0) {
+            html += `<div style="padding: 15px; text-align: center; color: #666;">Inga konton hittades som matchar sökningen.</div>`;
         } else {
-            html += admins.map(a => {
+            html += displayList.map(a => {
                 let roleBadge = '<span style="background:#e0e0e0; color:#333; padding:3px 8px; border-radius:12px; font-size:0.75em; font-weight:bold;">🧍 Användare</span>';
                 if(a.role === 'admin') roleBadge = '<span style="background:#fff3e0; color:#e65100; padding:3px 8px; border-radius:12px; border: 1px solid #ffe0b2; font-size:0.75em; font-weight:bold;">🔧 Admin</span>';
                 if(a.role === 'superadmin') roleBadge = '<span style="background:#f3e5f5; color:#4a148c; padding:3px 8px; border-radius:12px; border: 1px solid #e1bee7; font-size:0.75em; font-weight:bold;">👑 Super-Admin</span>';
@@ -402,6 +422,10 @@ function initAdminSettings() {
         document.getElementById('adminListContainer').innerHTML = html;
     };
 
+    if (searchInput) {
+        searchInput.addEventListener('input', () => renderAdmins(true));
+    }
+
     window.startEditAdmin = (id) => {
         const u = globalAdmins.find(admin => String(admin.id) === String(id));
         if (!u) return;
@@ -427,6 +451,11 @@ function initAdminSettings() {
         admDisp.value = ""; admFirst.value = ""; admLast.value = ""; admEmail.value = "";
         admUser.value = ""; admPass.value = ""; admPass.placeholder = "Lösenord"; admRole.value = 'user';
         admBtn.innerText = "Spara / Skapa konto"; admBtn.style.background = ""; admCancel.style.display = "none";
+        
+        if (searchInput) {
+            searchInput.value = '';
+            renderAdmins(true); 
+        }
     };
     if(admCancel) admCancel.onclick = resetAdm;
 
@@ -453,7 +482,7 @@ function initAdminSettings() {
 
         if (res.ok) {
             showToast("Användare sparad!", "success");
-            resetAdm(); renderAdmins();
+            resetAdm(); renderAdmins(); 
         } else {
             const err = await res.json();
             showToast(err.error || "Fel vid sparande", "error");
@@ -467,9 +496,12 @@ function initAdminSettings() {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` },
                 body: JSON.stringify({ action: 'remove_admin', username: u })
             });
-            renderAdmins();
+            
+            if (searchInput) searchInput.value = '';
+            renderAdmins(); 
         }
     };
+    
     renderAdmins();
 }
 
