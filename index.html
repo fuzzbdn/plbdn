@@ -2,8 +2,16 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Anpassad för mobil/PWA (Förhindrar inzoomning) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>STRUL - Logga in</title>
+    
+    <!-- PWA / App Manifest och färgtema -->
+    <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+    <meta name="theme-color" content="#0277bd">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     
@@ -33,7 +41,7 @@
                 <h1 class="strul-title">
                     <span class="title-text-wrapper">
                         STRUL
-                        <span class="version-tag">v1.3</span>
+                        <span class="version-tag" id="appVersionDisplay"></span>
                     </span>
                 </h1>
                 
@@ -42,27 +50,24 @@
             
             <div id="loginForm">
                 <div class="input-group">
-                    <input type="text" id="usernameInput" placeholder="Användarnamn">
+                    <!-- autocapitalize="none" gör att mobilen inte automatiskt sätter stor första bokstav -->
+                    <input type="text" id="usernameInput" placeholder="Användarnamn" autocapitalize="none" autocorrect="off">
                 </div>
                 <div class="input-group">
                     <input type="password" id="passwordInput" placeholder="Lösenord">
                 </div>
                 
                 <button id="loginBtn" class="action-btn primary">Logga in</button>
-                
                 <a href="#" id="forgotPassLink" class="link-text">Glömt lösenord?</a>
-
-                <div class="divider"><span>ELLER</span></div>
-
-                <a href="display.html" class="action-btn secondary">📺 Visa Schema (Display)</a>
             </div>
 
-            <div id="forgotForm">
+            <div id="forgotForm" style="display:none;">
                 <h3 style="margin-top:0; color:#333;">Återställ Lösenord</h3>
                 <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">Ange din e-postadress så skickar vi en återställningslänk.</p>
                 
                 <div class="input-group">
-                    <input type="email" id="resetEmailInput" placeholder="Din e-postadress">
+                    <!-- Samma mobilfix för e-post -->
+                    <input type="email" id="resetEmailInput" placeholder="Din e-postadress" autocapitalize="none" autocorrect="off">
                 </div>
                 
                 <button id="sendResetBtn" class="action-btn primary">Skicka länk</button>
@@ -74,9 +79,30 @@
     </div>
 
     <div id="toast"></div>
+
+    <!-- Skript som fångar upp "Gå"- eller "Enter"-knappen på mobiltangentbordet och loggar in dig -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const passInput = document.getElementById('passwordInput');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            if(passInput && loginBtn) {
+                passInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        loginBtn.click();
+                    }
+                });
+            }
+        });
+    </script>
+    <!-- Registrera Service Worker för Android Chrome -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js');
+            });
+        }
+    </script>
 </body>
 </html>
-
-
-
-

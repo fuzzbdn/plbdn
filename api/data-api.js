@@ -2,218 +2,308 @@ import pg from 'pg';
 const { Pool } = pg;
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import { Resend } from 'resend'; 
+import { Resend } from 'resend';
 
-// Skapa poolen
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const resend = new Resend(process.env.RESEND_API_KEY); // <-- INITIERA RESEND
+const SECRET_DISPLAY_KEY = process.env.DISPLAY_SECRET;
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Fail-safe: Stoppa appen direkt om nyckeln saknas
-if (!JWT_SECRET) {
-  console.error("KRITISKT FEL: JWT_SECRET saknas i miljövariablerna.");
-  throw new Error("Serverkonfiguration saknas. Kontakta systemadministratören.");
+// Hjälpfunktion för att hantera databasfel snyggare
+function handleDatabaseError(res, error) {
+    console.error("Databasfel:", error);
+    // 23505 är PostgreSQL-koden för "Unique violation" (t.ex. upptaget användarnamn)
+    if (error.code === '23505') {
+        return res.status(400).json({ success: false, error: "Detta värde (t.ex. användarnamn) finns redan." });
+    }
+    return res.status(500).json({ success: false, error: "Ett internt serverfel uppstod." });
 }
 
 export default async function handler(req, res) {
-  // CORS och Headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-workplace-id');
 
-  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+    if (req.method === 'OPTIONS') { return res.status(200).end(); }
 
-  try {
-    // --- GET (Hämta data) ---
-    if (req.method === 'GET') {
-      const { type } = req.query;
+    try {
+        // --- 1. AUTENTISERING ---
+        const authHeader = req.headers.authorization;
+        const token = authHeader && authHeader.split(' ')[1];
+        
+        let isAuthorized = false;
+        let currentUserRole = 'user';
+        let currentWorkplace = 'default';
 
-      // Hämta Admins
-      if (type === 'admins') {
-          const authHeader = req.headers.authorization;
-          const token = authHeader && authHeader.split(' ')[1];
-          if (!token) return res.status(401).json({ error: "Ingen token" });
-          try {
-              jwt.verify(token, JWT_SECRET);
-              const result = await pool.query('SELECT id, username, first_name, last_name, email FROM admin_users ORDER BY username ASC');
-              return res.status(200).json(result.rows);
-          } catch (err) { return res.status(403).json({ error: "Ogiltig token" }); }
-      }
-      
-      // Hämta Övrigt
-      try {
-          const result = await pool.query('SELECT data FROM app_storage WHERE key = $1', [type]);
-          if (result.rows.length > 0) {
-              return res.status(200).json(result.rows[0].data);
-          }
-      } catch (dbError) {
-          console.error("DB Error fetching " + type, dbError);
-      }
-      
-      // Defaults
-      if (type === 'settings') return res.status(200).json({ theme: 'light' });
-      if (type === 'users') return res.status(200).json([]);
-      if (type === 'message') return res.status(200).json({ text: '', show: false });
-      
-      return res.status(200).json({});
-    }
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, JWT_SECRET);
+                isAuthorized = true;
+                currentUserRole = decoded.role || 'user';
+                currentWorkplace = decoded.workplaceId || 'default';
 
-    // --- POST (Spara/Ändra) ---
-    if (req.method === 'POST') {
-      const { action, username, password, type, data } = req.body;
-
-      // 0. AUKTORISERING
-      const isPublicAction = ['login', 'request_reset', 'perform_reset'].includes(action);
-      
-      if (!isPublicAction) {
-          const authHeader = req.headers.authorization;
-          const token = authHeader && authHeader.split(' ')[1];
-          
-          if (!token) {
-              return res.status(401).json({ error: "Åtkomst nekad: Token saknas" });
-          }
-          
-          try {
-              jwt.verify(token, JWT_SECRET);
-          } catch (err) { 
-              return res.status(403).json({ error: "Åtkomst nekad: Ogiltig token" }); 
-          }
-      }
-
-      // 1. LOGGA IN
-      if (action === 'login') {
-        const result = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username]);
-        const user = result.rows[0];
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(401).json({ success: false, error: "Fel uppgifter" });
+                if (currentUserRole === 'superadmin' && req.headers['x-workplace-id']) {
+                    currentWorkplace = req.headers['x-workplace-id'];
+                }
+            } catch (err) { /* Ogiltig token */ }
         }
-        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
-        const name = (user.first_name) ? `${user.first_name} ${user.last_name||''}` : user.username;
-        return res.status(200).json({ success: true, token, user: user.username, name });
-      }
 
-      // 2. SPARA DATA
-      if (type && data) {
-         await pool.query(
-           `INSERT INTO app_storage (key, data) VALUES ($1, $2) 
-            ON CONFLICT (key) DO UPDATE SET data = $2`,
-           [type, JSON.stringify(data)]
-         );
-         return res.status(200).json({ success: true });
-      }
+        if (req.query.display_token === SECRET_DISPLAY_KEY) {
+            isAuthorized = true;
+            currentWorkplace = req.query.workplace || 'default'; 
+        }
 
-      // 3. ADMIN HANTERING
-      
-      // Lägg till Admin
-      if (action === 'add_admin') {
-          const { firstName, lastName, email } = req.body;
-          const salt = await bcrypt.genSalt(10);
-          const hashedPassword = await bcrypt.hash(password, salt);
-          try {
-              await pool.query(
-                  'INSERT INTO admin_users (username, password, first_name, last_name, email) VALUES ($1, $2, $3, $4, $5)', 
-                  [username, hashedPassword, firstName, lastName, email]
-              );
-              return res.status(200).json({ success: true });
-          } catch (e) { return res.status(400).json({ error: "Användare finns redan" }); }
-      }
+        // ==========================================
+        // --- 2. GET: HÄMTA DATA ---
+        // ==========================================
+        if (req.method === 'GET') {
+            const { type, start_date, end_date } = req.query;
 
-      // Redigera Admin
-      if (action === 'edit_admin') {
-          const { id, firstName, lastName, email } = req.body;
-          try {
-              if (password && password.trim() !== "") {
-                  const salt = await bcrypt.genSalt(10);
-                  const hashedPassword = await bcrypt.hash(password, salt);
-                  await pool.query(
-                      'UPDATE admin_users SET username=$1, password=$2, first_name=$3, last_name=$4, email=$5 WHERE id=$6',
-                      [username, hashedPassword, firstName, lastName, email, id]
-                  );
-              } else {
-                  await pool.query(
-                      'UPDATE admin_users SET username=$1, first_name=$2, last_name=$3, email=$4 WHERE id=$5',
-                      [username, firstName, lastName, email, id]
-                  );
-              }
-              return res.status(200).json({ success: true });
-          } catch (e) { return res.status(400).json({ error: "Kunde inte uppdatera" }); }
-      }
+            if (!isAuthorized && !['settings', 'custom_themes'].includes(type)) {
+                return res.status(401).json({ error: "Åtkomst nekad." });
+            }
 
-      // Ta bort Admin
-      if (action === 'remove_admin') {
-          await pool.query('DELETE FROM admin_users WHERE username = $1', [username]);
-          return res.status(200).json({ success: true });
-      }
+            // Använder Switch istället för massa if-satser för mycket renare kod
+            switch (type) {
+                case 'workplaces':
+                    if (currentUserRole !== 'superadmin') return res.status(403).json({ error: "Obehörig" });
+                    const wpRes = await pool.query('SELECT * FROM workplaces ORDER BY name ASC');
+                    return res.status(200).json(wpRes.rows);
 
-      // Återställning (Request Reset)
-      if (action === 'request_reset') {
-          const { email } = req.body;
-          const result = await pool.query('SELECT * FROM admin_users WHERE email = $1', [email]);
-          const user = result.rows[0];
-          
-          if (!user) return res.status(200).json({ success: true, message: "Länk skickad (om e-posten finns)." });
+                case 'users':
+                case 'admins':
+                    const roleFilter = type === 'users' ? "AND (role != 'superadmin' OR role IS NULL)" : "";
+                    const usersRes = await pool.query(
+                        `SELECT id, username, first_name, last_name, display_name, email, role 
+                         FROM admin_users WHERE workplace_id = $1 ${roleFilter}
+                         ORDER BY COALESCE(display_name, first_name, username) ASC`, [currentWorkplace]
+                    );
+                    return res.status(200).json(usersRes.rows);
 
-          const resetToken = crypto.randomBytes(20).toString('hex');
-          const expires = Date.now() + 3600000; // Giltig i 1 timme
-          await pool.query('UPDATE admin_users SET reset_token=$1, reset_expires=$2 WHERE id=$3', [resetToken, expires, user.id]);
-          
-          // Bygg URL:en
-          const protocol = req.headers.host.includes('localhost') ? 'http' : 'https';
-          const resetLink = `${protocol}://${req.headers.host}/reset.html?token=${resetToken}`;
-          
-          // --- SKICKA MAILET VIA RESEND ---
-          try {
-              await resend.emails.send({
-                  from: 'STRUL <losen@info.strulapp.se>', // Låt denna vara kvar tills du verifierat en egen domän
-                  to: email,
-                  subject: 'Återställ ditt lösenord - STRUL',
-                  html: `
-                      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-                          <h2 style="color: #0277bd;">Återställ ditt lösenord</h2>
-                          <p>Du har begärt att få återställa ditt lösenord för STRUL.</p>
-                          <p>Klicka på knappen nedan för att välja ett nytt lösenord. Länken är giltig i 1 timme.</p>
-                          <div style="margin: 30px 0;">
-                              <a href="${resetLink}" style="background-color: #0277bd; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">Välj nytt lösenord</a>
-                          </div>
-                          <p style="font-size: 0.9em; color: #666;">Om knappen inte fungerar, klistra in denna länk i din webbläsare:<br>
-                          <a href="${resetLink}">${resetLink}</a></p>
-                          <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;">
-                          <p style="font-size: 0.8em; color: #999;">Om du inte har begärt en lösenordsåterställning kan du tryggt ignorera detta mail.</p>
-                      </div>
-                  `
-              });
-              console.log("Återställningsmail skickat via Resend till:", email);
-          } catch (mailError) {
-              console.error("Kunde inte skicka mail via Resend:", mailError);
-          }
+                case 'absences':
+                    const absRes = await pool.query(`
+                        SELECT a.*, u.first_name, u.last_name, u.display_name FROM absences a 
+                        JOIN admin_users u ON a.user_id = u.id 
+                        WHERE a.workplace_id = $1 ORDER BY a.start_date DESC`, [currentWorkplace]
+                    );
+                    return res.status(200).json(absRes.rows);
 
-          return res.status(200).json({ success: true });
-      }
+                case 'stations':
+                    const statRes = await pool.query('SELECT * FROM stations WHERE workplace_id = $1 ORDER BY sort_order ASC', [currentWorkplace]);
+                    return res.status(200).json(statRes.rows);
 
-      // Utför Återställning (Perform Reset)
-      if (action === 'perform_reset') {
-          const { token, newPassword } = req.body;
-          const result = await pool.query('SELECT * FROM admin_users WHERE reset_token = $1 AND reset_expires > $2', [token, Date.now()]);
-          const user = result.rows[0];
-          if (!user) return res.status(400).json({ success: false, error: "Ogiltig eller utgången länk" });
+                case 'shifts':
+                    const shiftRes = await pool.query('SELECT * FROM shifts WHERE workplace_id = $1 ORDER BY sort_order ASC', [currentWorkplace]);
+                    return res.status(200).json(shiftRes.rows);
 
-          const salt = await bcrypt.genSalt(10);
-          const hashedPassword = await bcrypt.hash(newPassword, salt);
-          await pool.query('UPDATE admin_users SET password=$1, reset_token=NULL, reset_expires=NULL WHERE id=$2', [hashedPassword, user.id]);
-          return res.status(200).json({ success: true });
-      }
+                case 'schedule':
+                    if(!start_date || !end_date) return res.status(400).json({error: "Saknar datum"});
+                    const schedRes = await pool.query(`
+                        SELECT sa.id, sa.work_date, sa.user_id, sa.station_id, sa.shift_id, sa.is_published,
+                               u.first_name, u.last_name, u.display_name
+                        FROM schedule_assignments sa
+                        JOIN admin_users u ON sa.user_id = u.id
+                        JOIN stations s ON sa.station_id = s.id
+                        WHERE s.workplace_id = $1 AND sa.work_date >= $2 AND sa.work_date <= $3
+                        ORDER BY sa.id ASC`, [currentWorkplace, start_date, end_date]
+                    );
+                    return res.status(200).json(schedRes.rows);
+
+                default:
+                    // app_storage (t.ex. settings)
+                    const storeRes = await pool.query('SELECT data FROM app_storage WHERE key = $1 AND workplace_id = $2', [type, currentWorkplace]);
+                    return res.status(200).json(storeRes.rows.length > 0 ? storeRes.rows[0].data : {});
+            }
+        }
+
+        // ==========================================
+        // --- 3. POST: SPARA / ÄNDRA DATA ---
+        // ==========================================
+        if (req.method === 'POST') {
+            const { action, payload, type, data, username, password, fullName, id, firstName, lastName, displayName, email, role, token: tokenBody, newPassword } = req.body;
+
+            // --- A. Publika actions (Inloggning & Återställning) ---
+            switch (action) {
+                case 'login':
+                    const userRes = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username || payload?.username]);
+                    const user = userRes.rows[0];
+                    if (!user || !user.password || !(await bcrypt.compare(password || payload?.password, user.password))) {
+                        return res.status(401).json({ success: false, error: "Fel uppgifter" });
+                    }
+                    const signedToken = jwt.sign({ id: user.id, username: user.username, role: user.role, workplaceId: user.workplace_id }, JWT_SECRET, { expiresIn: '24h' });
+                    return res.status(200).json({ success: true, token: signedToken, userId: user.id, name: user.display_name || user.first_name || user.username, role: user.role });
+
+                case 'perform_reset':
+                    if (!tokenBody || !newPassword) return res.status(400).json({ error: "Saknar data" });
+                    const decoded = jwt.verify(tokenBody, JWT_SECRET);
+                    if (decoded.purpose !== 'reset') return res.status(400).json({ error: "Ogiltig token typ" });
+                    const hashedPassword = await bcrypt.hash(newPassword, 10);
+                    await pool.query('UPDATE admin_users SET password = $1 WHERE id = $2', [hashedPassword, decoded.id]);
+                    return res.status(200).json({ success: true });
+            }
+
+            // Säkerhetskontroll för alla nedanstående actions
+            if (currentUserRole !== 'admin' && currentUserRole !== 'superadmin') {
+                return res.status(403).json({ error: "Behörighet saknas" });
+            }
+
+            // --- B. Skyddade actions ---
+            switch (action) {
+                
+                // 1. TRANSAKTION: Spara frånvaro och rensa krockande pass säkert
+                case 'save_absence':
+                    if (!payload || !payload.user_id || !payload.start_date || !payload.end_date) {
+                        return res.status(400).json({ error: "Saknar nödvändig data för frånvaro" });
+                    }
+                    
+                    const client = await pool.connect(); // Öppna en dedikerad anslutning för transaktionen
+                    try {
+                        await client.query('BEGIN'); // Starta transaktion
+                        
+                        await client.query(
+                            'INSERT INTO absences (user_id, start_date, end_date, type, workplace_id) VALUES ($1, $2, $3, $4, $5)',
+                            [payload.user_id, payload.start_date, payload.end_date, payload.type, currentWorkplace]
+                        );
+                        
+                        await client.query(`
+                            DELETE FROM schedule_assignments 
+                            WHERE user_id = $1 AND work_date >= $2 AND work_date <= $3 
+                            AND station_id IN (SELECT id FROM stations WHERE workplace_id = $4)
+                        `, [payload.user_id, payload.start_date, payload.end_date, currentWorkplace]);
+
+                        await client.query('COMMIT'); // Spara båda om inget fel skedde
+                        return res.status(200).json({ success: true });
+                    } catch (err) {
+                        await client.query('ROLLBACK'); // Ångra allt om något gick snett
+                        throw err; // Kasta vidare till den allmänna catch-blocket
+                    } finally {
+                        client.release(); // Släpp tillbaka anslutningen till poolen
+                    }
+
+                // 2. PARALLELLA LOOPAR (Promise.all) för prestanda (N+1 Problemet)
+                case 'reorder_stations':
+                    if (!Array.isArray(payload)) return res.status(400).json({ error: "Payload måste vara en array" });
+                    // Skickar iväg alla uppdateringar till databasen samtidigt istället för en i taget
+                    const stationQueries = payload.map((statId, i) => 
+                        pool.query('UPDATE stations SET sort_order=$1 WHERE id=$2 AND workplace_id=$3', [i, statId, currentWorkplace])
+                    );
+                    await Promise.all(stationQueries);
+                    return res.status(200).json({ success: true });
+
+                case 'reorder_shifts':
+                    if (!Array.isArray(payload)) return res.status(400).json({ error: "Payload måste vara en array" });
+                    const shiftQueries = payload.map((shiftId, i) => 
+                        pool.query('UPDATE shifts SET sort_order=$1 WHERE id=$2 AND workplace_id=$3', [i, shiftId, currentWorkplace])
+                    );
+                    await Promise.all(shiftQueries);
+                    return res.status(200).json({ success: true });
+
+                // Standard CRUD-operationer
+                case 'delete_absence':
+                    await pool.query('DELETE FROM absences WHERE id = $1 AND workplace_id = $2', [payload.id, currentWorkplace]);
+                    return res.status(200).json({ success: true });
+
+                case 'save_workplace':
+                    if (currentUserRole !== 'superadmin') return res.status(403).json({ error: "Kräver superadmin" });
+                    if (payload.is_new) {
+                        await pool.query('INSERT INTO workplaces (id, name) VALUES ($1, $2)', [Date.now().toString(), payload.name]);
+                    } else {
+                        await pool.query('UPDATE workplaces SET name=$1 WHERE id=$2', [payload.name, payload.id]);
+                    }
+                    return res.status(200).json({ success: true });
+
+                case 'quick_add_user':
+                    const nameToAdd = payload?.fullName || fullName;
+                    if (!nameToAdd) return res.status(400).json({ error: "Namn saknas" });
+                    const parts = nameToAdd.trim().split(' ');
+                    await pool.query('INSERT INTO admin_users (username, first_name, last_name, display_name, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6)', 
+                        ['user_' + Date.now(), parts[0], parts.slice(1).join(' '), nameToAdd.trim(), 'user', currentWorkplace]);
+                    return res.status(200).json({ success: true });
+
+                case 'remove_user':
+                    const nameToRemove = payload?.fullName || fullName;
+                    await pool.query(`DELETE FROM admin_users WHERE (display_name = $1 OR TRIM(CONCAT(first_name, ' ', COALESCE(last_name, ''))) = $1 OR username = $1) AND workplace_id = $2`, [nameToRemove.trim(), currentWorkplace]);
+                    return res.status(200).json({ success: true });
+
+                case 'add_admin':
+                    const newHashedPass = await bcrypt.hash(password, 10);
+                    await pool.query('INSERT INTO admin_users (username, password, first_name, last_name, display_name, email, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', 
+                        [username, newHashedPass, firstName || displayName || username, lastName, displayName, email, role, currentWorkplace]);
+                    return res.status(200).json({ success: true });
+
+                case 'edit_admin':
+                    const safeFirstName = firstName || displayName || username;
+                    if (password && password.trim() !== "") {
+                        const updatedHash = await bcrypt.hash(password, 10);
+                        await pool.query('UPDATE admin_users SET username=$1, password=$2, first_name=$3, last_name=$4, display_name=$5, email=$6, role=$7 WHERE id=$8 AND workplace_id=$9',
+                            [username, updatedHash, safeFirstName, lastName, displayName, email, role, id, currentWorkplace]);
+                    } else {
+                        await pool.query('UPDATE admin_users SET username=$1, first_name=$2, last_name=$3, display_name=$4, email=$5, role=$6 WHERE id=$7 AND workplace_id=$8',
+                            [username, safeFirstName, lastName, displayName, email, role, id, currentWorkplace]);
+                    }
+                    return res.status(200).json({ success: true });
+
+                case 'remove_admin':
+                    await pool.query('DELETE FROM admin_users WHERE username = $1 AND workplace_id = $2', [username, currentWorkplace]);
+                    return res.status(200).json({ success: true });
+
+                case 'assign_shift':
+                    await pool.query(`INSERT INTO schedule_assignments (work_date, user_id, station_id, shift_id, is_published) VALUES ($1, $2, $3, $4, false) ON CONFLICT DO NOTHING`, 
+                        [payload.date, payload.user_id, payload.station_id, payload.shift_id]);
+                    return res.status(200).json({ success: true });
+
+                case 'remove_shift':
+                    await pool.query('DELETE FROM schedule_assignments WHERE work_date=$1 AND user_id=$2 AND station_id=$3 AND shift_id=$4', 
+                        [payload.date, payload.user_id, payload.station_id, payload.shift_id]);
+                    return res.status(200).json({ success: true });
+
+                case 'publish_schedule':
+                    await pool.query(`UPDATE schedule_assignments sa SET is_published = true FROM stations s WHERE sa.station_id = s.id AND s.workplace_id = $1 AND sa.work_date >= $2 AND sa.work_date <= $3`, 
+                        [currentWorkplace, payload.start_date, payload.end_date]);
+                    return res.status(200).json({ success: true });
+
+                case 'save_station':
+                    if (payload.id) {
+                        await pool.query('UPDATE stations SET name=$1, color=$2, is_spacer=$3 WHERE id=$4 AND workplace_id=$5', [payload.name, payload.color, payload.is_spacer, payload.id, currentWorkplace]);
+                    } else {
+                        await pool.query('INSERT INTO stations (workplace_id, name, color, is_spacer, sort_order) VALUES ($1, $2, $3, $4, 99)', [currentWorkplace, payload.name, payload.color, payload.is_spacer]);
+                    }
+                    return res.status(200).json({ success: true });
+
+                case 'save_shift':
+                    if (payload.id) {
+                        await pool.query('UPDATE shifts SET label=$1, time_range=$2 WHERE id=$3 AND workplace_id=$4', [payload.label, payload.time_range, payload.id, currentWorkplace]);
+                    } else {
+                        await pool.query('INSERT INTO shifts (workplace_id, label, time_range, sort_order) VALUES ($1, $2, $3, 99)', [currentWorkplace, payload.label, payload.time_range]);
+                    }
+                    return res.status(200).json({ success: true });
+
+                case 'delete_station':
+                    await pool.query('DELETE FROM stations WHERE id=$1 AND workplace_id=$2', [payload.id, currentWorkplace]);
+                    return res.status(200).json({ success: true });
+
+                case 'delete_shift':
+                    await pool.query('DELETE FROM shifts WHERE id=$1 AND workplace_id=$2', [payload.id, currentWorkplace]);
+                    return res.status(200).json({ success: true });
+            }
+
+            // Om anropet inte var en 'action' utan en direkt sparning av typ ('settings', 'message')
+            if (type && data) {
+                await pool.query('DELETE FROM app_storage WHERE key = $1 AND workplace_id = $2', [type, currentWorkplace]);
+                await pool.query('INSERT INTO app_storage (key, data, workplace_id) VALUES ($1, $2, $3)', [type, JSON.stringify(data), currentWorkplace]);
+                return res.status(200).json({ success: true });
+            }
+        }
+        
+        return res.status(405).end(); // Method Not Allowed
+
+    } catch (e) { 
+        // Skicka felet till vår nya specifika felhanterare
+        return handleDatabaseError(res, e);
     }
-    
-    return res.status(405).json({ error: "Method not allowed" });
-
-  } catch (error) {
-    console.error("API Error:", error);
-    return res.status(500).json({ error: error.message });
-  }
 }

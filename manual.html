@@ -3,206 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Användarmanual STRUL 1.3</title>
-    
+    <title>Manual - STRUL Bemanningssystem</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="base.css">
-    <link rel="stylesheet" href="admin.css">
-    
     <style>
-        /* Specifik styling för manual-sidan för bättre läsbarhet */
-        body {
-            background-color: #ffffff;
-            padding: 40px;
-            margin: 0;
-            overflow-y: auto;
-            color: #333;
+        :root {
+            --primary: #0277bd;
+            --text: #333;
+            --bg: #fff;
+            --light-bg: #f8f9fa;
+            --border: #e0e0e0;
         }
-        .manual-wrapper {
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
             max-width: 800px;
             margin: 0 auto;
+            padding: 40px 20px;
         }
-        h3 {
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            margin-top: 40px;
-            color: #2c3e50;
-        }
-        h4 {
-            margin-top: 25px;
-            margin-bottom: 10px;
-            color: #0277bd;
-        }
-        p, li {
-            line-height: 1.6;
-            font-size: 1rem;
-        }
-        code {
-            background: #f5f5f5;
-            padding: 2px 5px;
-            border-radius: 4px;
-            font-family: monospace;
-            color: #d32f2f;
-        }
-        .img-placeholder {
-            background: #f9f9f9;
-            border: 1px dashed #ccc;
-            padding: 20px;
-            text-align: center;
-            color: #888;
-            margin: 10px 0;
-            border-radius: 6px;
-        }
-        /* Dölj scrollbar men tillåt scroll */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        h1 { color: var(--primary); font-size: 2.5rem; margin-bottom: 10px; }
+        h2 { border-bottom: 2px solid var(--primary); padding-bottom: 5px; margin-top: 40px; color: #222; }
+        h3 { color: #444; margin-top: 25px; }
+        p, li { font-size: 1.05rem; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; }
+        .highlight { background: #e3f2fd; padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #01579b; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; color: #fff; }
+        .badge.user { background: #757575; }
+        .badge.admin { background: #ef6c00; }
+        .badge.superadmin { background: #6a1b9a; }
+        .box { background: var(--light-bg); border: 1px solid var(--border); padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .toc { background: #f1f8e9; border: 1px solid #c5e1a5; padding: 20px; border-radius: 8px; margin-bottom: 40px; }
+        .toc a { color: #2e7d32; text-decoration: none; font-weight: 600; display: block; margin-bottom: 8px; }
+        .toc a:hover { text-decoration: underline; }
+        kbd { background: #eee; border: 1px solid #ccc; border-radius: 4px; padding: 2px 5px; font-family: monospace; font-size: 0.9em; }
     </style>
 </head>
 <body>
 
-<div class="manual-wrapper manual-content">
+<div class="container">
+    <h1>📖 Manual för STRUL</h1>
+    <p style="font-size: 1.2rem; color: #666;">Välkommen till den officiella guiden för STRUL Bemanningssystem v2.0.</p>
+
+    <div class="toc">
+        <strong>Innehållsförteckning:</strong><br><br>
+        <a href="#roller">1. Användarroller & Rättigheter</a>
+        <a href="#anvandare">2. För Anställda (Mitt Schema)</a>
+        <a href="#admin-planering">3. För Administratörer (Planering)</a>
+        <a href="#franvaro">4. Sjukdom & Frånvaro</a>
+        <a href="#installningar">5. Inställningar & Systemhantering</a>
+        <a href="#skarm">6. TV-skärm & Displaylänk</a>
+        <a href="#superadmin">7. Super-Admin (Flera arbetsplatser)</a>
+    </div>
+
+    <h2 id="roller">1. Användarroller & Rättigheter</h2>
+    <p>Systemet har tre olika nivåer av behörighet:</p>
+    <ul>
+        <li><span class="badge user">Användare</span> - Den vanliga personalen. De kan logga in och se schemat, men kan inte ändra något.</li>
+        <li><span class="badge admin">Admin</span> - Chefer och schemaläggare. De har tillgång till Planeringsverktyget, Frånvarohanteringen och Inställningarna.</li>
+        <li><span class="badge superadmin">Super-Admin</span> - Systemägare. Kan göra allt en Admin kan, men kan dessutom skapa helt nya isolerade <em>Arbetsplatser</em> (t.ex. olika städer eller avdelningar). Super-Admins syns normalt inte i personal-listan.</li>
+    </ul>
+
+    <h2 id="anvandare">2. För Anställda (Mitt Schema)</h2>
+    <p>När du loggar in med ett Användar-konto landar du direkt i <strong>Mitt Schema</strong>. Denna vy är optimerad för mobilen.</p>
+    <ul>
+        <li><strong>👤 Visa endast mitt schema:</strong> Genom att klicka på denna knapp döljer du alla kollegor och ser dina egna pass <em>rullande 7 dagar framåt</em> räknat från valt startdatum.</li>
+        <li><strong>👥 Visa alla pass:</strong> Visar en klassisk kalendervecka (Mån-Sön) där du ser vilka kollegor du jobbar med.</li>
+        <li><strong>Frånvaro:</strong> Om du är schemalagd under en period men blir sjuk, kommer administratören att lägga in det, och en röd/gul ikon (t.ex. 🤒 Sjuk eller 🌴 Semester) syns istället för dina pass.</li>
+    </ul>
+
+    <h2 id="admin-planering">3. För Administratörer (Planering)</h2>
+    <p>Planeringsvyn är hjärtat i systemet där schemat byggs. Det finns tre sätt att bemanna ett pass på:</p>
     
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-        <h1 style="margin:0; color:var(--btn-primary); font-size: 2.2rem;">Användarmanual</h1>
-        <button onclick="window.print()" class="save-btn" style="width:auto; background-color:#455a64;">🖨️ Skriv ut</button>
-    </div>
-
-    <p class="intro-text">
-        Detta är manualen för <strong>STRUL v1.3</strong> (Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen). 
-        Här hittar du instruktioner för hur du planerar, hanterar inställningar och sparar schemat.
-    </p>
-
-    <nav style="background:#f0f2f5; padding:20px; border-radius:8px; margin-bottom:40px; border:1px solid #ddd;">
-        <p style="margin-top:0; font-weight:800; text-transform:uppercase; font-size:0.85rem; color:#666; letter-spacing:1px;">Innehållsförteckning</p>
-        <ul style="margin:0; padding-left:20px;">
-            <li><a href="#planning" style="color:#0277bd; text-decoration:none; font-weight:600;">1. Planering, Dagsvy & Veckovy</a></li>
-            <li><a href="#display" style="color:#0277bd; text-decoration:none; font-weight:600;">2. Display-vyn (Storskärm & Mobil)</a></li>
-            <li><a href="#settings" style="color:#0277bd; text-decoration:none; font-weight:600;">3. Inställningar & Väder</a></li>
-            <li><a href="#export" style="color:#0277bd; text-decoration:none; font-weight:600;">4. Utskrift & Bildexport</a></li>
-            <li><a href="#themes" style="color:#0277bd; text-decoration:none; font-weight:600;">5. Teman & Utseende</a></li>
-            <li><a href="#troubleshoot" style="color:#0277bd; text-decoration:none; font-weight:600;">6. Felsökning</a></li>
-        </ul>
-    </nav>
-
-    <div id="planning">
-        <h3>1. Planering, Dagsvy & Veckovy</h3>
-        <p>I admin-vyn sköter du den dagliga bemanningen. Du kan nu växla mellan att planera dag för dag (Dagsvy) och att se en överblick för personalen (Veckovy).</p>
+    <div class="box">
+        <h3>Metod 1: Drag and Drop 🖱️</h3>
+        <p>Klicka och håll inne musknappen på ett namn i listan till vänster. Dra namnet till önskad ruta i schemat och släpp.</p>
         
-        <h4>Navigera i kalendern</h4>
-        <p>Du kan byta dag på två sätt:</p>
+        <h3>Metod 2: Menyn (+) 📋</h3>
+        <p>Håll muspekaren över ett pass och klicka på <kbd>+</kbd>-knappen som dyker upp. En rullgardin visas där du kan klicka på valfri person i databasen för att snabbt lägga till dem. Om personen inte finns, klicka på <em>"+ Skriv in eget namn..."</em> så skapas ett nytt konto åt dem automatiskt.</p>
+        
+        <h3>Metod 3: Snabb inmatning (Tangentbord & Autocomplete) ⌨️</h3>
+        <p>Klicka direkt på texten i ett tomt (eller bemannat) pass. Rutan blir nu en textruta!</p>
         <ul>
-            <li><strong>Kalendern:</strong> Klicka på datumfältet för att välja ett specifikt datum.</li>
-            <li><strong>Pilarna (◀ ▶):</strong> Använd pilarna bredvid datumet för att snabbt hoppa till föregående eller nästa dag.</li>
+            <li>Börja skriva ett namn. Systemet föreslår automatiskt namn från personal-listan.</li>
+            <li>Klicka på förslaget för att autokomplettera (fylla i resten av namnet).</li>
+            <li>Om du vill ha flera personer på samma pass, skriv ett snedstreck <kbd>/</kbd> mellan namnen (ex: <code>Anna / Kalle</code>).</li>
+            <li>Klicka utanför rutan när du är klar – systemet sparar direkt till databasen! <em>(Om du skrev ett namn som inte fanns förut, läggs personen till i personal-listan automatiskt).</em></li>
         </ul>
-
-        <h4>Lägga till personal (Endast i Dagsvy)</h4>
-        <div class="step">
-            <div class="step-num">1</div>
-            <div class="step-content">Klicka på det gröna <strong>+</strong> tecknet i rutan där du vill lägga till någon.</div>
-        </div>
-        <div class="step">
-            <div class="step-num">2</div>
-            <div class="step-content">Välj en person från listan i menyn som dyker upp, eller klicka på <em>"Skriv in eget namn..."</em> för att skriva manuellt.</div>
-        </div>
-        <p>Du kan också <strong>dra och släppa</strong> namn från listan till vänster ("Personal") direkt in i schemat. Personal som redan är inlagd på ett pass under dagen markeras i grått i listan.</p>
-
-        <h4>📅 Byt till Veckovy (Personalschema)</h4>
-        <p>Om du vill få en överblick över hur mycket personalen jobbar under den valda veckan, klicka på den blå knappen <strong>"📅 Byt till Veckovy"</strong> högst upp bredvid datumväljaren.</p>
-        <div style="background: #e1f5fe; border: 1px solid #81d4fa; padding: 15px; border-radius: 6px; margin-top: 10px;">
-            <strong>Pro-tip för Veckovyn:</strong><br>
-            Veckovyn är <strong>skrivskyddad</strong> för att undvika att man råkar dra och släppa personal på fel dag av misstag. För att flytta ett pass klickar du helt enkelt på "📆 Byt till Dagsvy", gör din ändring med drag-and-drop, och växlar sedan tillbaka för att se resultatet!
-        </div>
-
-        <h4>Publicera ändringar</h4>
-        <div class="warning-box" style="background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; margin-top: 15px;">
-            <strong>Viktigt:</strong> Ändringar du gör sparas automatiskt som ett "utkast". Om du gör ändringar som inte syns live, visas en gul varningsbanner. För att ändringarna ska synas på storskärmen måste du klicka på den gröna knappen <strong>📡 Publicera</strong> nere till höger.
-        </div>
     </div>
 
-    <div id="display">
-        <h3>2. Display-vyn (Storskärm & Mobil)</h3>
-        <p>Display-vyn är den sida som primärt visas på TV-skärmarna i ledningscentralen. Den uppdateras automatiskt var 15:e sekund för att hämta nya publiceringar.</p>
-        <p>Sidan visar:</p>
+    <h3>Rensa pass och Ta bort personal</h3>
+    <ul>
+        <li><strong>Ta bort någon från ett pass:</strong> Håll musen över passet och klicka på krysset <kbd>×</kbd>.</li>
+        <li><strong>Ta bort personal helt:</strong> Klicka på krysset bredvid namnet i listan till vänster. <em>Varning: Detta raderar personens konto och framtida pass!</em></li>
+    </ul>
+
+    <h3>📡 Publicera schemat</h3>
+    <p>Ändringar du gör i schemat är <strong>Dolda (Utkast)</strong> fram till att du publicerar dem. Det visas en gul varningsbanner om det finns opublicerade ändringar. När du är nöjd, klicka på den gröna knappen <span class="highlight">📡 Publicera</span> i botten av skärmen för att skicka utkastet till TV-skärmarna och de anställdas inloggning.</p>
+
+    <h2 id="franvaro">4. Sjukdom & Frånvaro</h2>
+    <p>Om någon blir sjuk eller ska ha semester ska du <strong>inte</strong> bara radera deras pass manuellt. Använd Frånvarohanteraren för att undvika schemakrockar!</p>
+    <ol>
+        <li>Gå till <strong>Inställningar ⚙️</strong> och klicka på fliken <strong>🏖️ Hantera Frånvaro</strong>.</li>
+        <li>Välj person, typ av frånvaro (Sjuk, VAB, Semester, Tjänstledig) och ett datumintervall.</li>
+        <li><strong>Krock-Systemet:</strong> När du sparar kommer systemet automatiskt att radera personen från alla pass de var inbokade på under den perioden.</li>
+        <li>I Planeringsvyn blir personens "piller" i sidopanelen nu rödmarkerat, och det är omöjligt att schemalägga personen av misstag under denna period.</li>
+    </ol>
+
+    <h2 id="installningar">5. Inställningar & Systemhantering</h2>
+    <p>Under Inställningar styr du hur systemet fungerar och ser ut.</p>
+    
+    <div class="box">
         <ul>
-            <li><strong>Datum & Vecka:</strong> Visas högst upp. Slår automatiskt om till nästa dag vid midnatt.</li>
-            <li><strong>Väder:</strong> Live-väder för den stad som är vald i inställningarna.</li>
-            <li><strong>Klocka:</strong> Digital klocka.</li>
-            <li><strong>Schema:</strong> Dagens bemanning för alla stationer.</li>
-            <li><strong>Rullande text:</strong> Ett informationsmeddelande i nederkant (om aktiverat i inställningarna).</li>
+            <li><strong>Allmänt & Meddelanden:</strong> Skriv en textrad som ska rulla på display-skärmen (t.ex. "Välkommen till jobbet!").</li>
+            <li><strong>Väder & Plats:</strong> Sök efter din stad för att visa lokalt väder uppe i hörnet på TV-skärmen.</li>
+            <li><strong>Utskrift & Export:</strong> Välj ett datumintervall och skriv ut schemat till en pappersskrivare (PDF), eller spara schemat som en färdig <strong>Bild / ZIP-fil</strong> som kan mailas eller läggas upp på intranätet.</li>
+            <li><strong>Platser & Pass:</strong> Skapa arbetsstationer (med färgkoder) och tider. Dra och släpp dem i listan för att byta ordning. Du kan även lägga in "Mellanrum" för att gruppera stationer snyggt på skärmen.</li>
+            <li><strong>Utseende & Tema:</strong> Välj hur TV-skärmen ska se ut. Du kan även skriva din egen CSS-kod för att skapa unika teman. Live-preview låter dig testa direkt i webbläsaren!</li>
         </ul>
-        
-        <h4>📱 Mobilanpassning</h4>
-        <p>Display-vyn är numera fullt mobilanpassad. Om personalen surfar in på Display-vyn via sina smartphones kommer schemat automatiskt att göras om till "smarta kort" som staplas på varandra, vilket gör det väldigt lättläst även på små skärmar.</p>
     </div>
 
-    <div id="settings">
-        <h3>3. Inställningar & Väder</h3>
-        <p>Under knappen <strong>⚙️ Inställningar</strong> kan du anpassa systemet. Även inställningssidan fungerar nu utmärkt att hantera direkt från mobilen.</p>
+    <h3>👥 Användare, Konton & Lösenord</h3>
+    <p>I fliken Användare & Konton skapar du inloggningar för din personal.</p>
+    <ul>
+        <li><strong>Visningsnamn:</strong> Det namn som visas externt på schemat (perfekt för smeknamn eller för att skilja på två "Johan").</li>
+        <li><strong>Återställa lösenord:</strong> Om en person har glömt sitt lösenord kan du som Admin redigera deras konto och skriva in ett nytt lösenord direkt.</li>
+        <li><strong>E-poståterställning:</strong> Om användaren har sin E-post inlagd på kontot kan de själva klicka på "Glömt lösenord" på inloggningssidan för att få en återställningslänk skickad till sig.</li>
+    </ul>
 
-        <h4>🌤️ Väder & Plats</h4>
-        <p>För att visa rätt väder på displayen:</p>
-        <ol>
-            <li>Gå till fliken <strong>Väder & Plats</strong>.</li>
-            <li>Skriv in namnet på din stad (t.ex. "Boden" eller "Kiruna") i sökfältet och tryck <strong>Sök</strong>.</li>
-            <li>Välj rätt alternativ i listan som dyker upp.</li>
-            <li>Klicka på <strong>Spara Inställningar</strong>.</li>
-        </ol>
-        <p>Displayen kommer nu automatiskt att hämta temperatur för den valda platsen.</p>
+    <h2 id="skarm">6. TV-skärm & Displaylänk</h2>
+    <p>Display-vyn är gjord för att rulla dygnet runt på en TV i lunchrummet. Den uppdaterar sig själv automatiskt var 15:e sekund.</p>
+    <ul>
+        <li>Gå till <strong>Inställningar ⚙️ > Allmänt & Meddelanden</strong>.</li>
+        <li>Skriv in er hemliga display-nyckel (konfigurerad av IT/Super-Admin) i fältet och klicka på "Skapa displaylänk".</li>
+        <li>En säker länk genereras som är låst till er specifika arbetsplats. Kopiera länken och klistra in den i webbläsaren på TV-skärmen.</li>
+    </ul>
 
-        <h4>🚉 Stationer & Pass</h4>
-        <p>Här kan du lägga till nya stationer (platser) eller ändra namnet på dem. Du kan också ändra färgerna på stationerna för att göra schemat tydligare. Du kan dra och släppa stationerna för att ändra ordningen, eller lägga till ett "mellanrum" för att gruppera stationer. Under "Arbetspass" ställer du in vilka tider som gäller (t.ex. Förmiddag, Eftermiddag, Natt).</p>
+    <h2 id="superadmin">7. Super-Admin (Flera arbetsplatser)</h2>
+    <p>Ett Super-Admin konto hanterar hela organisationen. Om ni t.ex. har en anläggning i Boden och en i Stockholm, vill de inte dela schema, inställningar och personal.</p>
+    <p>I inställningarna har en Super-Admin en orange flik som heter <strong>🏢 Arbetsplatser</strong>. Här kan du skapa hur många oberoende arbetsplatser som helst. Varje arbetsplats får en helt egen, isolerad miljö i databasen.</p>
+    <p>I Planeringsvyn får Super-Admins fram en rullgardin i toppmenyn där de snabbt kan hoppa mellan de olika anläggningarna för att administrera dem.</p>
+
+    <div style="text-align: center; margin-top: 50px; color: #888; border-top: 1px solid #ddd; padding-top: 20px;">
+        <em>STRUL Bemanningssystem v2.0 - Optimerad för molnet och PostgreSQL.</em>
     </div>
-
-    <div id="export">
-        <h3>4. Utskrift & Bildexport</h3>
-        <p>Ibland behöver man schemat på papper eller som en digital bild. Gå till fliken <strong>🖨️ Utskrift & Export</strong> i inställningarna.</p>
-        
-        <h4>Välj period</h4>
-        <p>Börja med att välja vilka dagar du vill exportera. Du kan välja "Idag", "Denna vecka" eller ett valfritt datumintervall i kalendrarna.</p>
-
-        <h4>🖨️ Skriv ut på papper</h4>
-        <p>Klickar du på "Skriv ut" genereras en speciell utskriftsversion av schemat som sparar bläck men behåller tydligheten.</p>
-        <div style="background: #e1f5fe; border: 1px solid #81d4fa; padding: 15px; border-radius: 6px; margin-top: 10px;">
-            <strong>Pro-tip för utskrift:</strong><br>
-            Systemet är skapat för att skrivas ut i <strong>A4 Liggande (Landscape)</strong>. En dag fyller exakt en A4-sida. Se till att din webbläsare är inställd på att <em>skriva ut bakgrundsgrafik/färger</em> så att stationernas färger kommer med!
-        </div>
-
-        <h4>📷 Spara som bild(er)</h4>
-        <p>Klickar du på "Spara som bild" laddar systemet ner schemat som högupplösta bilder (PNG). Du får en bildfil för varje vald dag. Dessa är perfekta att maila ut eller spara i ett gemensamt filsystem.</p>
-    </div>
-
-    <div id="themes">
-        <h3>5. Teman & Utseende</h3>
-        <p>Du kan ändra utseendet på både admin- och displaysidan.</p>
-        <ul>
-            <li>Gå till fliken <strong>Utseende & Tema</strong>.</li>
-            <li>Välj ett tema i listan "Aktivt tema".</li>
-            <li>Du ser direkt en <strong>förhandsgranskning</strong> till höger om hur det kommer se ut.</li>
-            <li>Klicka på <strong>Aktivera Tema</strong> för att spara.</li>
-        </ul>
-        <p>Du kan även skapa egna teman genom att skriva CSS-kod i editorn längst ner på sidan. Observera att ändring av tema påverkar display-skärmarna live.</p>
-    </div>
-
-    <div id="troubleshoot">
-        <h3>6. Felsökning</h3>
-        
-        <p><strong>Skärmen visar inte mina ändringar?</strong><br>
-        Kontrollera att du har klickat på den gröna knappen <strong>Publicera</strong> i admin-vyn. Har du en gul banner över schemat betyder det att du har osparade ändringar. Displayen uppdateras därefter med ca 15 sekunders fördröjning.</p>
-
-        <p><strong>Vädret visar fel stad eller uppdateras inte?</strong><br>
-        Gå till Inställningar > Väder & Plats och gör en ny sökning. Se till att välja rätt stad i listan och klicka på Spara.</p>
-        
-        <p><strong>Schemat ser konstigt ut på mobilen?</strong><br>
-        Både displayen och inställningarna har numera en anpassad mobilvy. Om det mot förmodan ser konstigt ut, testa att ladda om sidan (dra neråt på skärmen) eller töm webbläsarens cache.</p>
-
-        <p><strong>Jag kan inte logga in?</strong><br>
-        Kontrollera lösenordet. Om du glömt det, använd funktionen "Glömt lösenord" på inloggningssidan. En annan admin kan också byta ditt lösenord under fliken "Administratörer".</p>
-    </div>
-
-    <div style="margin-top:50px; text-align:center; color:#999; font-size:0.8rem;">
-        STRUL Bemanningssystem v1.3 • Uppdaterad manual
-    </div>
-
 </div>
 
 </body>
