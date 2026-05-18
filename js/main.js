@@ -1,18 +1,31 @@
+import { APP_VERSION } from './config.js';
 import { initLogin, initReset } from './auth.js';
 import { initAdmin } from './admin.js';
-import { initUser } from './user.js'; // <-- NY
+import { initUserView } from './user.js'; // FIX: Ändrat till initUserView
 import { initDisplay } from './display.js';
 import { initSettings } from './settings.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- NYTT: Skriv automatiskt ut versionen på alla sidor ---
+    document.querySelectorAll('.version-tag').forEach(tag => {
+        tag.innerText = APP_VERSION;
+    });
+
     const pageId = document.body.id;
     console.log("Startar modul för sida:", pageId);
 
-    if (pageId === 'page-login') initLogin();
-    else if (pageId === 'page-reset') initReset();
+    if (pageId === 'page-login') {
+        // Kontrollera om vi är på återställningssidan (som använder samma body-id)
+        if (window.location.pathname.includes('reset.html')) {
+            initReset();
+        } else {
+            initLogin();
+        }
+    }
+    else if (pageId === 'page-reset') initReset(); // Om du har ett unikt id för reset
     else if (pageId === 'page-admin') initAdmin();
-    else if (pageId === 'page-user') initUser(); // <-- NY
-    else if (pageId === 'page-display') initDisplay();
+    else if (pageId === 'page-user') initUserView(); // FIX: Ändrat till initUserView
+    else if (pageId === 'page-display' || document.body.classList.contains('display-view')) initDisplay();
     else if (pageId === 'page-settings') initSettings(); 
 });
 
@@ -23,9 +36,8 @@ window.openTab = function(tabId) {
         pane.style.display = 'none';
     });
     const allBtns = document.querySelectorAll('.tab-btn');
-    allBtns.forEach(btn => {
-        btn.classList.remove('active');
-    });
+    allBtns.forEach(btn => btn.classList.remove('active'));
+    
     const targetPane = document.getElementById(tabId);
     if (targetPane) {
         targetPane.classList.add('active');
