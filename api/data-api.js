@@ -138,6 +138,53 @@ export default async function handler(req, res) {
                     const signedToken = jwt.sign({ id: user.id, username: user.username, role: user.role, workplaceId: user.workplace_id }, JWT_SECRET, { expiresIn: '24h' });
                     return res.status(200).json({ success: true, token: signedToken, userId: user.id, name: user.display_name || user.first_name || user.username, role: user.role });
 
+                // NYTT: Återställning av lösenord (Begäran)
+                case 'request_reset':
+                    if (!email) return res.status(400).json({ error: "E-post saknas" });
+                    
+                    const emailRes = await pool.query('SELECT * FROM admin_users WHERE email = $1', [email]);
+                    const resetUser = emailRes.rows[0];
+                    
+                    // Returnera alltid success för att hackare inte ska kunna skanna vilka mail som finns
+                    if (!resetUser) return res.status(200).json({ success: true, message: "Länk skickad (om e-posten finns)." });
+
+                    // Skapa en säker JWT-token giltig i 1 timme
+                    const resetToken = jwt.sign(
+                        { id: resetUser.id, purpose: 'reset' }, 
+                        JWT_SECRET, 
+                        { expiresIn: '1h' }
+                    );
+                    
+                    // Bygg URL:en
+                    const protocol = req.headers.host.includes('localhost') ? 'http' : 'https';
+                    const resetLink = `${protocol}://${req.headers.host}/reset.html?token=${resetToken}`;
+                    
+                    // Skicka mail via Resend
+                    try {
+                        await resend.emails.send({
+                            from: 'STRUL <losen@info.strulapp.se>', // Byt till din verifierade domän i Resend
+                            to: email,
+                            subject: 'Återställ ditt lösenord - STRUL',
+                            html: `
+                                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+                                    <h2 style="color: #0277bd;">Återställ ditt lösenord</h2>
+                                    <p>Du har begärt att få återställa ditt lösenord för STRUL.</p>
+                                    <p>Klicka på knappen nedan för att välja ett nytt lösenord. Länken är giltig i 1 timme.</p>
+                                    <div style="margin: 30px 0;">
+                                        <a href="${resetLink}" style="background-color: #0277bd; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">Välj nytt lösenord</a>
+                                    </div>
+                                    <p style="font-size: 0.9em; color: #666;">Om knappen inte fungerar, klistra in denna länk i din webbläsare:<br>
+                                    <a href="${resetLink}">${resetLink}</a></p>
+                                </div>
+                            `
+                        });
+                        console.log("Återställningsmail skickat via Resend till:", email);
+                    } catch (mailError) {
+                        console.error("Kunde inte skicka mail via Resend:", mailError);
+                    }
+
+                    return res.status(200).json({ success: true });
+
                 case 'perform_reset':
                     if (!tokenBody || !newPassword) return res.status(400).json({ error: "Saknar data" });
                     const decoded = jwt.verify(tokenBody, JWT_SECRET);
