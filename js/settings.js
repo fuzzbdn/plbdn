@@ -344,6 +344,16 @@ function initAdminSettings() {
     const admRole = document.getElementById('newAdminRole');
     if (!admBtn) return;
 
+    // --- UX-SPÄRR: Ta bort Super-admin-valet helt för vanliga admins ---
+    const loggedInRole = (localStorage.getItem('userRole') || '').trim().toLowerCase();
+    if (admRole && loggedInRole !== 'superadmin') {
+        const superAdminOption = admRole.querySelector('option[value="superadmin"]');
+        if (superAdminOption) {
+            superAdminOption.remove(); // Raderar alternativet från rullgardinsmenyn
+        }
+    }
+    // ------------------------------------------------------------------
+
     const renderAdmins = async () => {
         let admins = await fetchData('admins');
         if (!Array.isArray(admins)) admins = []; 
