@@ -13,10 +13,8 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const SECRET_DISPLAY_KEY = process.env.DISPLAY_SECRET;
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Hjälpfunktion för att hantera databasfel snyggare
 function handleDatabaseError(res, error) {
     console.error("Databasfel:", error);
-    // 23505 är PostgreSQL-koden för "Unique violation" (t.ex. upptaget användarnamn)
     if (error.code === '23505') {
         return res.status(400).json({ success: false, error: "Detta värde (t.ex. användarnamn) finns redan." });
     }
@@ -32,7 +30,6 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') { return res.status(200).end(); }
 
     try {
-        // --- 1. AUTENTISERING ---
         const authHeader = req.headers.authorization;
         const token = authHeader && authHeader.split(' ')[1];
         
@@ -58,9 +55,6 @@ export default async function handler(req, res) {
             currentWorkplace = req.query.workplace || 'default'; 
         }
 
-        // ==========================================
-        // --- 2. GET: HÄMTA DATA ---
-        // ==========================================
         if (req.method === 'GET') {
             const { type, start_date, end_date } = req.query;
 
@@ -68,7 +62,6 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Åtkomst nekad." });
             }
 
-            // Använder Switch istället för massa if-satser för mycket renare kod
             switch (type) {
                 case 'workplaces':
                     if (currentUserRole !== 'superadmin') return res.status(403).json({ error: "Obehörig" });
@@ -115,19 +108,14 @@ export default async function handler(req, res) {
                     return res.status(200).json(schedRes.rows);
 
                 default:
-                    // app_storage (t.ex. settings)
                     const storeRes = await pool.query('SELECT data FROM app_storage WHERE key = $1 AND workplace_id = $2', [type, currentWorkplace]);
                     return res.status(200).json(storeRes.rows.length > 0 ? storeRes.rows[0].data : {});
             }
         }
 
-        // ==========================================
-        // --- 3. POST: SPARA / ÄNDRA DATA ---
-        // ==========================================
         if (req.method === 'POST') {
             const { action, payload, type, data, username, password, fullName, id, firstName, lastName, displayName, email, role, token: tokenBody, newPassword } = req.body;
 
-            // --- A. Publika actions (Inloggning & Återställning) ---
             switch (action) {
                 case 'login':
                     const userRes = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username || payload?.username]);
@@ -138,31 +126,19 @@ export default async function handler(req, res) {
                     const signedToken = jwt.sign({ id: user.id, username: user.username, role: user.role, workplaceId: user.workplace_id }, JWT_SECRET, { expiresIn: '24h' });
                     return res.status(200).json({ success: true, token: signedToken, userId: user.id, name: user.display_name || user.first_name || user.username, role: user.role });
 
-                // NYTT: Återställning av lösenord (Begäran)
                 case 'request_reset':
                     if (!email) return res.status(400).json({ error: "E-post saknas" });
-                    
                     const emailRes = await pool.query('SELECT * FROM admin_users WHERE email = $1', [email]);
                     const resetUser = emailRes.rows[0];
-                    
-                    // Returnera alltid success för att hackare inte ska kunna skanna vilka mail som finns
                     if (!resetUser) return res.status(200).json({ success: true, message: "Länk skickad (om e-posten finns)." });
 
-                    // Skapa en säker JWT-token giltig i 1 timme
-                    const resetToken = jwt.sign(
-                        { id: resetUser.id, purpose: 'reset' }, 
-                        JWT_SECRET, 
-                        { expiresIn: '1h' }
-                    );
-                    
-                    // Bygg URL:en
+                    const resetToken = jwt.sign({ id: resetUser.id, purpose: 'reset' }, JWT_SECRET, { expiresIn: '1h' });
                     const protocol = req.headers.host.includes('localhost') ? 'http' : 'https';
                     const resetLink = `${protocol}://${req.headers.host}/reset.html?token=${resetToken}`;
                     
-                    // Skicka mail via Resend
                     try {
                         await resend.emails.send({
-                            from: 'STRUL <losen@info.strulapp.se>', // Byt till din verifierade domän i Resend
+                            from: 'STRUL <losen@info.strulapp.se>', 
                             to: email,
                             subject: 'Återställ ditt lösenord - STRUL',
                             html: `
@@ -178,11 +154,9 @@ export default async function handler(req, res) {
                                 </div>
                             `
                         });
-                        console.log("Återställningsmail skickat via Resend till:", email);
                     } catch (mailError) {
                         console.error("Kunde inte skicka mail via Resend:", mailError);
                     }
-
                     return res.status(200).json({ success: true });
 
                 case 'perform_reset':
@@ -194,48 +168,38 @@ export default async function handler(req, res) {
                     return res.status(200).json({ success: true });
             }
 
-            // Säkerhetskontroll för alla nedanstående actions
             if (currentUserRole !== 'admin' && currentUserRole !== 'superadmin') {
                 return res.status(403).json({ error: "Behörighet saknas" });
             }
 
-            // --- B. Skyddade actions ---
             switch (action) {
-                
-                // 1. TRANSAKTION: Spara frånvaro och rensa krockande pass säkert
                 case 'save_absence':
                     if (!payload || !payload.user_id || !payload.start_date || !payload.end_date) {
                         return res.status(400).json({ error: "Saknar nödvändig data för frånvaro" });
                     }
-                    
-                    const client = await pool.connect(); // Öppna en dedikerad anslutning för transaktionen
+                    const client = await pool.connect(); 
                     try {
-                        await client.query('BEGIN'); // Starta transaktion
-                        
+                        await client.query('BEGIN'); 
                         await client.query(
                             'INSERT INTO absences (user_id, start_date, end_date, type, workplace_id) VALUES ($1, $2, $3, $4, $5)',
                             [payload.user_id, payload.start_date, payload.end_date, payload.type, currentWorkplace]
                         );
-                        
                         await client.query(`
                             DELETE FROM schedule_assignments 
                             WHERE user_id = $1 AND work_date >= $2 AND work_date <= $3 
                             AND station_id IN (SELECT id FROM stations WHERE workplace_id = $4)
                         `, [payload.user_id, payload.start_date, payload.end_date, currentWorkplace]);
-
-                        await client.query('COMMIT'); // Spara båda om inget fel skedde
+                        await client.query('COMMIT'); 
                         return res.status(200).json({ success: true });
                     } catch (err) {
-                        await client.query('ROLLBACK'); // Ångra allt om något gick snett
-                        throw err; // Kasta vidare till den allmänna catch-blocket
+                        await client.query('ROLLBACK'); 
+                        throw err; 
                     } finally {
-                        client.release(); // Släpp tillbaka anslutningen till poolen
+                        client.release(); 
                     }
 
-                // 2. PARALLELLA LOOPAR (Promise.all) för prestanda (N+1 Problemet)
                 case 'reorder_stations':
                     if (!Array.isArray(payload)) return res.status(400).json({ error: "Payload måste vara en array" });
-                    // Skickar iväg alla uppdateringar till databasen samtidigt istället för en i taget
                     const stationQueries = payload.map((statId, i) => 
                         pool.query('UPDATE stations SET sort_order=$1 WHERE id=$2 AND workplace_id=$3', [i, statId, currentWorkplace])
                     );
@@ -250,7 +214,6 @@ export default async function handler(req, res) {
                     await Promise.all(shiftQueries);
                     return res.status(200).json({ success: true });
 
-                // Standard CRUD-operationer
                 case 'delete_absence':
                     await pool.query('DELETE FROM absences WHERE id = $1 AND workplace_id = $2', [payload.id, currentWorkplace]);
                     return res.status(200).json({ success: true });
@@ -278,21 +241,29 @@ export default async function handler(req, res) {
                     return res.status(200).json({ success: true });
 
                 case 'add_admin':
-                    let newHashedPass = null; // Standard är inget lösenord (NULL)
-                    
-                    // Om ett lösenord faktiskt har fyllts i, hasha det
-                    if (password && password.trim().length > 0) {
-                        newHashedPass = await bcrypt.hash(password, 10);
+                    if (role === 'superadmin' && currentUserRole !== 'superadmin') {
+                        return res.status(403).json({ error: "Endast en Super-Admin kan skapa andra Super-Admin-konton." });
                     }
                     
+                    let newHashedPass = null; 
+                    if (password && password.trim().length >= 6) {
+                        newHashedPass = await bcrypt.hash(password, 10);
+                    } else if (password && password.trim().length > 0 && password.trim().length < 6) {
+                        return res.status(400).json({ error: "Lösenordet måste vara minst 6 tecken långt om det anges." });
+                    }
+
                     await pool.query('INSERT INTO admin_users (username, password, first_name, last_name, display_name, email, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', 
                         [username, newHashedPass, firstName || displayName || username, lastName, displayName, email, role, currentWorkplace]);
-                    
                     return res.status(200).json({ success: true });
 
                 case 'edit_admin':
+                    if (role === 'superadmin' && currentUserRole !== 'superadmin') {
+                        return res.status(403).json({ error: "Endast en Super-Admin kan tilldela Super-Admin-rollen." });
+                    }
+
                     const safeFirstName = firstName || displayName || username;
                     if (password && password.trim() !== "") {
+                        if (password.trim().length < 6) return res.status(400).json({ error: "Lösenordet måste vara minst 6 tecken långt." });
                         const updatedHash = await bcrypt.hash(password, 10);
                         await pool.query('UPDATE admin_users SET username=$1, password=$2, first_name=$3, last_name=$4, display_name=$5, email=$6, role=$7 WHERE id=$8 AND workplace_id=$9',
                             [username, updatedHash, safeFirstName, lastName, displayName, email, role, id, currentWorkplace]);
@@ -346,18 +317,22 @@ export default async function handler(req, res) {
                     return res.status(200).json({ success: true });
             }
 
-            // Om anropet inte var en 'action' utan en direkt sparning av typ ('settings', 'message')
+            // SÄKERHET: Vitlista för lagringsnycklar så att ingen kan skriva över kritisk data
             if (type && data) {
+                const allowedStorageKeys = ['settings', 'message', 'custom_themes', 'weather_config'];
+                if (!allowedStorageKeys.includes(type)) {
+                    return res.status(400).json({ error: "Ogiltig datatyp för lagring" });
+                }
+                
                 await pool.query('DELETE FROM app_storage WHERE key = $1 AND workplace_id = $2', [type, currentWorkplace]);
                 await pool.query('INSERT INTO app_storage (key, data, workplace_id) VALUES ($1, $2, $3)', [type, JSON.stringify(data), currentWorkplace]);
                 return res.status(200).json({ success: true });
             }
         }
         
-        return res.status(405).end(); // Method Not Allowed
+        return res.status(405).end(); 
 
     } catch (e) { 
-        // Skicka felet till vår nya specifika felhanterare
         return handleDatabaseError(res, e);
     }
 }
