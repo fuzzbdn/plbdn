@@ -278,9 +278,16 @@ export default async function handler(req, res) {
                     return res.status(200).json({ success: true });
 
                 case 'add_admin':
-                    const newHashedPass = await bcrypt.hash(password, 10);
+                    let newHashedPass = null; // Standard är inget lösenord (NULL)
+                    
+                    // Om ett lösenord faktiskt har fyllts i, hasha det
+                    if (password && password.trim().length > 0) {
+                        newHashedPass = await bcrypt.hash(password, 10);
+                    }
+                    
                     await pool.query('INSERT INTO admin_users (username, password, first_name, last_name, display_name, email, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', 
                         [username, newHashedPass, firstName || displayName || username, lastName, displayName, email, role, currentWorkplace]);
+                    
                     return res.status(200).json({ success: true });
 
                 case 'edit_admin':
