@@ -11,7 +11,6 @@ let editingStationId = null, editingShiftId = null, editingAdminId = null;
 export async function initSettings() {
     const role = (localStorage.getItem('userRole') || '').trim().toLowerCase();
     
-    // Säkerställ att endast admin/superadmin kommer åt sidan
     if (role !== 'admin' && role !== 'superadmin') {
         window.location.href = "user.html";
         return;
@@ -20,7 +19,6 @@ export async function initSettings() {
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (localStorage.getItem('adminName') || 'Admin');
     document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = "index.html"; };
 
-    // Super-admin specifika flikar
     if (role === 'superadmin') {
         const tabBtn = document.getElementById('tabBtnWorkplaces');
         if (tabBtn) tabBtn.style.display = 'flex';
@@ -30,7 +28,6 @@ export async function initSettings() {
     try {
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // Ladda ner all data från databasen parallellt för snabbhet
         const [settings, themes, stations, shifts, scheduleData, users, absences] = await Promise.all([
             fetchData('settings'),
             fetchData('custom_themes'),
@@ -56,25 +53,28 @@ export async function initSettings() {
             });
         }
 
-        // Initiera alla flikar
-        initGeneralTab();
+        // Passa med inställningarna till flikarna
+        initGeneralTab(settings);
         initWeatherTab();
         initStationsSettings();
         initShiftsSettings();
         initAdminSettings();
         initAbsenceSettings(); 
         initThemeTab(settings);
-        initExportTab(); 
+        initExportTab(settings); 
+        initStatisticsTab();
+
     } catch (e) {
         showToast("Kunde inte ladda alla inställningar", "error");
     }
 }
 
-function initGeneralTab() {
+function initGeneralTab(currentSettings) {
     const msgIn = document.getElementById('displayMessageInput');
     const msgCheck = document.getElementById('showMessageCheckbox');
     const saveBtn = document.getElementById('saveMessageBtn');
     
+    // Meddelande-logik
     if (msgIn && msgCheck) {
         fetchData('message').then(msg => {
             if (msg) {
@@ -89,6 +89,25 @@ function initGeneralTab() {
                 showToast("Meddelande uppdaterat!", "success");
             };
         }
+    }
+
+    // NYTT: Hantera inställning för export-dagar
+    const daysInp = document.getElementById('exportDefaultDaysInput');
+    const saveMiscBtn = document.getElementById('saveMiscSettingsBtn');
+    
+    if (daysInp) {
+        // Standard är 1 dag (idag) om inget annat sparats
+        daysInp.value = currentSettings?.exportDefaultDays || 1; 
+    }
+    
+    if (saveMiscBtn) {
+        saveMiscBtn.onclick = async () => {
+            const currentSets = await fetchData('settings') || {};
+            // Tvinga till ett heltal, lägst 1
+            currentSets.exportDefaultDays = Math.max(1, parseInt(daysInp.value) || 1);
+            await saveData('settings', currentSets);
+            showToast("Inställning sparad!", "success");
+        };
     }
 }
 
@@ -125,7 +144,6 @@ function initStationsSettings() {
     const stCancel = document.getElementById('cancelStationEditBtn');
     if (!stName) return;
 
-    // Drag-and-drop logik för sortering av platser
     let dragSrcStationEl = null;
     window.handleStationDragStart = (e) => {
         dragSrcStationEl = e.target.closest('.draggable-station');
@@ -247,7 +265,6 @@ function initShiftsSettings() {
     const shCancel = document.getElementById('cancelShiftEditBtn');
     if (!shLabel) return;
 
-    // Drag-and-drop logik för sortering av pass
     let dragSrcShiftEl = null;
     window.handleShiftDragStart = (e) => {
         dragSrcShiftEl = e.target.closest('.draggable-shift');
@@ -352,7 +369,6 @@ function initAdminSettings() {
     
     if (!admBtn) return;
 
-    // --- UX-SPÄRR: Ta bort Super-admin-valet helt för vanliga admins ---
     const loggedInRole = (localStorage.getItem('userRole') || '').trim().toLowerCase();
     if (admRole && loggedInRole !== 'superadmin') {
         const superAdminOption = admRole.querySelector('option[value="superadmin"]');
@@ -360,7 +376,6 @@ function initAdminSettings() {
             superAdminOption.remove(); 
         }
     }
-    // ------------------------------------------------------------------
 
     const renderAdmins = async (skipFetch = false) => {
         if (!skipFetch) {
@@ -795,7 +810,7 @@ function initThemeTab(currentSettings) {
     }
 }
 
-function initExportTab() {
+function initExportTab(currentSettings) {
     const btnToday = document.getElementById('btnSetToday');
     const btnWeek = document.getElementById('btnSetWeek');
     const btnNextWeek = document.getElementById('btnSetNextWeek');
@@ -811,6 +826,14 @@ function initExportTab() {
         startInp.value = new Date(start.getTime() - tz).toISOString().split('T')[0];
         endInp.value = new Date(end.getTime() - tz).toISOString().split('T')[0];
     };
+
+    // --- NYTT: Läs in och applicera standardval för antal dagar ---
+    // Standard är 1 om fältet är tomt eller ogiltigt.
+    const defaultDays = parseInt(currentSettings?.exportDefaultDays) || 1;
+    const dStart = new Date();
+    const dEnd = new Date(dStart);
+    dEnd.setDate(dStart.getDate() + defaultDays - 1); 
+    setDates(dStart, dEnd);
 
     if(btnToday) btnToday.onclick = () => {
         const d = new Date();
@@ -830,8 +853,6 @@ function initExportTab() {
         const end = new Date(start); end.setDate(start.getDate() + 6);
         setDates(start, end);
     };
-
-    if(btnWeek) btnWeek.click();
 
     function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
         const iso = getISOWeek(dateObj);
@@ -1078,10 +1099,107 @@ function initExportTab() {
     if(imgBtn) imgBtn.onclick = () => runExport('image');
 }
 
-// --- GLOBAL EVENT LISTENER FÖR DISPLAYLÄNK (Event Delegation) ---
-// Säkerställer att knapparna fungerar oavsett om sidan uppdateras dynamiskt
-document.addEventListener('click', function(e) {
+function initStatisticsTab() {
+    const btn = document.getElementById('loadStatsBtn');
+    const startInp = document.getElementById('statsStartDate');
+    const endInp = document.getElementById('statsEndDate');
+    const resultsContainer = document.getElementById('statsResultsContainer');
+
+    if (!btn || !startInp || !endInp || !resultsContainer) return;
+
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     
+    startInp.value = new Date(firstDay.getTime() - (firstDay.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    endInp.value = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+    btn.onclick = async () => {
+        const sDate = startInp.value;
+        const eDate = endInp.value;
+
+        if (!sDate || !eDate) return showToast("Välj både start- och slutdatum", "error");
+        if (sDate > eDate) return showToast("Startdatum kan inte vara efter slutdatum", "error");
+
+        resultsContainer.innerHTML = '<div style="padding: 30px; text-align: center; font-weight: bold; color: #0277bd;">Hämtar och beräknar data... ⏳</div>';
+
+        try {
+            const scheduleData = await fetchData('schedule', `&start_date=${sDate}&end_date=${eDate}`);
+            
+            if (!scheduleData || scheduleData.length === 0) {
+                resultsContainer.innerHTML = '<div style="padding: 30px; text-align: center; color: #666;">Inga schemalagda pass hittades under denna period.</div>';
+                return;
+            }
+
+            const publishedShifts = scheduleData.filter(s => s.is_published);
+
+            if (publishedShifts.length === 0) {
+                resultsContainer.innerHTML = '<div style="padding: 30px; text-align: center; color: #666;">Inga <b>publicerade</b> pass hittades under denna period.</div>';
+                return;
+            }
+
+            const userStats = {};
+            
+            publishedShifts.forEach(shift => {
+                const uid = shift.user_id;
+                
+                if (!userStats[uid]) {
+                    userStats[uid] = {
+                        name: shift.display_name || `${shift.first_name || ''} ${shift.last_name || ''}`.trim() || 'Okänd Användare',
+                        totalShifts: 0,
+                        stations: {}
+                    };
+                }
+                
+                userStats[uid].totalShifts++; 
+
+                const stationName = globalStations.find(s => s.id === shift.station_id)?.name || 'Borttagen plats';
+                userStats[uid].stations[stationName] = (userStats[uid].stations[stationName] || 0) + 1;
+            });
+
+            const sortedUsers = Object.values(userStats).sort((a, b) => b.totalShifts - a.totalShifts);
+
+            let html = `
+            <div style="display:flex; padding: 12px 15px; background: #f5f5f5; border-bottom: 2px solid #ddd; font-weight: 800; font-size: 0.85rem; color: #555; text-transform: uppercase; position: sticky; top: 0; z-index: 10;">
+                <div style="flex: 2;">Personal</div>
+                <div style="flex: 1; text-align: center;">Totalt Antal Pass</div>
+                <div style="flex: 3; padding-left: 15px;">Fördelning av platser</div>
+            </div>
+            `;
+
+            sortedUsers.forEach(user => {
+                const topStations = Object.entries(user.stations)
+                    .map(([name, count]) => `<span style="display:inline-block; background:#e3f2fd; color:#0277bd; padding:2px 6px; border-radius:4px; font-size:0.8rem; margin: 2px 4px 2px 0;">${escapeHTML(name)}: <b>${count}</b></span>`)
+                    .join(' ');
+                    
+                html += `
+                <div class="admin-list-item" style="display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #eee; background: #fff; transition: background 0.2s;">
+                    <div style="flex: 2; font-weight: bold; color: #333; font-size: 1rem;">
+                        ${escapeHTML(user.name)}
+                    </div>
+                    <div style="flex: 1; text-align: center; font-size: 1.3rem; font-weight: 800; color: #0277bd;">
+                        ${user.totalShifts}
+                    </div>
+                    <div style="flex: 3; padding-left: 15px;">
+                        ${topStations}
+                    </div>
+                </div>`;
+            });
+
+            html += `
+            <div style="padding: 15px; background: #e8f5e9; text-align: right; font-weight: bold; color: #2e7d32; border-top: 2px solid #c8e6c9;">
+                Totalt publicerade pass i perioden: ${publishedShifts.length} st
+            </div>`;
+
+            resultsContainer.innerHTML = html;
+
+        } catch (err) {
+            console.error("Fel vid statistik:", err);
+            resultsContainer.innerHTML = '<div style="padding: 30px; text-align: center; color: #d32f2f; font-weight:bold;">Kunde inte hämta statistik. Kontrollera din anslutning.</div>';
+        }
+    };
+}
+
+document.addEventListener('click', function(e) {
     if (e.target && e.target.id === 'generateDisplayLinkBtn') {
         e.preventDefault();
         
