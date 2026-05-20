@@ -53,15 +53,14 @@ export async function initSettings() {
             });
         }
 
-        initGeneralTab();
+        // Passa med inställningarna till flikarna
+        initGeneralTab(settings);
         initWeatherTab();
         initStationsSettings();
         initShiftsSettings();
         initAdminSettings();
         initAbsenceSettings(); 
         initThemeTab(settings);
-        
-        // Passa settings-objektet till exportfliken så vi kan läsa standardvärdet
         initExportTab(settings); 
         initStatisticsTab();
 
@@ -70,11 +69,12 @@ export async function initSettings() {
     }
 }
 
-function initGeneralTab() {
+function initGeneralTab(currentSettings) {
     const msgIn = document.getElementById('displayMessageInput');
     const msgCheck = document.getElementById('showMessageCheckbox');
     const saveBtn = document.getElementById('saveMessageBtn');
     
+    // Meddelande-logik
     if (msgIn && msgCheck) {
         fetchData('message').then(msg => {
             if (msg) {
@@ -89,6 +89,25 @@ function initGeneralTab() {
                 showToast("Meddelande uppdaterat!", "success");
             };
         }
+    }
+
+    // NYTT: Hantera inställning för export-dagar
+    const daysInp = document.getElementById('exportDefaultDaysInput');
+    const saveMiscBtn = document.getElementById('saveMiscSettingsBtn');
+    
+    if (daysInp) {
+        // Standard är 1 dag (idag) om inget annat sparats
+        daysInp.value = currentSettings?.exportDefaultDays || 1; 
+    }
+    
+    if (saveMiscBtn) {
+        saveMiscBtn.onclick = async () => {
+            const currentSets = await fetchData('settings') || {};
+            // Tvinga till ett heltal, lägst 1
+            currentSets.exportDefaultDays = Math.max(1, parseInt(daysInp.value) || 1);
+            await saveData('settings', currentSets);
+            showToast("Inställning sparad!", "success");
+        };
     }
 }
 
@@ -350,7 +369,6 @@ function initAdminSettings() {
     
     if (!admBtn) return;
 
-    // --- UX-SPÄRR: Ta bort Super-admin-valet helt för vanliga admins ---
     const loggedInRole = (localStorage.getItem('userRole') || '').trim().toLowerCase();
     if (admRole && loggedInRole !== 'superadmin') {
         const superAdminOption = admRole.querySelector('option[value="superadmin"]');
@@ -800,27 +818,22 @@ function initExportTab(currentSettings) {
     const endInp = document.getElementById('printEndDate');
     const printBtn = document.getElementById('doPrintBtn');
     const imgBtn = document.getElementById('doImageBtn');
-    
-    const exportDefaultSelect = document.getElementById('exportDefaultSelect'); 
 
     if(!startInp || !endInp) return;
-
-    if (exportDefaultSelect) {
-        exportDefaultSelect.value = currentSettings?.exportDefault || 'today';
-        
-        exportDefaultSelect.onchange = async (e) => {
-            const currentSets = await fetchData('settings') || {};
-            currentSets.exportDefault = e.target.value;
-            await saveData('settings', currentSets);
-            showToast("Standardurval sparat!", "success");
-        };
-    }
 
     const setDates = (start, end) => {
         const tz = start.getTimezoneOffset() * 60000;
         startInp.value = new Date(start.getTime() - tz).toISOString().split('T')[0];
         endInp.value = new Date(end.getTime() - tz).toISOString().split('T')[0];
     };
+
+    // --- NYTT: Läs in och applicera standardval för antal dagar ---
+    // Standard är 1 om fältet är tomt eller ogiltigt.
+    const defaultDays = parseInt(currentSettings?.exportDefaultDays) || 1;
+    const dStart = new Date();
+    const dEnd = new Date(dStart);
+    dEnd.setDate(dStart.getDate() + defaultDays - 1); 
+    setDates(dStart, dEnd);
 
     if(btnToday) btnToday.onclick = () => {
         const d = new Date();
@@ -840,12 +853,6 @@ function initExportTab(currentSettings) {
         const end = new Date(start); end.setDate(start.getDate() + 6);
         setDates(start, end);
     };
-
-    const defaultMode = currentSettings?.exportDefault || 'today'; 
-    
-    if (defaultMode === 'week' && btnWeek) btnWeek.click();
-    else if (defaultMode === 'next_week' && btnNextWeek) btnNextWeek.click();
-    else if (btnToday) btnToday.click(); 
 
     function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
         const iso = getISOWeek(dateObj);
