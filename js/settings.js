@@ -60,9 +60,9 @@ export async function initSettings() {
         initAdminSettings();
         initAbsenceSettings(); 
         initThemeTab(settings);
-        initExportTab(); 
         
-        // Initiera den nya statistikfliken
+        // Passa settings-objektet till exportfliken så vi kan läsa standardvärdet
+        initExportTab(settings); 
         initStatisticsTab();
 
     } catch (e) {
@@ -358,7 +358,6 @@ function initAdminSettings() {
             superAdminOption.remove(); 
         }
     }
-    // ------------------------------------------------------------------
 
     const renderAdmins = async (skipFetch = false) => {
         if (!skipFetch) {
@@ -793,7 +792,7 @@ function initThemeTab(currentSettings) {
     }
 }
 
-function initExportTab() {
+function initExportTab(currentSettings) {
     const btnToday = document.getElementById('btnSetToday');
     const btnWeek = document.getElementById('btnSetWeek');
     const btnNextWeek = document.getElementById('btnSetNextWeek');
@@ -801,8 +800,21 @@ function initExportTab() {
     const endInp = document.getElementById('printEndDate');
     const printBtn = document.getElementById('doPrintBtn');
     const imgBtn = document.getElementById('doImageBtn');
+    
+    const exportDefaultSelect = document.getElementById('exportDefaultSelect'); 
 
     if(!startInp || !endInp) return;
+
+    if (exportDefaultSelect) {
+        exportDefaultSelect.value = currentSettings?.exportDefault || 'today';
+        
+        exportDefaultSelect.onchange = async (e) => {
+            const currentSets = await fetchData('settings') || {};
+            currentSets.exportDefault = e.target.value;
+            await saveData('settings', currentSets);
+            showToast("Standardurval sparat!", "success");
+        };
+    }
 
     const setDates = (start, end) => {
         const tz = start.getTimezoneOffset() * 60000;
@@ -829,7 +841,11 @@ function initExportTab() {
         setDates(start, end);
     };
 
-    if(btnWeek) btnWeek.click();
+    const defaultMode = currentSettings?.exportDefault || 'today'; 
+    
+    if (defaultMode === 'week' && btnWeek) btnWeek.click();
+    else if (defaultMode === 'next_week' && btnNextWeek) btnNextWeek.click();
+    else if (btnToday) btnToday.click(); 
 
     function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
         const iso = getISOWeek(dateObj);
@@ -1084,7 +1100,6 @@ function initStatisticsTab() {
 
     if (!btn || !startInp || !endInp || !resultsContainer) return;
 
-    // Sätt default datum (Första dagen denna månad fram till idag)
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     
@@ -1101,7 +1116,6 @@ function initStatisticsTab() {
         resultsContainer.innerHTML = '<div style="padding: 30px; text-align: center; font-weight: bold; color: #0277bd;">Hämtar och beräknar data... ⏳</div>';
 
         try {
-            // Vi utnyttjar API:et för att hämta schemat för den valda perioden
             const scheduleData = await fetchData('schedule', `&start_date=${sDate}&end_date=${eDate}`);
             
             if (!scheduleData || scheduleData.length === 0) {
@@ -1109,7 +1123,6 @@ function initStatisticsTab() {
                 return;
             }
 
-            // Filtrera fram bara de pass som faktiskt är publicerade
             const publishedShifts = scheduleData.filter(s => s.is_published);
 
             if (publishedShifts.length === 0) {
@@ -1117,13 +1130,11 @@ function initStatisticsTab() {
                 return;
             }
 
-            // Mapp för att lagra statistiken per person
             const userStats = {};
             
             publishedShifts.forEach(shift => {
                 const uid = shift.user_id;
                 
-                // Om personen inte finns i vår statistiklista än, skapa upp dem
                 if (!userStats[uid]) {
                     userStats[uid] = {
                         name: shift.display_name || `${shift.first_name || ''} ${shift.last_name || ''}`.trim() || 'Okänd Användare',
@@ -1132,17 +1143,14 @@ function initStatisticsTab() {
                     };
                 }
                 
-                userStats[uid].totalShifts++; // Öka totala antalet pass
+                userStats[uid].totalShifts++; 
 
-                // Registrera vilken station/plats personen jobbat på
                 const stationName = globalStations.find(s => s.id === shift.station_id)?.name || 'Borttagen plats';
                 userStats[uid].stations[stationName] = (userStats[uid].stations[stationName] || 0) + 1;
             });
 
-            // Gör om objektet till en array och sortera så att den som jobbat mest hamnar högst upp
             const sortedUsers = Object.values(userStats).sort((a, b) => b.totalShifts - a.totalShifts);
 
-            // Generera HTML-tabellen
             let html = `
             <div style="display:flex; padding: 12px 15px; background: #f5f5f5; border-bottom: 2px solid #ddd; font-weight: 800; font-size: 0.85rem; color: #555; text-transform: uppercase; position: sticky; top: 0; z-index: 10;">
                 <div style="flex: 2;">Personal</div>
@@ -1152,7 +1160,6 @@ function initStatisticsTab() {
             `;
 
             sortedUsers.forEach(user => {
-                // Bygg en liten sträng av platserna (t.ex. "Kassan: 5, Lagret: 2")
                 const topStations = Object.entries(user.stations)
                     .map(([name, count]) => `<span style="display:inline-block; background:#e3f2fd; color:#0277bd; padding:2px 6px; border-radius:4px; font-size:0.8rem; margin: 2px 4px 2px 0;">${escapeHTML(name)}: <b>${count}</b></span>`)
                     .join(' ');
@@ -1171,7 +1178,6 @@ function initStatisticsTab() {
                 </div>`;
             });
 
-            // Slutligen, lägg till total sammanfattning längst ner
             html += `
             <div style="padding: 15px; background: #e8f5e9; text-align: right; font-weight: bold; color: #2e7d32; border-top: 2px solid #c8e6c9;">
                 Totalt publicerade pass i perioden: ${publishedShifts.length} st
@@ -1186,10 +1192,7 @@ function initStatisticsTab() {
     };
 }
 
-// --- GLOBAL EVENT LISTENER FÖR DISPLAYLÄNK (Event Delegation) ---
-// Säkerställer att knapparna fungerar oavsett om sidan uppdateras dynamiskt
 document.addEventListener('click', function(e) {
-    
     if (e.target && e.target.id === 'generateDisplayLinkBtn') {
         e.preventDefault();
         
