@@ -58,15 +58,20 @@ export default async function handler(req, res) {
         if (req.method === 'GET') {
             const { type, start_date, end_date, include_config } = req.query;
 
-            // 1. VERCEL EDGE CACHING: Spara svaret i Vercels minne i 15 sekunder.
-            res.setHeader('Cache-Control', 's-maxage=15, stale-while-revalidate=30');
+            // --- UPPDATERAD CACHE-LOGIK ---
+            // Cacha BARA displayens anrop (display_bundle) för att spara på databasen.
+            // Allt annat (som admin-panelens anrop för schema, personal, etc) måste alltid vara 100% live.
+            if (type === 'display_bundle') {
+                res.setHeader('Cache-Control', 's-maxage=15, stale-while-revalidate=30');
+            } else {
+                res.setHeader('Cache-Control', 'no-store, max-age=0');
+            }
 
             if (!isAuthorized && !['settings', 'custom_themes'].includes(type) && type !== 'display_bundle') {
                 return res.status(401).json({ error: "Åtkomst nekad." });
             }
 
             switch (type) {
-                // 2. NY ENDPOINT FÖR DISPLAYEN (Batching)
                 case 'display_bundle':
                     if(!start_date || !end_date) return res.status(400).json({error: "Saknar datum"});
                     
