@@ -25,8 +25,7 @@ let hasUnpublishedChanges = false;
 /**
  * Hämtar det mest relevanta namnet för en användare.
  * Prioriterar display_name, därefter för/efternamn, sist username.
- * 
- * @param {Object} u - Användarobjektet från databasen.
+ * * @param {Object} u - Användarobjektet från databasen.
  * @returns {string} Det formaterade namnet.
  */
 function getFriendlyName(u) {
@@ -38,8 +37,7 @@ function getFriendlyName(u) {
 /**
  * Räknar ut datum för alla dagar i den vecka som det angivna datumet tillhör.
  * Veckan börjar alltid på en måndag.
- * 
- * @param {string} dateStr - Datumsträng (YYYY-MM-DD).
+ * * @param {string} dateStr - Datumsträng (YYYY-MM-DD).
  * @returns {string[]} Array med 7 datumsträngar (Måndag till Söndag).
  */
 function getDatesOfWeek(dateStr) {
@@ -63,8 +61,7 @@ function getDatesOfWeek(dateStr) {
 
 /**
  * Kontrollerar om en användare har registrerad frånvaro ett specifikt datum.
- * 
- * @param {number|string} userId - Användarens ID.
+ * * @param {number|string} userId - Användarens ID.
  * @param {string} dateStr - Datum att kontrollera (YYYY-MM-DD).
  * @returns {Object|undefined} Frånvaroobjektet om personen är frånvarande, annars undefined.
  */
@@ -206,6 +203,15 @@ export async function initAdmin() {
     // 7. Event Delegation för schemabehållaren (hanterar klick/skrivande i rutorna)
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
+        
+        // --- NY KOD: Förhindra att rutan sparas av misstag ---
+        scheduleContainer.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('clear-btn') || e.target.classList.contains('add-user-btn')) {
+                e.preventDefault(); 
+            }
+        });
+        // -----------------------------------------------------
+
         scheduleContainer.addEventListener('click', async (e) => {
             // Ta bort från pass (X-knappen)
             if (e.target.classList.contains('clear-btn')) {
