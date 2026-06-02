@@ -204,13 +204,56 @@ export async function initAdmin() {
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
         
-        // --- NY KOD: Förhindra att rutan sparas av misstag ---
+        // --- Förhindra att rutan sparas av misstag ---
         scheduleContainer.addEventListener('mousedown', (e) => {
             if (e.target.classList.contains('clear-btn') || e.target.classList.contains('add-user-btn')) {
                 e.preventDefault(); 
             }
         });
-        // -----------------------------------------------------
+        
+        // --- Tangentbordsnavigering för autokomplettering (Pil upp/ner & Enter) ---
+        scheduleContainer.addEventListener('keydown', (e) => {
+            if (e.target.classList.contains('shift-text')) {
+                const dropdown = document.getElementById('autocomplete-dropdown');
+                if (!dropdown) return;
+
+                const items = dropdown.querySelectorAll('.dropdown-item');
+                if (items.length === 0) return;
+
+                let currentIndex = Array.from(items).findIndex(item => item.classList.contains('active-item'));
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault(); 
+                    currentIndex = (currentIndex < items.length - 1) ? currentIndex + 1 : 0;
+                    updateDropdownHighlight(items, currentIndex);
+                } 
+                else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    currentIndex = (currentIndex > 0) ? currentIndex - 1 : items.length - 1;
+                    updateDropdownHighlight(items, currentIndex);
+                } 
+                else if (e.key === 'Enter') {
+                    e.preventDefault(); 
+                    if (currentIndex >= 0 && currentIndex < items.length) {
+                        const event = new MouseEvent('mousedown');
+                        items[currentIndex].dispatchEvent(event);
+                    }
+                }
+                else if (e.key === 'Escape') {
+                    closeAutocomplete();
+                }
+            }
+        });
+
+        // Hjälpfunktion för att flytta färgmarkeringen i listan
+        function updateDropdownHighlight(items, index) {
+            items.forEach(item => item.classList.remove('active-item'));
+            if (index >= 0 && index < items.length) {
+                items[index].classList.add('active-item');
+                items[index].scrollIntoView({ block: "nearest" }); 
+            }
+        }
+        // -------------------------------------------------------------------------
 
         scheduleContainer.addEventListener('click', async (e) => {
             // Ta bort från pass (X-knappen)
@@ -249,7 +292,7 @@ export async function initAdmin() {
                     const stationId = e.target.getAttribute('data-station');
                     const shiftId = e.target.getAttribute('data-shift');
                     await syncShiftTextToDB(date, stationId, shiftId, e.target.innerText);
-                }, 150); // Liten delay så att ev. klick på autokomplettering hinner registreras
+                }, 150); 
             }
         });
     }
@@ -535,9 +578,17 @@ function showAutocomplete(element) {
     dropdown.style.top = 'calc(100% + 2px)'; 
     dropdown.style.left = '0';
 
+    let isFirst = true;
+
     matches.forEach(match => {
         const item = document.createElement('div');
         item.className = 'dropdown-item';
+        
+        if (isFirst) {
+            item.classList.add('active-item'); // Markera det första namnet som standard
+            isFirst = false;
+        }
+
         item.innerText = getFriendlyName(match);
         
         item.onmousedown = (evt) => { 
