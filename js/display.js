@@ -62,9 +62,17 @@ export async function initDisplay() {
 
             // Om vi bad om inställningarna, spara ner dem i cache-minnet
             if (fetchConfig) {
-                cachedConfig.settings = bundleData.settings;
-                cachedConfig.message = bundleData.message;
-                cachedConfig.weatherConfig = bundleData.weather_config;
+                // NYTT: Säkerhets-tolkare ifall databasen returnerar en textsträng istället för objekt
+                const parseSafe = (data) => {
+                    if (typeof data === 'string') {
+                        try { return JSON.parse(data); } catch(e) { return {}; }
+                    }
+                    return data || {};
+                };
+
+                cachedConfig.settings = parseSafe(bundleData.settings);
+                cachedConfig.message = parseSafe(bundleData.message);
+                cachedConfig.weatherConfig = parseSafe(bundleData.weather_config);
                 cachedConfig.lastConfigFetch = now.getTime();
             }
 
@@ -82,12 +90,12 @@ export async function initDisplay() {
             }
 
             // 2. SNAPSHOT-LOGIK: Kolla om datan är ändrad sedan förra sekunden
-            // Vi skapar en sträng av schemat, platser, pass och meddelande
             const currentSnapshot = JSON.stringify({
                 sch: globalScheduleData, 
                 st: globalStations, 
                 sh: globalShifts, 
-                msg: cachedConfig.message?.text
+                msg: cachedConfig.message?.text,
+                showMsg: cachedConfig.message?.show // NYTT: Nu känner displayen av om du togglat checkboxen
             });
 
             // Avbryt uppritningen om ingenting har ändrats (Sparar CPU & undviker blinkningar)
@@ -105,7 +113,6 @@ export async function initDisplay() {
 
                 renderGrid();
 
-                const msgBox = document.getElementById('messageBox'); // Antar att denna existerar i HTML eller Marquee
                 const mqContainer = document.getElementById('marqueeContainer');
                 if (mqContainer) {
                     if (cachedConfig.message && cachedConfig.message.show && cachedConfig.message.text) {
