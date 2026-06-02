@@ -423,7 +423,7 @@
 .dropdown-item:last-child {
     border-bottom: none;
 }
-.dropdown-item:hover {
+.dropdown-item:hover, .dropdown-item.active-item {
     background: #f0f8ff;
     color: #0277bd;
     font-weight: 600;

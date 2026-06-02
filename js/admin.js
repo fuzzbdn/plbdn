@@ -25,8 +25,7 @@ let hasUnpublishedChanges = false;
 /**
  * Hämtar det mest relevanta namnet för en användare.
  * Prioriterar display_name, därefter för/efternamn, sist username.
- * 
- * @param {Object} u - Användarobjektet från databasen.
+ * * @param {Object} u - Användarobjektet från databasen.
  * @returns {string} Det formaterade namnet.
  */
 function getFriendlyName(u) {
@@ -38,8 +37,7 @@ function getFriendlyName(u) {
 /**
  * Räknar ut datum för alla dagar i den vecka som det angivna datumet tillhör.
  * Veckan börjar alltid på en måndag.
- * 
- * @param {string} dateStr - Datumsträng (YYYY-MM-DD).
+ * * @param {string} dateStr - Datumsträng (YYYY-MM-DD).
  * @returns {string[]} Array med 7 datumsträngar (Måndag till Söndag).
  */
 function getDatesOfWeek(dateStr) {
@@ -63,8 +61,7 @@ function getDatesOfWeek(dateStr) {
 
 /**
  * Kontrollerar om en användare har registrerad frånvaro ett specifikt datum.
- * 
- * @param {number|string} userId - Användarens ID.
+ * * @param {number|string} userId - Användarens ID.
  * @param {string} dateStr - Datum att kontrollera (YYYY-MM-DD).
  * @returns {Object|undefined} Frånvaroobjektet om personen är frånvarande, annars undefined.
  */
@@ -206,6 +203,58 @@ export async function initAdmin() {
     // 7. Event Delegation för schemabehållaren (hanterar klick/skrivande i rutorna)
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
+        
+        // --- Förhindra att rutan sparas av misstag ---
+        scheduleContainer.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('clear-btn') || e.target.classList.contains('add-user-btn')) {
+                e.preventDefault(); 
+            }
+        });
+        
+        // --- Tangentbordsnavigering för autokomplettering (Pil upp/ner & Enter) ---
+        scheduleContainer.addEventListener('keydown', (e) => {
+            if (e.target.classList.contains('shift-text')) {
+                const dropdown = document.getElementById('autocomplete-dropdown');
+                if (!dropdown) return;
+
+                const items = dropdown.querySelectorAll('.dropdown-item');
+                if (items.length === 0) return;
+
+                let currentIndex = Array.from(items).findIndex(item => item.classList.contains('active-item'));
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault(); 
+                    currentIndex = (currentIndex < items.length - 1) ? currentIndex + 1 : 0;
+                    updateDropdownHighlight(items, currentIndex);
+                } 
+                else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    currentIndex = (currentIndex > 0) ? currentIndex - 1 : items.length - 1;
+                    updateDropdownHighlight(items, currentIndex);
+                } 
+                else if (e.key === 'Enter') {
+                    e.preventDefault(); 
+                    if (currentIndex >= 0 && currentIndex < items.length) {
+                        const event = new MouseEvent('mousedown');
+                        items[currentIndex].dispatchEvent(event);
+                    }
+                }
+                else if (e.key === 'Escape') {
+                    closeAutocomplete();
+                }
+            }
+        });
+
+        // Hjälpfunktion för att flytta färgmarkeringen i listan
+        function updateDropdownHighlight(items, index) {
+            items.forEach(item => item.classList.remove('active-item'));
+            if (index >= 0 && index < items.length) {
+                items[index].classList.add('active-item');
+                items[index].scrollIntoView({ block: "nearest" }); 
+            }
+        }
+        // -------------------------------------------------------------------------
+
         scheduleContainer.addEventListener('click', async (e) => {
             // Ta bort från pass (X-knappen)
             if (e.target.classList.contains('clear-btn')) {
@@ -243,7 +292,7 @@ export async function initAdmin() {
                     const stationId = e.target.getAttribute('data-station');
                     const shiftId = e.target.getAttribute('data-shift');
                     await syncShiftTextToDB(date, stationId, shiftId, e.target.innerText);
-                }, 150); // Liten delay så att ev. klick på autokomplettering hinner registreras
+                }, 150); 
             }
         });
     }
@@ -529,9 +578,17 @@ function showAutocomplete(element) {
     dropdown.style.top = 'calc(100% + 2px)'; 
     dropdown.style.left = '0';
 
+    let isFirst = true;
+
     matches.forEach(match => {
         const item = document.createElement('div');
         item.className = 'dropdown-item';
+        
+        if (isFirst) {
+            item.classList.add('active-item'); // Markera det första namnet som standard
+            isFirst = false;
+        }
+
         item.innerText = getFriendlyName(match);
         
         item.onmousedown = (evt) => { 

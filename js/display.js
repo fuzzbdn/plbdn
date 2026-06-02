@@ -48,28 +48,32 @@ export async function initDisplay() {
             const tzoffset = now.getTimezoneOffset() * 60000;
             const todayStr = (new Date(now.getTime() - tzoffset)).toISOString().slice(0, 10);
             
-            // 1. OPTIMERING: Hämta bara inställningar/väder-plats var 5:e minut (300 000 ms)
-            // Vi hämtar ALLTID schema, platser och tider.
+            // 1. OPTIMERING: Kolla om vi behöver hämta inställningar (var 5:e minut)
             const fetchConfig = (now.getTime() - cachedConfig.lastConfigFetch > 300000);
             
-            let stations, shifts, scheduleRaw;
+            // 2. Hämta allting från vår nya batch-endpoint i ett enda svep!
+            const bundleData = await fetchData('display_bundle', `&start_date=${todayStr}&end_date=${todayStr}&include_config=${fetchConfig}`);
             
+            if (!bundleData) return; // Avbryt om servern inte svarar
+
+            let stations = bundleData.stations;
+            let shifts = bundleData.shifts;
+            let scheduleRaw = bundleData.schedule;
+
+            // Om vi bad om inställningarna, spara ner dem i cache-minnet
             if (fetchConfig) {
-                [stations, shifts, scheduleRaw, cachedConfig.settings, cachedConfig.message, cachedConfig.weatherConfig] = await Promise.all([
-                    fetchData('stations'),
-                    fetchData('shifts'),
-                    fetchData('schedule', `&start_date=${todayStr}&end_date=${todayStr}`),
-                    fetchData('settings'),
-                    fetchData('message'),
-                    fetchData('weather_config')
-                ]);
+                // NYTT: Säkerhets-tolkare ifall databasen returnerar en textsträng istället för objekt
+                const parseSafe = (data) => {
+                    if (typeof data === 'string') {
+                        try { return JSON.parse(data); } catch(e) { return {}; }
+                    }
+                    return data || {};
+                };
+
+                cachedConfig.settings = parseSafe(bundleData.settings);
+                cachedConfig.message = parseSafe(bundleData.message);
+                cachedConfig.weatherConfig = parseSafe(bundleData.weather_config);
                 cachedConfig.lastConfigFetch = now.getTime();
-            } else {
-                [stations, shifts, scheduleRaw] = await Promise.all([
-                    fetchData('stations'),
-                    fetchData('shifts'),
-                    fetchData('schedule', `&start_date=${todayStr}&end_date=${todayStr}`)
-                ]);
             }
 
             globalStations = Array.isArray(stations) ? stations : [];
@@ -86,12 +90,12 @@ export async function initDisplay() {
             }
 
             // 2. SNAPSHOT-LOGIK: Kolla om datan är ändrad sedan förra sekunden
-            // Vi skapar en sträng av schemat, platser, pass och meddelande
             const currentSnapshot = JSON.stringify({
                 sch: globalScheduleData, 
                 st: globalStations, 
                 sh: globalShifts, 
-                msg: cachedConfig.message?.text
+                msg: cachedConfig.message?.text,
+                showMsg: cachedConfig.message?.show // NYTT: Nu känner displayen av om du togglat checkboxen
             });
 
             // Avbryt uppritningen om ingenting har ändrats (Sparar CPU & undviker blinkningar)
@@ -109,7 +113,6 @@ export async function initDisplay() {
 
                 renderGrid();
 
-                const msgBox = document.getElementById('messageBox'); // Antar att denna existerar i HTML eller Marquee
                 const mqContainer = document.getElementById('marqueeContainer');
                 if (mqContainer) {
                     if (cachedConfig.message && cachedConfig.message.show && cachedConfig.message.text) {
@@ -166,7 +169,7 @@ export async function initDisplay() {
     
     // Starta cykeln
     await updateDisplay();
-    setInterval(updateDisplay, 15000);
+    setInterval(updateDisplay, 60000); // 60 sekunder
     
     // Klockan uppdateras separat för att vara exakt på sekunden
     setInterval(() => {

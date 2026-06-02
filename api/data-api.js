@@ -56,13 +56,60 @@ export default async function handler(req, res) {
         }
 
         if (req.method === 'GET') {
-            const { type, start_date, end_date } = req.query;
+            const { type, start_date, end_date, include_config } = req.query;
 
-            if (!isAuthorized && !['settings', 'custom_themes'].includes(type)) {
+            // --- UPPDATERAD CACHE-LOGIK ---
+            // Cacha BARA displayens anrop (display_bundle) för att spara på databasen.
+            // Allt annat (som admin-panelens anrop för schema, personal, etc) måste alltid vara 100% live.
+            if (type === 'display_bundle') {
+                res.setHeader('Cache-Control', 's-maxage=15, stale-while-revalidate=30');
+            } else {
+                res.setHeader('Cache-Control', 'no-store, max-age=0');
+            }
+
+            if (!isAuthorized && !['settings', 'custom_themes'].includes(type) && type !== 'display_bundle') {
                 return res.status(401).json({ error: "Åtkomst nekad." });
             }
 
             switch (type) {
+                case 'display_bundle':
+                    if(!start_date || !end_date) return res.status(400).json({error: "Saknar datum"});
+                    
+                    const queries = [
+                        pool.query('SELECT * FROM stations WHERE workplace_id = $1 ORDER BY sort_order ASC', [currentWorkplace]),
+                        pool.query('SELECT * FROM shifts WHERE workplace_id = $1 ORDER BY sort_order ASC', [currentWorkplace]),
+                        pool.query(`
+                            SELECT sa.id, sa.work_date, sa.user_id, sa.station_id, sa.shift_id, sa.is_published,
+                                   u.first_name, u.last_name, u.display_name
+                            FROM schedule_assignments sa
+                            JOIN admin_users u ON sa.user_id = u.id
+                            JOIN stations s ON sa.station_id = s.id
+                            WHERE s.workplace_id = $1 AND sa.work_date >= $2 AND sa.work_date <= $3
+                            ORDER BY sa.id ASC`, [currentWorkplace, start_date, end_date])
+                    ];
+
+                    if (include_config === 'true') {
+                        queries.push(pool.query('SELECT data FROM app_storage WHERE key = $1 AND workplace_id = $2', ['settings', currentWorkplace]));
+                        queries.push(pool.query('SELECT data FROM app_storage WHERE key = $1 AND workplace_id = $2', ['message', currentWorkplace]));
+                        queries.push(pool.query('SELECT data FROM app_storage WHERE key = $1 AND workplace_id = $2', ['weather_config', currentWorkplace]));
+                    }
+
+                    const results = await Promise.all(queries);
+                    
+                    const responseData = {
+                        stations: results[0].rows,
+                        shifts: results[1].rows,
+                        schedule: results[2].rows
+                    };
+
+                    if (include_config === 'true') {
+                        responseData.settings = results[3].rows.length > 0 ? results[3].rows[0].data : {};
+                        responseData.message = results[4].rows.length > 0 ? results[4].rows[0].data : {};
+                        responseData.weather_config = results[5].rows.length > 0 ? results[5].rows[0].data : {};
+                    }
+
+                    return res.status(200).json(responseData);
+
                 case 'workplaces':
                     if (currentUserRole !== 'superadmin') return res.status(403).json({ error: "Obehörig" });
                     const wpRes = await pool.query('SELECT * FROM workplaces ORDER BY name ASC');
