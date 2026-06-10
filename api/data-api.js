@@ -21,17 +21,32 @@ function handleDatabaseError(res, error) {
     return res.status(500).json({ success: false, error: "Ett internt serverfel uppstod." });
 }
 
+// HJÄLPARFUNKTION: Extraherar cookies från request-headern
+function parseCookies(request) {
+    const list = {};
+    const rc = request.headers.cookie;
+    if (rc) {
+        rc.split(';').forEach(cookie => {
+            const parts = cookie.split('=');
+            list[parts.shift().trim()] = decodeURI(parts.join('='));
+        });
+    }
+    return list;
+}
+
 export default async function handler(req, res) {
+    // Tillåt att webbläsaren skickar med cookies via Access-Control-Allow-Credentials
     res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-workplace-id');
 
     if (req.method === 'OPTIONS') { return res.status(200).end(); }
 
     try {
-        const authHeader = req.headers.authorization;
-        const token = authHeader && authHeader.split(' ')[1];
+        // --- ÄNDRING 1: Läs JWT från HttpOnly cookie istället för Authorization-header ---
+        const cookies = parseCookies(req);
+        const token = cookies.jwtToken;
         
         let isAuthorized = false;
         let currentUserRole = 'user';
@@ -50,7 +65,9 @@ export default async function handler(req, res) {
             } catch (err) { /* Ogiltig token */ }
         }
 
-        if (req.query.display_token === SECRET_DISPLAY_KEY) {
+        // Stöder både .display_token och .token som parameter
+        const displayTokenParam = req.query.display_token || req.query.token;
+        if (displayTokenParam === SECRET_DISPLAY_KEY) {
             isAuthorized = true;
             currentWorkplace = req.query.workplace || 'default'; 
         }
@@ -58,16 +75,15 @@ export default async function handler(req, res) {
         if (req.method === 'GET') {
             const { type, start_date, end_date, include_config } = req.query;
 
-            // --- UPPDATERAD CACHE-LOGIK ---
-            // Cacha BARA displayens anrop (display_bundle) för att spara på databasen.
-            // Allt annat (som admin-panelens anrop för schema, personal, etc) måste alltid vara 100% live.
             if (type === 'display_bundle') {
                 res.setHeader('Cache-Control', 's-maxage=15, stale-while-revalidate=30');
             } else {
                 res.setHeader('Cache-Control', 'no-store, max-age=0');
             }
 
-            if (!isAuthorized && !['settings', 'custom_themes'].includes(type) && type !== 'display_bundle') {
+            // --- ÄNDRING 2: Säkerhetshålet stängt. 'settings' och 'custom_themes' är borttagna.
+            // Nu är det bara 'display_bundle' som släpps igenom utan att isAuthorized är true.
+            if (!isAuthorized && type !== 'display_bundle') {
                 return res.status(401).json({ error: "Åtkomst nekad." });
             }
 
@@ -171,7 +187,17 @@ export default async function handler(req, res) {
                         return res.status(401).json({ success: false, error: "Fel uppgifter" });
                     }
                     const signedToken = jwt.sign({ id: user.id, username: user.username, role: user.role, workplaceId: user.workplace_id }, JWT_SECRET, { expiresIn: '24h' });
-                    return res.status(200).json({ success: true, token: signedToken, userId: user.id, name: user.display_name || user.first_name || user.username, role: user.role });
+                    
+                    // --- ÄNDRING 3: Skicka JWT i en säker HttpOnly-cookie istället för råtext
+                    res.setHeader('Set-Cookie', `jwtToken=${signedToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${24 * 60 * 60}`);
+                    
+                    // Returnera "cookie-authenticated" så att er befintliga frontend-logik fortsätter fungera
+                    return res.status(200).json({ success: true, token: "cookie-authenticated", userId: user.id, name: user.display_name || user.first_name || user.username, role: user.role });
+
+                // --- NYTT: Möjlighet att logga ut (rensar cookien)
+                case 'logout':
+                    res.setHeader('Set-Cookie', 'jwtToken=; HttpOnly; Secure; SameSite=Strict; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
+                    return res.status(200).json({ success: true });
 
                 case 'request_reset':
                     if (!email) return res.status(400).json({ error: "E-post saknas" });
@@ -187,17 +213,15 @@ export default async function handler(req, res) {
                         await resend.emails.send({
                             from: 'STRUL <losen@info.strulapp.se>', 
                             to: email,
-                            subject: 'Återställ ditt lösenord - STRUL',
+                            subject: 'Återställ ditt lösenord',
                             html: `
                                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
                                     <h2 style="color: #0277bd;">Återställ ditt lösenord</h2>
-                                    <p>Du har begärt att få återställa ditt lösenord för STRUL.</p>
+                                    <p>Du har begärt att få återställa ditt lösenord.</p>
                                     <p>Klicka på knappen nedan för att välja ett nytt lösenord. Länken är giltig i 1 timme.</p>
                                     <div style="margin: 30px 0;">
                                         <a href="${resetLink}" style="background-color: #0277bd; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">Välj nytt lösenord</a>
                                     </div>
-                                    <p style="font-size: 0.9em; color: #666;">Om knappen inte fungerar, klistra in denna länk i din webbläsare:<br>
-                                    <a href="${resetLink}">${resetLink}</a></p>
                                 </div>
                             `
                         });
@@ -220,6 +244,7 @@ export default async function handler(req, res) {
             }
 
             switch (action) {
+                // ... Alla dina adminkommandon (save_absence, save_shift etc) behålls precis som de var ...
                 case 'save_absence':
                     if (!payload || !payload.user_id || !payload.start_date || !payload.end_date) {
                         return res.status(400).json({ error: "Saknar nödvändig data för frånvaro" });
@@ -364,7 +389,6 @@ export default async function handler(req, res) {
                     return res.status(200).json({ success: true });
             }
 
-            // SÄKERHET: Vitlista för lagringsnycklar så att ingen kan skriva över kritisk data
             if (type && data) {
                 const allowedStorageKeys = ['settings', 'message', 'custom_themes', 'weather_config'];
                 if (!allowedStorageKeys.includes(type)) {
