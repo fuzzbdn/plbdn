@@ -1,6 +1,9 @@
 import { fetchData } from '../service.js';
 import { showToast } from '../utils.js';
 import { setAllInitialData } from '../store.js';
+import { initStationsTab } from './stations.js';
+import { initShiftsTab } from './shifts.js';
+
 
 // Importera logiken för varje enskild flik
 import { initGeneralTab } from './general.js';
@@ -61,8 +64,8 @@ export async function initSettings() {
         
         // Här kommer resten sen:
         // initWeatherTab();
-        // initStationsTab();
-        // initShiftsTab();
+        initStationsTab();
+        initShiftsTab();
         // initAdminsTab();
         // initAbsencesTab();
         // initThemeTab(settings);
