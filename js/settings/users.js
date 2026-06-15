@@ -123,12 +123,12 @@ export function initUsersTab() {
     };
     if(admCancel) admCancel.onclick = resetAdm;
 
-    admBtn.onclick = async () => {
+admBtn.onclick = async () => {
         if (!admUser.value) return showToast("Användarnamn krävs", "error");
         const action = editingAdminId ? 'edit_admin' : 'add_admin';
         
         const payload = {
-            action, id: editingAdminId,
+            action, id: editingAdminId, // Action låg inbakat här förut
             displayName: admDisp.value.trim(),
             firstName: admFirst.value.trim(),
             lastName: admLast.value.trim(),
@@ -138,7 +138,7 @@ export function initUsersTab() {
             role: admRole.value
         };
 
-        // Här används rå fetch istället för apiAction på grund av endpointens uppbyggnad i originalet
+        // Här används rå fetch istället för apiAction...
         const res = await fetch('/api/data-api', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
