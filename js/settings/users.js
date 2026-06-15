@@ -128,7 +128,7 @@ admBtn.onclick = async () => {
         const action = editingAdminId ? 'edit_admin' : 'add_admin';
         
         const payload = {
-            action, id: editingAdminId, // Action låg inbakat här förut
+            id: editingAdminId,
             displayName: admDisp.value.trim(),
             firstName: admFirst.value.trim(),
             lastName: admLast.value.trim(),
@@ -138,32 +138,30 @@ admBtn.onclick = async () => {
             role: admRole.value
         };
 
-        // Här används rå fetch istället för apiAction...
-        const res = await fetch('/api/data-api', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        // FIX: Använd konsekvent apiAction!
+        const res = await apiAction(action, payload);
 
-        if (res.ok) {
+        if (res.success) {
             showToast("Användare sparad!", "success");
-            resetAdm(); renderAdmins(); 
+            resetAdm(); 
+            renderAdmins(); 
         } else {
-            const err = await res.json();
-            showToast(err.error || "Fel vid sparande", "error");
+            showToast(res.error || "Fel vid sparande", "error");
         }
     };
 
     window.deleteAdmin = async (u) => {
-        if (await showConfirm(`Ta bort kontot @${u}?`)) {
-            await fetch('/api/data-api', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'remove_admin', username: u })
-            });
+        if (await showConfirm(`Ta bort kontot @${escapeHTML(u)}?`)) {
+            // FIX: Använd konsekvent apiAction för radering
+            const res = await apiAction('remove_admin', { username: u });
             
-            if (searchInput) searchInput.value = '';
-            renderAdmins(); 
+            if (res.success) {
+                showToast("Användare raderad", "info");
+                if (searchInput) searchInput.value = '';
+                renderAdmins(); 
+            } else {
+                showToast("Kunde inte radera användare", "error");
+            }
         }
     };
     
