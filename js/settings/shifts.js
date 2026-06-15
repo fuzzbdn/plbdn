@@ -38,8 +38,8 @@ export function initShiftsTab() {
                     <span style="color:#666; margin-left:5px;">(${escapeHTML(sh.time_range || '')})</span>
                 </div>
                 <div class="list-actions-right">
-                    <button class="list-btn" onclick="startEditShift(${escapeHTML(String(sh.id))})">✏️</button>
-                    <button class="list-btn" onclick="deleteShift(${escapeHTML(String(sh.id))})">🗑️</button>
+                    <button class="list-btn" onclick="startEditShift(${sh.id})">✏️</button>
+                    <button class="list-btn" onclick="deleteShift(${sh.id})">🗑️</button>
                 </div>
             </div>`;
         }).join('');
