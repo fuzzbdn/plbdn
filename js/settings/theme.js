@@ -73,9 +73,11 @@ export function initThemeTab(currentSettings) {
             
             currentShifts.forEach(sh => {
                 const targetDateStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                // FIX: Använd det nya nyckelformatet från store.js (inklusive datumet)
+                
+                // FIX: Använd det nya uppdaterade formatet på nyckeln som matchar store.js
                 const assignedRows = scheduleData[`${targetDateStr}_${st.id}_${sh.id}`] || [];
-                // (Eftersom nyckeln redan filtrerar på datum, behöver vi bara kolla is_published)
+                
+                // FIX: Datumet är redan filtrerat i nyckeln, så vi behöver bara kolla is_published
                 const validRows = assignedRows.filter(r => r.is_published);
                 
                 const val = validRows.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
@@ -193,7 +195,6 @@ export function initThemeTab(currentSettings) {
     }
     populate();
     
-    // Fix för att iframen ska skala om sig korrekt när man klickar in på fliken
     const tabBtn = document.querySelector('button[onclick="openTab(\'tab-theme\')"]');
     if(tabBtn) {
         tabBtn.addEventListener('click', () => {
