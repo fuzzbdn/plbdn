@@ -31,11 +31,15 @@ export default async function handler(req, res) {
                 return res.status(403).json({ error: "Behörighet saknas" });
             }
 
-            const { action, payload, username, password, fullName, id, firstName, lastName, displayName, email, role } = req.body;
+            const { action, payload } = req.body;
+            
+            // FIX: Extrahera variablerna från payload (fallback till req.body ifall äldre anrop görs)
+            const data = payload || req.body;
+            const { username, password, fullName, id, firstName, lastName, displayName, email, role } = data;
 
             switch (action) {
                 case 'quick_add_user':
-                    const nameToAdd = payload?.fullName || fullName;
+                    const nameToAdd = data.fullName || fullName;
                     if (!nameToAdd) return res.status(400).json({ error: "Namn saknas" });
                     const parts = nameToAdd.trim().split(' ');
                     await pool.query('INSERT INTO admin_users (username, first_name, last_name, display_name, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6)', 
@@ -43,7 +47,7 @@ export default async function handler(req, res) {
                     return res.status(200).json({ success: true });
 
                 case 'remove_user':
-                    const nameToRemove = payload?.fullName || fullName;
+                    const nameToRemove = data.fullName || fullName;
                     await pool.query(`DELETE FROM admin_users WHERE (display_name = $1 OR TRIM(CONCAT(first_name, ' ', COALESCE(last_name, ''))) = $1 OR username = $1) AND workplace_id = $2`, 
                         [nameToRemove.trim(), auth.workplace]);
                     return res.status(200).json({ success: true });
