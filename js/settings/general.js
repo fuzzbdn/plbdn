@@ -41,4 +41,40 @@ export function initGeneralTab(currentSettings) {
             showToast("Inställning sparad!", "success");
         };
     }
+
+    // 3. Hantering av Displaylänk
+    const generateDisplayLinkBtn = document.getElementById('generateDisplayLinkBtn');
+    const displaySecretInput = document.getElementById('displaySecretInput');
+    const displayLinkContainer = document.getElementById('displayLinkContainer');
+    const generatedDisplayLink = document.getElementById('generatedDisplayLink');
+    const copyDisplayLinkBtn = document.getElementById('copyDisplayLinkBtn');
+
+    if (generateDisplayLinkBtn) {
+        generateDisplayLinkBtn.onclick = () => {
+            const secret = displaySecretInput.value.trim();
+            
+            if (!secret) {
+                showToast("Du måste ange en display-nyckel!", "error");
+                return;
+            }
+
+            // Skapa länken baserat på nuvarande domän och nyckeln
+            const currentUrl = window.location.origin;
+            // Antar att display.html tar emot nyckeln via URL-parametern ?key=
+            const link = `${currentUrl}/display.html?key=${encodeURIComponent(secret)}`;
+            
+            generatedDisplayLink.value = link;
+            displayLinkContainer.style.display = 'block';
+            showToast("Länk genererad!", "success");
+        };
+    }
+
+    // Kod för att kopiera länken när man klickar på "Kopiera länk"
+    if (copyDisplayLinkBtn) {
+        copyDisplayLinkBtn.onclick = () => {
+            generatedDisplayLink.select();
+            document.execCommand('copy');
+            showToast("Länken kopierades till urklipp!", "success");
+        };
+    }
 }
