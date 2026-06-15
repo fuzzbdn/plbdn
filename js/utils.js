@@ -125,3 +125,47 @@ export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersW
     html += '</div>';
     return html;
 }
+
+/**
+ * Generisk Drag-and-Drop-hanterare för listor (Event Delegation).
+ * @param {HTMLElement} container - DOM-elementet som håller listan.
+ * @param {string} itemSelector - CSS-selektor för de objekt som får dras (t.ex. '.draggable-item').
+ * @param {Function} onReorder - Callback som körs när ett objekt släpps (får oldIndex och newIndex).
+ */
+export function setupListDragAndDrop(container, itemSelector, onReorder) {
+    if (!container) return;
+    let dragSrcEl = null;
+
+    container.addEventListener('dragstart', (e) => {
+        dragSrcEl = e.target.closest(itemSelector);
+        if (dragSrcEl) {
+            e.dataTransfer.effectAllowed = 'move';
+            dragSrcEl.classList.add('dragging');
+        }
+    });
+
+    container.addEventListener('dragover', (e) => {
+        if (e.target.closest(itemSelector)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+    });
+
+    container.addEventListener('dragend', () => {
+        if (dragSrcEl) dragSrcEl.classList.remove('dragging');
+    });
+
+    container.addEventListener('drop', (e) => {
+        e.stopPropagation();
+        const targetEl = e.target.closest(itemSelector);
+        
+        if (dragSrcEl && targetEl && dragSrcEl !== targetEl) {
+            const oldIndex = parseInt(dragSrcEl.dataset.index);
+            const newIndex = parseInt(targetEl.dataset.index);
+            if (!isNaN(oldIndex) && !isNaN(newIndex)) {
+                onReorder(oldIndex, newIndex);
+            }
+        }
+        if (dragSrcEl) dragSrcEl.classList.remove('dragging');
+    });
+}
