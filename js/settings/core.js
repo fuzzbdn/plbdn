@@ -3,7 +3,8 @@ import { showToast } from '../utils.js';
 import { setAllInitialData } from '../store.js';
 import { initStationsTab } from './stations.js';
 import { initShiftsTab } from './shifts.js';
-
+import { initUsersTab } from './users.js';
+import { initAbsencesTab } from './absences.js';
 
 // Importera logiken för varje enskild flik
 import { initGeneralTab } from './general.js';
@@ -67,7 +68,8 @@ export async function initSettings() {
         initStationsTab();
         initShiftsTab();
         // initAdminsTab();
-        // initAbsencesTab();
+        initUsersTab();
+        initAbsencesTab();
         // initThemeTab(settings);
         // initExportTab(settings);
         // initStatisticsTab();
