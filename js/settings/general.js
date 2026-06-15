@@ -83,11 +83,17 @@ export function initGeneralTab(currentSettings) {
                 return;
             }
 
-            // Skapa länken baserat på nuvarande domän och nyckeln
+            // Skapa länken baserat på nuvarande domän, sökväg, arbetsplats och nyckeln
             const currentUrl = window.location.origin;
-            
+            const workplace = localStorage.getItem('activeWorkplace') || 'default';
+
+            // Räkna ut korrekt bassökväg (fungerar även om appen ligger i en undermapp)
+            let pathname = window.location.pathname;
+            pathname = pathname.replace('settings.html', '').replace('admin.html', '');
+            if (!pathname.endsWith('/')) pathname += '/';
+
             // Vi använder ?token= eftersom display.js förväntar sig det!
-            const link = `${currentUrl}/display.html?token=${encodeURIComponent(secret)}`;
+            const link = `${currentUrl}${pathname}display.html?token=${encodeURIComponent(secret)}&workplace=${encodeURIComponent(workplace)}`;
             
             generatedDisplayLink.value = link;
             displayLinkContainer.style.display = 'block';
@@ -99,8 +105,24 @@ export function initGeneralTab(currentSettings) {
     if (copyDisplayLinkBtn) {
         copyDisplayLinkBtn.onclick = () => {
             generatedDisplayLink.select();
-            document.execCommand('copy');
-            showToast("Länken kopierades till urklipp!", "success");
+            generatedDisplayLink.setSelectionRange(0, 99999);
+
+            const fallbackCopy = () => {
+                try {
+                    document.execCommand('copy');
+                    showToast("Länken kopierades till urklipp!", "success");
+                } catch {
+                    showToast("Kunde inte kopiera länken automatiskt", "error");
+                }
+            };
+
+            if (navigator.clipboard?.writeText) {
+                navigator.clipboard.writeText(generatedDisplayLink.value)
+                    .then(() => showToast("Länken kopierades till urklipp!", "success"))
+                    .catch(fallbackCopy);
+            } else {
+                fallbackCopy();
+            }
         };
     }
 }
