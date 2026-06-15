@@ -60,8 +60,9 @@ export function initGeneralTab(currentSettings) {
 
             // Skapa länken baserat på nuvarande domän och nyckeln
             const currentUrl = window.location.origin;
-            // Antar att display.html tar emot nyckeln via URL-parametern ?key=
-            const link = `${currentUrl}/display.html?key=${encodeURIComponent(secret)}`;
+            
+            // Vi använder ?token= eftersom display.js förväntar sig det!
+            const link = `${currentUrl}/display.html?token=${encodeURIComponent(secret)}`;
             
             generatedDisplayLink.value = link;
             displayLinkContainer.style.display = 'block';
