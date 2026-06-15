@@ -1,6 +1,6 @@
 import { APP_VERSION } from './config.js';
 import { initLogin, initReset } from './auth.js';
-import { initAdmin } from './admin.js';
+import { initAdmin } from './admin/core.js';
 import { initUserView } from './user.js';
 import { initDisplay } from './display.js';
 
