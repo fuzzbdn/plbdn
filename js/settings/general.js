@@ -2,7 +2,9 @@ import { fetchData, saveData } from '../service.js';
 import { showToast } from '../utils.js';
 
 export function initGeneralTab(currentSettings) {
+    // ==========================================
     // 1. Hantering av Meddelanden på display-skärmen
+    // ==========================================
     const msgIn = document.getElementById('displayMessageInput');
     const msgCheck = document.getElementById('showMessageCheckbox');
     const saveBtn = document.getElementById('saveMessageBtn');
@@ -23,7 +25,9 @@ export function initGeneralTab(currentSettings) {
         }
     }
 
+    // ==========================================
     // 2. Hantering av export-dagar
+    // ==========================================
     const daysInp = document.getElementById('exportDefaultDaysInput');
     const saveMiscBtn = document.getElementById('saveMiscSettingsBtn');
     
@@ -36,13 +40,34 @@ export function initGeneralTab(currentSettings) {
         saveMiscBtn.onclick = async () => {
             const currentSets = await fetchData('settings') || {};
             // Tvinga till ett heltal, lägst 1
-            currentSets.exportDefaultDays = Math.max(1, parseInt(daysInp.value) || 1);
+            const newDays = Math.max(1, parseInt(daysInp.value) || 1);
+            currentSets.exportDefaultDays = newDays;
+            
             await saveData('settings', currentSets);
             showToast("Inställning sparad!", "success");
+
+            // -- NY KOD: Uppdatera Export-fliken live --
+            // När vi sparar, hämtar vi datumfälten från Export-fliken och räknar om 
+            // slutdatumet baserat på det nya värdet för antal dagar.
+            const printStartDate = document.getElementById('printStartDate');
+            const printEndDate = document.getElementById('printEndDate');
+            
+            if (printStartDate && printEndDate && printStartDate.value) {
+                // Skapa ett datum-objekt från startdatumet
+                const startD = new Date(printStartDate.value);
+                // Lägg till de nya dagarna (minus 1 eftersom startdagen räknas)
+                startD.setDate(startD.getDate() + (newDays - 1));
+                
+                // Formatera tillbaka till YYYY-MM-DD med hänsyn till lokal tidszon och uppdatera fältet
+                const localDateStr = new Date(startD.getTime() - (startD.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                printEndDate.value = localDateStr;
+            }
         };
     }
 
+    // ==========================================
     // 3. Hantering av Displaylänk
+    // ==========================================
     const generateDisplayLinkBtn = document.getElementById('generateDisplayLinkBtn');
     const displaySecretInput = document.getElementById('displaySecretInput');
     const displayLinkContainer = document.getElementById('displayLinkContainer');
