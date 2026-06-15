@@ -32,13 +32,13 @@ export function initStationsTab() {
             const dragAttr = `draggable="true" data-index="${i}"`;
             
             if (st.is_spacer) {
+                // BUGGFIX: Tog bort edit-knappen ("✏️") för spacer-rader
                 return `<div class="admin-list-item draggable-station" ${dragAttr} style="background:#f9f9f9; cursor:grab;">
                             <div class="list-info-left">
                                 <span class="drag-handle" style="margin-right:10px; color:#aaa;">☰</span>
                                 <i>--- Mellanrum ---</i>
                             </div>
                             <div class="list-actions-right">
-                                <button class="list-btn" onclick="startEditStation(${st.id})">✏️</button>
                                 <button class="list-btn" onclick="deleteStation(${st.id})">🗑️</button>
                             </div>
                         </div>`;
