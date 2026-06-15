@@ -1,5 +1,5 @@
 import { fetchData, apiAction } from '../service.js';
-import { showToast, showConfirm, escapeHTML } from '../utils.js';
+import { showToast, showConfirm, escapeHTML, setupListDragAndDrop } from '../utils.js';
 import { getStations, setStations } from '../store.js';
 
 let editingStationId = null;
@@ -9,43 +9,27 @@ export function initStationsTab() {
     const stColor = document.getElementById('newStationColor');
     const stBtn = document.getElementById('addStationBtn');
     const stCancel = document.getElementById('cancelStationEditBtn');
-    if (!stName) return;
+    const cont = document.getElementById('stationListContainer');
+    
+    if (!stName || !cont) return;
 
-    let dragSrcStationEl = null;
-    window.handleStationDragStart = (e) => {
-        dragSrcStationEl = e.target.closest('.draggable-station');
-        e.dataTransfer.effectAllowed = 'move';
-        dragSrcStationEl.classList.add('dragging');
-    };
-    window.handleStationDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; };
-    window.handleStationDrop = async (e) => {
-        e.stopPropagation();
-        const targetEl = e.target.closest('.draggable-station');
-        if (dragSrcStationEl && targetEl && dragSrcStationEl !== targetEl) {
-            const oldIndex = parseInt(dragSrcStationEl.dataset.index);
-            const newIndex = parseInt(targetEl.dataset.index);
-            
-            // Hämta aktuell state
-            const currentStations = [...getStations()];
-            const movedItem = currentStations.splice(oldIndex, 1)[0];
-            currentStations.splice(newIndex, 0, movedItem);
-            
-            // Uppdatera state och databas
-            setStations(currentStations);
-            const newOrderIds = currentStations.map(st => st.id);
-            await apiAction('reorder_stations', newOrderIds);
-            
-            renderStations(); 
-        }
-        return false;
-    };
+    // NYTT: Aktivera generisk Drag & Drop för denna container
+    setupListDragAndDrop(cont, '.draggable-station', async (oldIndex, newIndex) => {
+        const currentStations = [...getStations()];
+        const movedItem = currentStations.splice(oldIndex, 1)[0];
+        currentStations.splice(newIndex, 0, movedItem);
+        
+        setStations(currentStations);
+        const newOrderIds = currentStations.map(st => st.id);
+        await apiAction('reorder_stations', newOrderIds);
+        
+        renderStations();
+    });
 
     const renderStations = () => {
-        const cont = document.getElementById('stationListContainer');
-        if (!cont) return;
-        
         cont.innerHTML = getStations().map((st, i) => {
-            const dragAttr = `draggable="true" ondragstart="handleStationDragStart(event)" ondragover="handleStationDragOver(event)" ondrop="handleStationDrop(event)" data-index="${i}"`;
+            // NYTT: Mycket renare HTML utan ondrag-attribut
+            const dragAttr = `draggable="true" data-index="${i}"`;
             
             if (st.is_spacer) {
                 return `<div class="admin-list-item draggable-station" ${dragAttr} style="background:#f9f9f9; cursor:grab;">
@@ -54,7 +38,7 @@ export function initStationsTab() {
                                 <i>--- Mellanrum ---</i>
                             </div>
                             <div class="list-actions-right">
-                                <button class="list-btn" onclick="deleteStation(${st.id})">🗑️</button>
+                                <button class="list-btn" onclick="deleteStation(${escapeHTML(String(st.id))})">🗑️</button>
                             </div>
                         </div>`;
             }
@@ -66,17 +50,17 @@ export function initStationsTab() {
                     <strong>${escapeHTML(st.name)}</strong>
                 </div>
                 <div class="list-actions-right">
-                    <button class="list-btn" onclick="startEditStation(${st.id})">✏️</button>
-                    <button class="list-btn" onclick="deleteStation(${st.id})">🗑️</button>
+                    <button class="list-btn" onclick="startEditStation(${escapeHTML(String(st.id))})">✏️</button>
+                    <button class="list-btn" onclick="deleteStation(${escapeHTML(String(st.id))})">🗑️</button>
                 </div>
             </div>`;
         }).join('');
     };
 
     window.startEditStation = (id) => {
-        const st = getStations().find(s => s.id === id);
+        const st = getStations().find(s => String(s.id) === String(id));
         if (!st) return;
-        editingStationId = id;
+        editingStationId = st.id;
         stName.value = st.name;
         stColor.value = st.color;
         stBtn.innerText = "Spara Ändringar";
@@ -91,7 +75,7 @@ export function initStationsTab() {
         stBtn.style.background = "";
         stCancel.style.display = "none";
     };
-    if(stCancel) stCancel.onclick = resetSt;
+    if (stCancel) stCancel.onclick = resetSt;
 
     stBtn.onclick = async () => {
         if (!stName.value) return showToast("Ange ett namn", "info");
