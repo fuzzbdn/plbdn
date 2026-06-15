@@ -73,8 +73,10 @@ export function initThemeTab(currentSettings) {
             
             currentShifts.forEach(sh => {
                 const targetDateStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                const assignedRows = scheduleData[`${st.id}_${sh.id}`] || [];
-                const validRows = assignedRows.filter(r => r.is_published && r.work_date.split('T')[0] === targetDateStr);
+                // FIX: Använd det nya nyckelformatet från store.js (inklusive datumet)
+                const assignedRows = scheduleData[`${targetDateStr}_${st.id}_${sh.id}`] || [];
+                // (Eftersom nyckeln redan filtrerar på datum, behöver vi bara kolla is_published)
+                const validRows = assignedRows.filter(r => r.is_published);
                 
                 const val = validRows.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
                 const safeVal = escapeHTML(val);
