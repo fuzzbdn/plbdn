@@ -5,6 +5,9 @@ import { initStationsTab } from './stations.js';
 import { initShiftsTab } from './shifts.js';
 import { initUsersTab } from './users.js';
 import { initAbsencesTab } from './absences.js';
+import { initWeatherTab } from './weather.js';
+import { initThemeTab } from './theme.js';
+
 
 // Importera logiken för varje enskild flik
 import { initGeneralTab } from './general.js';
@@ -64,13 +67,13 @@ export async function initSettings() {
         initGeneralTab(settings);
         
         // Här kommer resten sen:
-        // initWeatherTab();
+        initWeatherTab();
         initStationsTab();
         initShiftsTab();
         // initAdminsTab();
         initUsersTab();
         initAbsencesTab();
-        // initThemeTab(settings);
+        initThemeTab(settings);
         // initExportTab(settings);
         // initStatisticsTab();
 
