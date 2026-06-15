@@ -83,6 +83,7 @@ function parseCoords(lat, lon) {
 export async function initDisplay() {
     const urlParams     = new URLSearchParams(window.location.search);
     const displayToken  = urlParams.get('token');
+    const displayWorkplace = urlParams.get('workplace') || 'default';
 
     // FIX: Token visas i felmeddelande men skickas också med i alla API-anrop nedan
     if (!displayToken) {
@@ -90,7 +91,9 @@ export async function initDisplay() {
         return;
     }
 
-    globalCustomThemes = await fetchData('custom_themes') || [];
+    // FIX: Skicka med workplace + token även i detta anrop, annars hämtas
+    // alltid 'default'-arbetsplatsens teman på en oinloggad display-enhet.
+    globalCustomThemes = await fetchData('custom_themes', `&workplace=${encodeURIComponent(displayWorkplace)}&token=${encodeURIComponent(displayToken)}`) || [];
 
     async function updateDisplay() {
         try {
@@ -101,14 +104,15 @@ export async function initDisplay() {
             // Kolla om vi behöver hämta inställningar (var CONFIG_CACHE_MS)
             const fetchConfig = (now.getTime() - cachedConfig.lastConfigFetch > CONFIG_CACHE_MS);
 
-            // FIX: Skicka med displayToken i varje anrop så att servern kan
-            // autentisera förfrågan. Utan detta skyddar token ingenting.
+            // FIX: Skicka med displayToken och workplace i varje anrop så att
+            // servern kan autentisera förfrågan och slå upp rätt arbetsplats.
             const bundleData = await fetchData(
                 'display_bundle',
-                `&start_date=${todayStr}&end_date=${todayStr}&include_config=${fetchConfig}&token=${encodeURIComponent(displayToken)}`
+                `&start_date=${todayStr}&end_date=${todayStr}&include_config=${fetchConfig}&token=${encodeURIComponent(displayToken)}&workplace=${encodeURIComponent(displayWorkplace)}`
             );
 
             if (!bundleData) return;
+
 
             globalStations = Array.isArray(bundleData.stations) ? bundleData.stations : [];
             globalShifts   = Array.isArray(bundleData.shifts)   ? bundleData.shifts   : [];
