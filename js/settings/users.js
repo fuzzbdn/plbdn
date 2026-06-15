@@ -2,7 +2,7 @@ import { fetchData, apiAction } from '../service.js';
 import { showToast, showConfirm, escapeHTML } from '../utils.js';
 
 let editingAdminId = null;
-let localAdmins = []; // Hålls lokalt i denna modul
+let localAdmins = []; 
 
 export function initUsersTab() {
     const admBtn = document.getElementById('addAdminBtn');
@@ -18,7 +18,6 @@ export function initUsersTab() {
     
     if (!admBtn) return;
 
-    // Dölj Super-Admin valet om man inte själv är Super-Admin
     const loggedInRole = (localStorage.getItem('userRole') || '').trim().toLowerCase();
     if (admRole && loggedInRole !== 'superadmin') {
         const superAdminOption = admRole.querySelector('option[value="superadmin"]');
@@ -123,7 +122,7 @@ export function initUsersTab() {
     };
     if(admCancel) admCancel.onclick = resetAdm;
 
-admBtn.onclick = async () => {
+    admBtn.onclick = async () => {
         if (!admUser.value) return showToast("Användarnamn krävs", "error");
         const action = editingAdminId ? 'edit_admin' : 'add_admin';
         
@@ -138,7 +137,6 @@ admBtn.onclick = async () => {
             role: admRole.value
         };
 
-        // FIX: Använd konsekvent apiAction!
         const res = await apiAction(action, payload);
 
         if (res.success) {
@@ -152,7 +150,6 @@ admBtn.onclick = async () => {
 
     window.deleteAdmin = async (u) => {
         if (await showConfirm(`Ta bort kontot @${escapeHTML(u)}?`)) {
-            // FIX: Använd konsekvent apiAction för radering
             const res = await apiAction('remove_admin', { username: u });
             
             if (res.success) {
