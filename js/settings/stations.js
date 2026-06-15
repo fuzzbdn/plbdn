@@ -38,7 +38,8 @@ export function initStationsTab() {
                                 <i>--- Mellanrum ---</i>
                             </div>
                             <div class="list-actions-right">
-                                <button class="list-btn" onclick="deleteStation(${escapeHTML(String(st.id))})">🗑️</button>
+                                <button class="list-btn" onclick="startEditStation(${st.id})">✏️</button>
+                                <button class="list-btn" onclick="deleteStation(${st.id})">🗑️</button>
                             </div>
                         </div>`;
             }
