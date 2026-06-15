@@ -105,7 +105,7 @@ export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersW
                 if(absence.type === 'Sjuk') icon = '🤒';
                 if(absence.type === 'VAB') icon = '🧸';
                 if(absence.type === 'Semester') icon = '🌴';
-                // FIX: Lade till escapeHTML(absence.type) här
+                // FIX: absence.type är nu innesluten i escapeHTML()
                 html += `<div class="weekly-badge" style="background:#ffebee; color:#c62828; border: 1px solid #ffcdd2;">${icon} ${escapeHTML(absence.type)}</div>`;
             } 
             else if (!assignments || assignments.length === 0) {
