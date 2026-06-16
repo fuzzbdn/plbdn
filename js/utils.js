@@ -50,7 +50,11 @@ export function getISOWeek(date) {
 }
 
 export function isLight(color) {
+    // FIX: Härdad mot null/undefined/ogiltiga färgformat (t.ex. '#fff', 'red', '')
+    // Utan denna kraschar hela display-renderingen om station.color är NULL i databasen
+    if (!color || typeof color !== 'string') return true;
     const hex = color.replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(hex)) return true;
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
@@ -58,7 +62,10 @@ export function isLight(color) {
 }
 
 export function escapeHTML(str) {
-    if (!str) return "";
+    // FIX: Härdad mot icke-strängar (tal, boolean) som tidigare kraschade med
+    // "str.replace is not a function". Null/undefined returnerar fortfarande tom sträng.
+    if (str === null || str === undefined) return '';
+    if (typeof str !== 'string') str = String(str);
     return str.replace(/[&<>'"]/g, tag => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
     }[tag]));
@@ -105,7 +112,6 @@ export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersW
                 if(absence.type === 'Sjuk') icon = '🤒';
                 if(absence.type === 'VAB') icon = '🧸';
                 if(absence.type === 'Semester') icon = '🌴';
-                // FIX: absence.type är nu innesluten i escapeHTML()
                 html += `<div class="weekly-badge" style="background:#ffebee; color:#c62828; border: 1px solid #ffcdd2;">${icon} ${escapeHTML(absence.type)}</div>`;
             } 
             else if (!assignments || assignments.length === 0) {
