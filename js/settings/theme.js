@@ -99,8 +99,8 @@ export function initThemeTab(currentSettings) {
             <head>
                 <base href="${window.location.href}">
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-                <link rel="stylesheet" href="base.css">
-                <link rel="stylesheet" href="display.css">
+                    <link rel="stylesheet" href="css/base.css">
+                    <link rel="stylesheet" href="css/display.css">
                 <style>
                     body { margin: 0; background-color: var(--bg-color); }
                     ::-webkit-scrollbar { display: none; }
