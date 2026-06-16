@@ -1,10 +1,8 @@
 /* =========================================
    CSS/DISPLAY.CSS
    Stilar för display.html (presentationsskärm).
-   Laddar INTE base.css — den ingår separat.
    ========================================= */
 
-/* Display-specifika tokens (override av base) */
 :root {
     --bg-color:      #f0f2f5;
     --text-color:    #1a1a1a;
@@ -23,6 +21,7 @@
 body.display-view {
     background-color: var(--bg-color);
     color: var(--text-color);
+    margin: 0; /* FIX 1: Återställt margin för att förhindra scrollbars */
     padding: 2vh 3vw;
     height: 100vh;
     overflow: hidden;
@@ -101,6 +100,8 @@ body.display-view {
 .time-header-row,
 .display-row {
     display: grid;
+    /* Om dina kolumner staplas på varandra, ta bort kommentaren nedan och justera: */
+    /* grid-template-columns: 220px 1fr 1fr; */ 
     gap: 1.5vw;
     padding: 0 10px;
     align-items: stretch;
@@ -156,10 +157,11 @@ body.display-view {
     text-overflow: ellipsis;
 }
 
+/* FIX 2: Återställt !important för att tvinga tomma kort att bli transparenta */
 .shift-card.empty {
-    background-color: var(--empty-bg);
-    border: 2px dashed var(--empty-border);
-    box-shadow: none;
+    background-color: var(--empty-bg) !important;
+    border: 2px dashed var(--empty-border) !important;
+    box-shadow: none !important;
     color: transparent;
     border-bottom: none;
 }
@@ -173,8 +175,8 @@ body.display-view {
    ========================================= */
 @media (max-width: 850px) {
     body.display-view {
-        height: auto;
-        overflow-y: auto;
+        height: auto !important;
+        overflow-y: auto !important;
         padding: 15px 10px;
     }
 
@@ -191,11 +193,11 @@ body.display-view {
 
     /* Dölj tidsrubriker och mellanrum */
     .time-header-row,
-    .spacer-row       { display: none; }
+    .spacer-row       { display: none !important; }
 
     /* Varje station blir ett eget kort */
     .display-row {
-        display: flex;
+        display: flex !important;
         flex-direction: column;
         gap: 8px;
         background: #fff;
@@ -238,9 +240,9 @@ body.display-view {
     }
 
     .shift-card.empty {
-        color: transparent;
-        border-left: 4px dashed var(--empty-border, #ccc);
-        background-color: #fafafa;
+        color: transparent !important;
+        border-left: 4px dashed var(--empty-border, #ccc) !important;
+        background-color: #fafafa !important;
         border-top: none;
         border-right: none;
         border-bottom: none;
