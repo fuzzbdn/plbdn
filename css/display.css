@@ -100,8 +100,9 @@ body.display-view {
 .time-header-row,
 .display-row {
     display: grid;
-    /* Om dina kolumner staplas på varandra, ta bort kommentaren nedan och justera: */
-    /* grid-template-columns: 220px 1fr 1fr; */ 
+    grid-auto-flow: column;       /* NYTT: Tvingar rutorna att lägga sig horisontellt på samma rad */
+    grid-template-columns: 220px; /* NYTT: Låser den första kolumnen (Stationen) till 220px */
+    grid-auto-columns: 1fr;       /* NYTT: Alla pass efter stationen delar exakt lika på resten av bredden */
     gap: 1.5vw;
     padding: 0 10px;
     align-items: stretch;
