@@ -145,22 +145,25 @@ export function renderRoster() {
 
         return `<div class="draggable-item ${assignedClass} ${absClass}" draggable="${canDrag}" ondragstart="event.dataTransfer.setData('user_id','${safeId}')">
             ${absIcon} ${safeName} ${abs ? `<span style="font-size:0.75rem; font-weight:normal; margin-left:5px;">(${escapeHTML(abs.type)})</span>` : ''}
-            <button class="remove-user-btn" data-fullname="${safeName}">×</button>
+            <button class="remove-user-btn" data-userid="${safeId}" data-fullname="${safeName}">×</button>
         </div>`;
     }).join('');
 
     list.querySelectorAll('.remove-user-btn').forEach(btn => {
         btn.onclick = async (e) => {
+            const userId = e.target.getAttribute('data-userid'); // Hämta ID
             const name = e.target.getAttribute('data-fullname');
+            
             if (await showConfirm(`Ta bort ${name} från databasen?`)) {
-                const res = await apiAction('remove_user', { fullName: name });
+                // Skicka userId som "id"
+                const res = await apiAction('remove_user', { id: userId });
                 if (res.success) {
                     showToast('Personal borttagen', 'info');
                     const fetchedUsers = await fetchData('users');
                     setUsers(fetchedUsers || []);
                     renderViews();
                 } else {
-                    showToast('Kunde inte ta bort användaren', 'error');
+                    showToast(res.error || 'Kunde inte ta bort användaren', 'error');
                 }
             }
         };
