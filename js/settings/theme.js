@@ -41,7 +41,22 @@ export function initThemeTab(currentSettings) {
         
         const currentStations = getStations();
         const currentShifts = getShifts();
-        const scheduleData = getScheduleData();
+        const targetDateStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+        // Bygg lokal lookup med samma nyckelformat som display.js använder:
+        // ${station_id}_${shift_id} (utan datum, display filtrerar redan på datum via API)
+        const rawScheduleData = getScheduleData();
+        const previewSchedule = {};
+        Object.entries(rawScheduleData).forEach(([key, rows]) => {
+            // store.js-nycklar har format: "${date}_${station_id}_${shift_id}"
+            const parts = key.split('_');
+            if (parts.length < 3) return;
+            const [date, stationId, shiftId] = parts;
+            if (date !== targetDateStr) return; // Filtrera på dagens datum
+            const displayKey = `${stationId}_${shiftId}`;
+            if (!previewSchedule[displayKey]) previewSchedule[displayKey] = [];
+            previewSchedule[displayKey].push(...rows);
+        });
 
         let html = `
         <div class="display-wrapper">
@@ -72,15 +87,13 @@ export function initThemeTab(currentSettings) {
             html += `<div class="display-row" ${vars}><div class="station-label">${escapeHTML(st.name)}</div>`;
             
             currentShifts.forEach(sh => {
-                const targetDateStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                // Samma nyckelformat som display.js: "${station_id}_${shift_id}"
+                const assignments = (previewSchedule[`${st.id}_${sh.id}`] || [])
+                    .filter(r => r.is_published);
                 
-                // FIX: Använd det nya uppdaterade formatet på nyckeln som matchar store.js
-                const assignedRows = scheduleData[`${targetDateStr}_${st.id}_${sh.id}`] || [];
-                
-                // FIX: Datumet är redan filtrerat i nyckeln, så vi behöver bara kolla is_published
-                const validRows = assignedRows.filter(r => r.is_published);
-                
-                const val = validRows.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
+                const val = assignments
+                    .map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim())
+                    .join(' / ');
                 const safeVal = escapeHTML(val);
                 
                 html += `<div class="shift-card ${safeVal?'':'empty'}" data-label="${escapeHTML(sh.label)}">${safeVal}</div>`;
