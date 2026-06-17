@@ -26,105 +26,94 @@ export function initThemeTab(currentSettings) {
 
     function updatePreview(themeId) {
         if (!iframe || !iframe.contentDocument) return;
-        
+
         let customCss = "";
         if (themeId && themeId !== 'light') {
             const t = getCustomThemes().find(x => x.id === themeId);
             if (t) customCss = t.css;
         }
 
-        const now = new Date();
-        const dayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1; 
-        const dayName = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"][dayIndex];
-        const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
-        const iso = getISOWeek(now);
-        
-        const currentStations = getStations();
-        const currentShifts = getShifts();
+        const now        = new Date();
+        const dayIndex   = now.getDay() === 0 ? 6 : now.getDay() - 1;
+        const dayName    = ["Måndag","Tisdag","Onsdag","Torsdag","Fredag","Lördag","Söndag"][dayIndex];
+        const dateStr    = `${now.getDate()}/${now.getMonth() + 1}`;
+        const iso        = getISOWeek(now);
         const targetDateStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
-        // Bygg lokal lookup med samma nyckelformat som display.js använder:
-        // ${station_id}_${shift_id} (utan datum, display filtrerar redan på datum via API)
+        const currentStations = getStations();
+        const currentShifts   = getShifts();
+
+        // Bygg lokal lookup med samma nyckelformat som display.js: "${station_id}_${shift_id}"
         const rawScheduleData = getScheduleData();
         const previewSchedule = {};
         Object.entries(rawScheduleData).forEach(([key, rows]) => {
-            // store.js-nycklar har format: "${date}_${station_id}_${shift_id}"
             const parts = key.split('_');
             if (parts.length < 3) return;
             const [date, stationId, shiftId] = parts;
-            if (date !== targetDateStr) return; // Filtrera på dagens datum
+            if (date !== targetDateStr) return;
             const displayKey = `${stationId}_${shiftId}`;
             if (!previewSchedule[displayKey]) previewSchedule[displayKey] = [];
             previewSchedule[displayKey].push(...rows);
         });
 
-        let html = `
-        <div class="display-wrapper">
-            <div class="top-bar">
-                <h1 id="mainTitle">Vi som jobbar ${dayName} ${dateStr}</h1>
-                <div style="display:flex; align-items:center;">
-                    <div id="weatherWidget" style="margin-right:20px; font-weight:700;">PREVIEW: 20°C</div>
-                    <div id="clock">12:00</div>
-                </div>
-            </div>
-            
-            <div id="mainContainer">
-                <div class="time-header-row">
-                    <div></div>
-                    ${currentShifts.map(s => `<div class="time-header">${escapeHTML(s.label)}</div>`).join('')}
-                </div>
-        `;
-        
+        // Bygg #mainContainer-innehållet med EXAKT samma logik som display.js renderGrid()
+        let gridHtml = `<div class="time-header-row"><div></div>${currentShifts.map(s => `<div class="time-header">${escapeHTML(s.label)}</div>`).join('')}</div>`;
+
         currentStations.forEach(st => {
-            if (st.is_spacer) { 
-                html += `<div class="display-row spacer-row"></div>`; 
-                return; 
+            if (st.is_spacer) {
+                gridHtml += `<div class="display-row spacer-row"></div>`;
+                return;
             }
-            
-            const contrast = isLight(st.color) ? '#000' : '#fff';
-            const vars = `style="--station-color:${escapeHTML(st.color)}; --contrast-color:${contrast};"`;
-            
-            html += `<div class="display-row" ${vars}><div class="station-label">${escapeHTML(st.name)}</div>`;
-            
+            const contrast  = isLight(st.color) ? '#000' : '#fff';
+            const safeColor = escapeHTML(st.color);
+
+            gridHtml += `<div class="display-row" style="--station-color:${safeColor}; --contrast-color:${contrast};">`;
+            gridHtml += `<div class="station-label">${escapeHTML(st.name)}</div>`;
+
             currentShifts.forEach(sh => {
-                // Samma nyckelformat som display.js: "${station_id}_${shift_id}"
                 const assignments = (previewSchedule[`${st.id}_${sh.id}`] || [])
                     .filter(r => r.is_published);
-                
                 const val = assignments
                     .map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim())
                     .join(' / ');
-                const safeVal = escapeHTML(val);
-                
-                html += `<div class="shift-card ${safeVal?'':'empty'}" data-label="${escapeHTML(sh.label)}">${safeVal}</div>`;
+                gridHtml += `<div class="shift-card ${val ? '' : 'empty'}" data-label="${escapeHTML(sh.label)}">${escapeHTML(val)}</div>`;
             });
-            
-            html += `</div>`;
-        });
-        
-        html += `</div></div>`;
 
+            gridHtml += `</div>`;
+        });
+
+        // Skriv EXAKT samma HTML-skelett som display.html — iframen blir en kopia av display-sidan
         const doc = iframe.contentDocument;
         doc.open();
-        doc.write(`
-            <!DOCTYPE html>
-            <html lang="sv">
-            <head>
-                <base href="${window.location.href}">
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-                    <link rel="stylesheet" href="css/base.css">
-                    <link rel="stylesheet" href="css/display.css">
-                <style>
-                    body { margin: 0; background-color: var(--bg-color); }
-                    ::-webkit-scrollbar { display: none; }
-                    ${customCss}
-                </style>
-            </head>
-            <body class="display-view">
-                ${html}
-            </body>
-            </html>
-        `);
+        doc.write(`<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <base href="${window.location.href}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/display.css">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        ${customCss}
+    </style>
+</head>
+<body class="display-view" id="page-display">
+<div class="display-wrapper">
+    <div class="top-bar">
+        <h1 id="mainTitle">Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
+        <div style="display:flex; align-items:center;">
+            <div id="weatherWidget" style="margin-right:20px; font-weight:700;">☀️ 20°C</div>
+            <div id="clock">${now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+    </div>
+    <div id="marqueeContainer" style="display:none;">
+        <marquee id="marqueeText" scrollamount="10"></marquee>
+    </div>
+    <div id="mainContainer">${gridHtml}</div>
+</div>
+</body>
+</html>`);
         doc.close();
     }
 
