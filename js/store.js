@@ -41,10 +41,11 @@ export const setScheduleData = (rawData) => {
 };
 
 // Hjälpfunktion för att hämta allt på en gång (t.ex. vid initialisering)
-export const setAllInitialData = ({ users, stations, shifts, absences, themes }) => {
+export const setAllInitialData = ({ users, stations, shifts, absences, themes, scheduleData }) => {
     if (users) setUsers(users);
     if (stations) setStations(stations);
     if (shifts) setShifts(shifts);
     if (absences) setAbsences(absences);
     if (themes) setCustomThemes(themes);
+    if (scheduleData) setScheduleData(scheduleData);
 };
