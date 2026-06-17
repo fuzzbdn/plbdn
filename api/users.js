@@ -14,7 +14,13 @@ export default async function handler(req, res) {
             res.setHeader('Cache-Control', 'no-store, max-age=0');
 
             if (type === 'users' || type === 'admins') {
-                const roleFilter = type === 'users' ? "AND (role != 'superadmin' OR role IS NULL)" : "";
+                let roleFilter = "";
+                // Dölj alltid superadmin i den vanliga personal-listan.
+                // Om en vanlig admin begär admin-listan ska superadmins också döljas.
+                if (type === 'users' || (type === 'admins' && auth.role !== 'superadmin')) {
+                    roleFilter = "AND (role != 'superadmin' OR role IS NULL)";
+                }
+
                 const usersRes = await pool.query(
                     `SELECT id, username, first_name, last_name, display_name, email, role 
                      FROM admin_users WHERE workplace_id = $1 ${roleFilter}
@@ -33,7 +39,7 @@ export default async function handler(req, res) {
 
             const { action, payload } = req.body;
             
-            // FIX: Extrahera variablerna från payload (fallback till req.body ifall äldre anrop görs)
+            // Extrahera variablerna från payload (fallback till req.body ifall äldre anrop görs)
             const data = payload || req.body;
             const { username, password, fullName, id, firstName, lastName, displayName, email, role } = data;
 
@@ -47,9 +53,19 @@ export default async function handler(req, res) {
                     return res.status(200).json({ success: true });
 
                 case 'remove_user':
-                    const nameToRemove = data.fullName || fullName;
-                    await pool.query(`DELETE FROM admin_users WHERE (display_name = $1 OR TRIM(CONCAT(first_name, ' ', COALESCE(last_name, ''))) = $1 OR username = $1) AND workplace_id = $2`, 
-                        [nameToRemove.trim(), auth.workplace]);
+                    // Radera via unikt ID istället för Namn (hindrar att fel person tas bort vid dubbla namn)
+                    const targetId = data.id;
+                    if (!targetId) return res.status(400).json({ error: "ID saknas" });
+
+                    // Skydd mot att vanliga admins tar bort superadmins via personal-listan
+                    if (auth.role !== 'superadmin') {
+                        const checkRes = await pool.query('SELECT role FROM admin_users WHERE id = $1 AND workplace_id = $2', [targetId, auth.workplace]);
+                        if (checkRes.rows.length > 0 && checkRes.rows[0].role === 'superadmin') {
+                            return res.status(403).json({ error: "Du kan inte ta bort ett superadmin-konto." });
+                        }
+                    }
+
+                    await pool.query(`DELETE FROM admin_users WHERE id = $1 AND workplace_id = $2`, [targetId, auth.workplace]);
                     return res.status(200).json({ success: true });
 
                 case 'add_admin':
@@ -73,6 +89,14 @@ export default async function handler(req, res) {
                         return res.status(403).json({ error: "Endast en Super-Admin kan tilldela Super-Admin-rollen." });
                     }
 
+                    // Säkerhetsfix: Kontrollera vilken roll användaren SOM REDIGERAS har just nu i databasen
+                    if (auth.role !== 'superadmin') {
+                        const targetRes = await pool.query('SELECT role FROM admin_users WHERE id = $1 AND workplace_id = $2', [id, auth.workplace]);
+                        if (targetRes.rows.length > 0 && targetRes.rows[0].role === 'superadmin') {
+                            return res.status(403).json({ error: "Du har inte behörighet att redigera ett superadmin-konto." });
+                        }
+                    }
+
                     const safeFirstName = firstName || displayName || username;
                     if (password && password.trim() !== "") {
                         if (password.trim().length < 6) return res.status(400).json({ error: "Lösenordet måste vara minst 6 tecken långt." });
@@ -86,6 +110,13 @@ export default async function handler(req, res) {
                     return res.status(200).json({ success: true });
 
                 case 'remove_admin':
+                    // Säkerhetsfix: Samma skydd i admin-borttagningen
+                    if (auth.role !== 'superadmin') {
+                        const checkAdminRes = await pool.query('SELECT role FROM admin_users WHERE username = $1 AND workplace_id = $2', [username, auth.workplace]);
+                        if (checkAdminRes.rows.length > 0 && checkAdminRes.rows[0].role === 'superadmin') {
+                            return res.status(403).json({ error: "Du kan inte ta bort ett superadmin-konto." });
+                        }
+                    }
                     await pool.query('DELETE FROM admin_users WHERE username = $1 AND workplace_id = $2', [username, auth.workplace]);
                     return res.status(200).json({ success: true });
 
