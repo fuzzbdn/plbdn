@@ -4,7 +4,7 @@ export default async function handler(req, res) {
     setupCors(req, res);
     if (req.method === 'OPTIONS') return res.status(200).end();
 
-    const auth = authenticate(req);
+    const auth = authenticate(req); 
 
     try {
         if (req.method === 'GET') {
