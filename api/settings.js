@@ -4,7 +4,7 @@ export default async function handler(req, res) {
     setupCors(req, res);
     if (req.method === 'OPTIONS') return res.status(200).end();
 
-    const auth = authenticate(req); 
+    const auth = authenticate(req);
 
     try {
         if (req.method === 'GET') {
@@ -31,19 +31,6 @@ export default async function handler(req, res) {
             switch (type) {
                 case 'display_bundle':
                     if(!start_date || !end_date) return res.status(400).json({error: "Saknar datum"});
-                    
-                    // DEBUG: Tillfälligt för att verifiera att workplace sätts korrekt
-                    // Ta bort detta block efter verifiering
-                    if (req.query._debug === '1') {
-                        return res.status(200).json({
-                            _debug: true,
-                            auth_workplace: auth.workplace,
-                            token_received: req.query.token || null,
-                            secret_defined: !!process.env.DISPLAY_SECRET,
-                            secret_length: process.env.DISPLAY_SECRET?.length || 0,
-                            token_matches: req.query.token === process.env.DISPLAY_SECRET,
-                        });
-                    }
                     
                     const queries = [
                         pool.query('SELECT * FROM stations WHERE workplace_id = $1 ORDER BY sort_order ASC', [auth.workplace]),
