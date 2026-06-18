@@ -95,6 +95,15 @@ export async function initDisplay() {
     // alltid 'default'-arbetsplatsens teman på en oinloggad display-enhet.
     globalCustomThemes = await fetchData('custom_themes', `&workplace=${encodeURIComponent(displayWorkplace)}&token=${encodeURIComponent(displayToken)}`) || [];
 
+    // DEBUG: Visa debug-info på skärmen — ta bort efter verifiering
+    const debugRes = await fetch(`/api/settings?type=display_bundle&start_date=2026-01-01&end_date=2026-01-01&token=${encodeURIComponent(displayToken)}&workplace=${encodeURIComponent(displayWorkplace)}&_debug=1`);
+    const debugData = await debugRes.json();
+    const debugOverlay = document.createElement('div');
+    debugOverlay.style.cssText = 'position:fixed;top:10px;right:10px;background:rgba(0,0,0,0.85);color:#0f0;font-family:monospace;font-size:14px;padding:16px;border-radius:8px;z-index:99999;max-width:400px;white-space:pre;';
+    debugOverlay.textContent = JSON.stringify(debugData, null, 2);
+    document.body.appendChild(debugOverlay);
+    // END DEBUG
+
     async function updateDisplay() {
         try {
             const now       = new Date();
