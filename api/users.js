@@ -22,7 +22,7 @@ export default async function handler(req, res) {
                 }
 
                 const usersRes = await pool.query(
-                    `SELECT id, username, first_name, last_name, display_name, email, role 
+                    `SELECT id, username, first_name, last_name, display_name, email, role, (password IS NOT NULL) AS has_password 
                      FROM admin_users WHERE workplace_id = $1 ${roleFilter}
                      ORDER BY COALESCE(display_name, first_name, username) ASC`, 
                      [auth.workplace]
@@ -57,11 +57,19 @@ export default async function handler(req, res) {
                     const targetId = data.id;
                     if (!targetId) return res.status(400).json({ error: "ID saknas" });
 
-                    // Skydd mot att vanliga admins tar bort superadmins via personal-listan
-                    if (auth.role !== 'superadmin') {
-                        const checkRes = await pool.query('SELECT role FROM admin_users WHERE id = $1 AND workplace_id = $2', [targetId, auth.workplace]);
-                        if (checkRes.rows.length > 0 && checkRes.rows[0].role === 'superadmin') {
+                    // Säkerhetskontroll: hämta roll och lösenord
+                    const checkRes = await pool.query('SELECT role, password FROM admin_users WHERE id = $1 AND workplace_id = $2', [targetId, auth.workplace]);
+                    if (checkRes.rows.length > 0) {
+                        const targetUser = checkRes.rows[0];
+                        
+                        // Skydd mot att vanliga admins tar bort superadmins
+                        if (auth.role !== 'superadmin' && targetUser.role === 'superadmin') {
                             return res.status(403).json({ error: "Du kan inte ta bort ett superadmin-konto." });
+                        }
+                        
+                        // Skydd: Användare med lösenord kan inte tas bort från sidomenyn
+                        if (targetUser.password !== null) {
+                            return res.status(403).json({ error: "Konto med lösenord kan endast raderas från Inställningar > Användare & Konton." });
                         }
                     }
 
