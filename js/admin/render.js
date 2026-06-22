@@ -79,19 +79,23 @@ export function renderWeeklyView() {
     const currentShifts = getShifts();
     const users = getUsers();
 
+    // Bygg index en gång: { "2024-06-22": [assignment, ...], ... }
+    // Förutsätter nyckelformat: "dateStr_stationId_shiftId"
+    const scheduleIndex = {};
+    Object.entries(scheduleData).forEach(([key, assignments]) => {
+        const dateStr = key.split('_')[0];
+        if (!scheduleIndex[dateStr]) scheduleIndex[dateStr] = [];
+        scheduleIndex[dateStr].push(...assignments);
+    });
+
     const getAssignments = (userId, dateStr) => {
-        let userAssignments = [];
-        Object.keys(scheduleData).forEach(key => {
-            if (key.startsWith(dateStr)) {
-                const rowAssignments = scheduleData[key];
-                const assignment = rowAssignments.find(a => String(a.user_id) === String(userId));
-                if (assignment) {
-                    const st = currentStations.find(s => s.id === assignment.station_id);
-                    const sh = currentShifts.find(s => s.id === assignment.shift_id);
-                    if (st && sh) {
-                        userAssignments.push({ stationName: st.name, stationColor: st.color, shiftLabel: sh.label });
-                    }
-                }
+        const userAssignments = [];
+        (scheduleIndex[dateStr] || []).forEach(assignment => {
+            if (String(assignment.user_id) !== String(userId)) return;
+            const st = currentStations.find(s => s.id === assignment.station_id);
+            const sh = currentShifts.find(s => s.id === assignment.shift_id);
+            if (st && sh) {
+                userAssignments.push({ stationName: st.name, stationColor: st.color, shiftLabel: sh.label });
             }
         });
         return userAssignments;
@@ -143,9 +147,8 @@ export function renderRoster() {
         const safeId = escapeHTML(String(u.id));
         const canDrag = abs ? 'false' : 'true';
 
-        // Dölj borttagningsknappen om användaren har ett lösenord
-        const removeBtnHtml = u.has_password 
-            ? '' 
+        const removeBtnHtml = u.has_password
+            ? ''
             : `<button class="remove-user-btn" data-userid="${safeId}" data-fullname="${safeName}">×</button>`;
 
         return `<div class="draggable-item ${assignedClass} ${absClass}" draggable="${canDrag}" ondragstart="event.dataTransfer.setData('user_id','${safeId}')">
@@ -156,17 +159,20 @@ export function renderRoster() {
 
     list.querySelectorAll('.remove-user-btn').forEach(btn => {
         btn.onclick = async (e) => {
-            const userId = e.target.getAttribute('data-userid'); // Hämta ID
+            const userId = e.target.getAttribute('data-userid');
             const name = e.target.getAttribute('data-fullname');
-            
+
             if (await showConfirm(`Ta bort ${name} från databasen?`)) {
-                // Skicka userId som "id"
                 const res = await apiAction('remove_user', { id: userId });
                 if (res.success) {
                     showToast('Personal borttagen', 'info');
                     const fetchedUsers = await fetchData('users');
-                    setUsers(fetchedUsers || []);
-                    renderViews();
+                    if (fetchedUsers) {
+                        setUsers(fetchedUsers);
+                        renderViews();
+                    } else {
+                        showToast('Kunde inte ladda om personallistan', 'error');
+                    }
                 } else {
                     showToast(res.error || 'Kunde inte ta bort användaren', 'error');
                 }
