@@ -143,9 +143,14 @@ export function renderRoster() {
         const safeId = escapeHTML(String(u.id));
         const canDrag = abs ? 'false' : 'true';
 
+        // Dölj borttagningsknappen om användaren har ett lösenord
+        const removeBtnHtml = u.has_password 
+            ? '' 
+            : `<button class="remove-user-btn" data-userid="${safeId}" data-fullname="${safeName}">×</button>`;
+
         return `<div class="draggable-item ${assignedClass} ${absClass}" draggable="${canDrag}" ondragstart="event.dataTransfer.setData('user_id','${safeId}')">
             ${absIcon} ${safeName} ${abs ? `<span style="font-size:0.75rem; font-weight:normal; margin-left:5px;">(${escapeHTML(abs.type)})</span>` : ''}
-            <button class="remove-user-btn" data-userid="${safeId}" data-fullname="${safeName}">×</button>
+            ${removeBtnHtml}
         </div>`;
     }).join('');
 
