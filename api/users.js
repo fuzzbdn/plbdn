@@ -15,8 +15,6 @@ export default async function handler(req, res) {
 
             if (type === 'users' || type === 'admins') {
                 let roleFilter = "";
-                // Dölj alltid superadmin i den vanliga personal-listan.
-                // Om en vanlig admin begär admin-listan ska superadmins också döljas.
                 if (type === 'users' || (type === 'admins' && auth.role !== 'superadmin')) {
                     roleFilter = "AND (role != 'superadmin' OR role IS NULL)";
                 }
@@ -24,8 +22,8 @@ export default async function handler(req, res) {
                 const usersRes = await pool.query(
                     `SELECT id, username, first_name, last_name, display_name, email, role, (password IS NOT NULL) AS has_password 
                      FROM admin_users WHERE workplace_id = $1 ${roleFilter}
-                     ORDER BY COALESCE(display_name, first_name, username) ASC`, 
-                     [auth.workplace]
+                     ORDER BY COALESCE(display_name, first_name, username) ASC`,
+                    [auth.workplace]
                 );
                 return res.status(200).json(usersRes.rows);
             }
@@ -38,101 +36,151 @@ export default async function handler(req, res) {
             }
 
             const { action, payload } = req.body;
-            
-            // Extrahera variablerna från payload (fallback till req.body ifall äldre anrop görs)
             const data = payload || req.body;
-            const { username, password, fullName, id, firstName, lastName, displayName, email, role } = data;
+            const { username, password, id, firstName, lastName, displayName, email, role } = data;
 
             switch (action) {
-                case 'quick_add_user':
-                    const nameToAdd = data.fullName || fullName;
-                    if (!nameToAdd) return res.status(400).json({ error: "Namn saknas" });
+                case 'quick_add_user': {
+                    const nameToAdd = data.fullName;
+                    if (!nameToAdd || !nameToAdd.trim()) {
+                        return res.status(400).json({ error: "Namn saknas" });
+                    }
                     const parts = nameToAdd.trim().split(' ');
-                    await pool.query('INSERT INTO admin_users (username, first_name, last_name, display_name, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6)', 
-                        ['user_' + Date.now(), parts[0], parts.slice(1).join(' '), nameToAdd.trim(), 'user', auth.workplace]);
+                    // Använd crypto.randomUUID() för att undvika kollisioner vid hög last
+                    const uniqueUsername = 'user_' + crypto.randomUUID();
+                    await pool.query(
+                        'INSERT INTO admin_users (username, first_name, last_name, display_name, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6)',
+                        [uniqueUsername, parts[0], parts.slice(1).join(' '), nameToAdd.trim(), 'user', auth.workplace]
+                    );
                     return res.status(200).json({ success: true });
+                }
 
-                case 'remove_user':
-                    // Radera via unikt ID istället för Namn (hindrar att fel person tas bort vid dubbla namn)
+                case 'remove_user': {
                     const targetId = data.id;
                     if (!targetId) return res.status(400).json({ error: "ID saknas" });
 
-                    // Säkerhetskontroll: hämta roll och lösenord
-                    const checkRes = await pool.query('SELECT role, password FROM admin_users WHERE id = $1 AND workplace_id = $2', [targetId, auth.workplace]);
-                    if (checkRes.rows.length > 0) {
-                        const targetUser = checkRes.rows[0];
-                        
-                        // Skydd mot att vanliga admins tar bort superadmins
-                        if (auth.role !== 'superadmin' && targetUser.role === 'superadmin') {
-                            return res.status(403).json({ error: "Du kan inte ta bort ett superadmin-konto." });
-                        }
-                        
-                        // Skydd: Användare med lösenord kan inte tas bort från sidomenyn
-                        if (targetUser.password !== null) {
-                            return res.status(403).json({ error: "Konto med lösenord kan endast raderas från Inställningar > Användare & Konton." });
-                        }
+                    const checkRes = await pool.query(
+                        'SELECT role, password FROM admin_users WHERE id = $1 AND workplace_id = $2',
+                        [targetId, auth.workplace]
+                    );
+
+                    // FIX: Returnera explicit fel om användaren inte hittas
+                    if (checkRes.rows.length === 0) {
+                        return res.status(404).json({ error: "Användaren hittades inte." });
                     }
 
-                    await pool.query(`DELETE FROM admin_users WHERE id = $1 AND workplace_id = $2`, [targetId, auth.workplace]);
-                    return res.status(200).json({ success: true });
+                    const targetUser = checkRes.rows[0];
 
-                case 'add_admin':
+                    if (auth.role !== 'superadmin' && targetUser.role === 'superadmin') {
+                        return res.status(403).json({ error: "Du kan inte ta bort ett superadmin-konto." });
+                    }
+
+                    if (targetUser.password !== null) {
+                        return res.status(403).json({ error: "Konto med lösenord kan endast raderas från Inställningar > Användare & Konton." });
+                    }
+
+                    await pool.query('DELETE FROM admin_users WHERE id = $1 AND workplace_id = $2', [targetId, auth.workplace]);
+                    return res.status(200).json({ success: true });
+                }
+
+                case 'add_admin': {
+                    // FIX: Validera att username inte är tomt
+                    if (!username || !username.trim()) {
+                        return res.status(400).json({ error: "Användarnamn saknas." });
+                    }
+
                     if (role === 'superadmin' && auth.role !== 'superadmin') {
                         return res.status(403).json({ error: "Endast en Super-Admin kan skapa andra Super-Admin-konton." });
                     }
-                    
-                    let newHashedPass = null; 
+
+                    let newHashedPass = null;
                     if (password && password.trim().length >= 6) {
                         newHashedPass = await bcrypt.hash(password, 10);
                     } else if (password && password.trim().length > 0 && password.trim().length < 6) {
                         return res.status(400).json({ error: "Lösenordet måste vara minst 6 tecken långt om det anges." });
                     }
 
-                    await pool.query('INSERT INTO admin_users (username, password, first_name, last_name, display_name, email, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', 
-                        [username, newHashedPass, firstName || displayName || username, lastName, displayName, email, role, auth.workplace]);
+                    const addFirstName = firstName || displayName || username.trim();
+                    await pool.query(
+                        'INSERT INTO admin_users (username, password, first_name, last_name, display_name, email, role, workplace_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+                        [username.trim(), newHashedPass, addFirstName, lastName, displayName, email, role, auth.workplace]
+                    );
                     return res.status(200).json({ success: true });
+                }
 
-                case 'edit_admin':
+                case 'edit_admin': {
+                    // FIX: Kontrollera att id finns
+                    if (!id) return res.status(400).json({ error: "ID saknas." });
+
+                    // FIX: Flytta superadmin-rollkontrollen hit, före allt annat
                     if (role === 'superadmin' && auth.role !== 'superadmin') {
                         return res.status(403).json({ error: "Endast en Super-Admin kan tilldela Super-Admin-rollen." });
                     }
 
-                    // Säkerhetsfix: Kontrollera vilken roll användaren SOM REDIGERAS har just nu i databasen
+                    // Kontrollera att den som redigeras inte är superadmin (om anroparen inte är superadmin)
                     if (auth.role !== 'superadmin') {
-                        const targetRes = await pool.query('SELECT role FROM admin_users WHERE id = $1 AND workplace_id = $2', [id, auth.workplace]);
-                        if (targetRes.rows.length > 0 && targetRes.rows[0].role === 'superadmin') {
+                        const targetRes = await pool.query(
+                            'SELECT role FROM admin_users WHERE id = $1 AND workplace_id = $2',
+                            [id, auth.workplace]
+                        );
+                        if (targetRes.rows.length === 0) {
+                            return res.status(404).json({ error: "Användaren hittades inte." });
+                        }
+                        if (targetRes.rows[0].role === 'superadmin') {
                             return res.status(403).json({ error: "Du har inte behörighet att redigera ett superadmin-konto." });
                         }
                     }
 
-                    const safeFirstName = firstName || displayName || username;
+                    // FIX: Validera att minst ett namnfält finns
+                    const safeFirstName = firstName || displayName || (username && username.trim());
+                    if (!safeFirstName) {
+                        return res.status(400).json({ error: "Förnamn eller visningsnamn måste anges." });
+                    }
+
                     if (password && password.trim() !== "") {
-                        if (password.trim().length < 6) return res.status(400).json({ error: "Lösenordet måste vara minst 6 tecken långt." });
+                        if (password.trim().length < 6) {
+                            return res.status(400).json({ error: "Lösenordet måste vara minst 6 tecken långt." });
+                        }
                         const updatedHash = await bcrypt.hash(password, 10);
-                        await pool.query('UPDATE admin_users SET username=$1, password=$2, first_name=$3, last_name=$4, display_name=$5, email=$6, role=$7 WHERE id=$8 AND workplace_id=$9',
-                            [username, updatedHash, safeFirstName, lastName, displayName, email, role, id, auth.workplace]);
+                        await pool.query(
+                            'UPDATE admin_users SET username=$1, password=$2, first_name=$3, last_name=$4, display_name=$5, email=$6, role=$7 WHERE id=$8 AND workplace_id=$9',
+                            [username, updatedHash, safeFirstName, lastName, displayName, email, role, id, auth.workplace]
+                        );
                     } else {
-                        await pool.query('UPDATE admin_users SET username=$1, first_name=$2, last_name=$3, display_name=$4, email=$5, role=$6 WHERE id=$7 AND workplace_id=$8',
-                            [username, safeFirstName, lastName, displayName, email, role, id, auth.workplace]);
+                        await pool.query(
+                            'UPDATE admin_users SET username=$1, first_name=$2, last_name=$3, display_name=$4, email=$5, role=$6 WHERE id=$7 AND workplace_id=$8',
+                            [username, safeFirstName, lastName, displayName, email, role, id, auth.workplace]
+                        );
                     }
                     return res.status(200).json({ success: true });
+                }
 
-                case 'remove_admin':
-                    // Säkerhetsfix: Samma skydd i admin-borttagningen
+                case 'remove_admin': {
+                    // FIX: Radera på id istället för username för att undvika att fel konto tas bort vid dubbla namn
+                    if (!id) return res.status(400).json({ error: "ID saknas." });
+
                     if (auth.role !== 'superadmin') {
-                        const checkAdminRes = await pool.query('SELECT role FROM admin_users WHERE username = $1 AND workplace_id = $2', [username, auth.workplace]);
-                        if (checkAdminRes.rows.length > 0 && checkAdminRes.rows[0].role === 'superadmin') {
+                        const checkAdminRes = await pool.query(
+                            'SELECT role FROM admin_users WHERE id = $1 AND workplace_id = $2',
+                            [id, auth.workplace]
+                        );
+                        if (checkAdminRes.rows.length === 0) {
+                            return res.status(404).json({ error: "Användaren hittades inte." });
+                        }
+                        if (checkAdminRes.rows[0].role === 'superadmin') {
                             return res.status(403).json({ error: "Du kan inte ta bort ett superadmin-konto." });
                         }
                     }
-                    await pool.query('DELETE FROM admin_users WHERE username = $1 AND workplace_id = $2', [username, auth.workplace]);
+
+                    await pool.query('DELETE FROM admin_users WHERE id = $1 AND workplace_id = $2', [id, auth.workplace]);
                     return res.status(200).json({ success: true });
+                }
 
                 default:
                     return res.status(400).json({ error: "Okänd action för users" });
             }
         }
-        
+
         return res.status(405).end();
     } catch (e) {
         return handleDatabaseError(res, e);
