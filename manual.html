@@ -3,1005 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manual – STRUL Bemanningssystem v3.1</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <title>Manual - STRUL Bemanningssystem</title>
+    <link rel="stylesheet" href="css/base.css">
     <style>
-        :root {
-            --blue:        #0277bd;
-            --blue-light:  #e3f2fd;
-            --blue-dark:   #01579b;
-            --green:       #2e7d32;
-            --green-light: #e8f5e9;
-            --orange:      #e65100;
-            --orange-light:#fff3e0;
-            --purple:      #4a148c;
-            --purple-light:#f3e5f5;
-            --red:         #c62828;
-            --red-light:   #ffebee;
-            --yellow:      #f9a825;
-            --yellow-light:#fffde7;
-            --text:        #1a1a2e;
-            --muted:       #5f6368;
-            --border:      #e0e0e0;
-            --bg:          #f8f9fc;
-            --card:        #ffffff;
-            --code-bg:     #f1f3f4;
+        /* Mjuk scrollning är extra viktigt inuti en iframe */
+        html {
+            scroll-behavior: smooth;
         }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.7;
-            font-size: 1rem;
+            background-color: transparent; /* Låter inställningarnas bakgrund lysa igenom */
+            line-height: 1.6;
         }
-
-        /* ── LAYOUT ── */
-        .page-wrapper {
-            display: grid;
-            grid-template-columns: 260px 1fr;
-            min-height: 100vh;
+        .manual-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
         }
-
-        /* ── SIDEBAR ── */
-        nav {
-            background: var(--card);
-            border-right: 1px solid var(--border);
-            padding: 32px 0;
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            overflow-y: auto;
+        
+        /* Typografi och rubriker */
+        h1 { color: #0277bd; font-size: 2.5rem; margin-top: 0; margin-bottom: 10px; }
+        /* scroll-margin-top ser till att rubriken inte hamnar under kanten när man klickar i menyn */
+        h2 { border-bottom: 2px solid #0277bd; padding-bottom: 5px; margin-top: 50px; color: var(--header-text); scroll-margin-top: 20px; }
+        h3 { color: var(--header-text); margin-top: 25px; scroll-margin-top: 20px; }
+        p, li { font-size: 1.05rem; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; }
+        
+        /* Innehållsförteckningen (TOC) i toppen */
+        .toc { 
+            background: #f1f8e9; 
+            border: 1px solid #c5e1a5; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-bottom: 40px; 
         }
-
-        .nav-logo {
-            padding: 0 24px 24px;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 16px;
-        }
-
-        .nav-logo h2 {
-            font-size: 1.3rem;
-            font-weight: 800;
-            color: var(--blue);
-            letter-spacing: -0.5px;
-        }
-
-        .nav-logo span {
-            font-size: 0.78rem;
-            color: var(--muted);
-            font-weight: 500;
-        }
-
-        nav a {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 9px 24px;
-            text-decoration: none;
-            color: var(--muted);
-            font-size: 0.88rem;
-            font-weight: 500;
-            border-left: 3px solid transparent;
-            transition: all 0.15s;
-        }
-
-        nav a:hover {
-            color: var(--blue);
-            background: var(--blue-light);
-            border-left-color: var(--blue);
-        }
-
-        nav .nav-section {
-            font-size: 0.72rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #aaa;
-            padding: 20px 24px 6px;
-        }
-
-        /* ── MAIN CONTENT ── */
-        main {
-            padding: 48px 60px;
-            max-width: 900px;
-        }
-
-        /* ── HERO ── */
-        .hero {
-            background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
-            color: white;
-            border-radius: 16px;
-            padding: 40px 48px;
-            margin-bottom: 48px;
-        }
-
-        .hero h1 {
-            font-size: 2.4rem;
-            font-weight: 800;
-            letter-spacing: -1px;
-            margin-bottom: 8px;
-        }
-
-        .hero p {
-            font-size: 1.05rem;
-            opacity: 0.85;
-            max-width: 560px;
-        }
-
-        .hero .version-chip {
-            display: inline-block;
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 20px;
-            padding: 3px 12px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-bottom: 16px;
-        }
-
-        /* ── SECTIONS ── */
-        section {
-            margin-bottom: 56px;
-            scroll-margin-top: 32px;
-        }
-
-        h2 {
-            font-size: 1.6rem;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            color: var(--text);
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .section-divider {
-            height: 3px;
-            background: linear-gradient(90deg, var(--blue) 0%, transparent 100%);
-            border-radius: 2px;
-            margin-bottom: 24px;
-            width: 60px;
-        }
-
-        h3 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text);
-            margin: 28px 0 10px;
-        }
-
-        p { margin-bottom: 14px; color: var(--text); }
-
-        /* ── BADGES ── */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            vertical-align: middle;
-        }
-
-        .badge-user       { background: #e0e0e0; color: #333; }
-        .badge-admin      { background: var(--orange-light); color: var(--orange); border: 1px solid #ffcc80; }
-        .badge-superadmin { background: var(--purple-light); color: var(--purple); border: 1px solid #ce93d8; }
-
-        /* ── CARDS ── */
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 24px 28px;
-            margin-bottom: 16px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-        }
-
-        .card-blue   { border-left: 4px solid var(--blue);   background: var(--blue-light); }
-        .card-green  { border-left: 4px solid var(--green);  background: var(--green-light); }
-        .card-orange { border-left: 4px solid var(--orange); background: var(--orange-light); }
-        .card-yellow { border-left: 4px solid var(--yellow); background: var(--yellow-light); }
-        .card-red    { border-left: 4px solid var(--red);    background: var(--red-light); }
-
-        .card h4 {
-            font-size: 0.95rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .card p, .card li { font-size: 0.93rem; margin-bottom: 6px; }
-
-        /* ── METHODS GRID ── */
-        .methods-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            margin: 20px 0;
-        }
-
-        .method-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .method-card .method-icon {
-            font-size: 2rem;
-            display: block;
-            margin-bottom: 10px;
-        }
-
-        .method-card h4 {
-            font-size: 0.9rem;
-            font-weight: 700;
-            margin-bottom: 6px;
-            color: var(--text);
-        }
-
-        .method-card p {
-            font-size: 0.82rem;
-            color: var(--muted);
-            margin: 0;
-        }
-
-        /* ── STEPS ── */
-        .steps { list-style: none; }
-
-        .steps li {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 16px;
-            align-items: flex-start;
-        }
-
-        .step-num {
-            width: 28px;
-            height: 28px;
-            min-width: 28px;
-            background: var(--blue);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.78rem;
-            font-weight: 800;
-            margin-top: 2px;
-        }
-
-        .step-text { flex: 1; }
-        .step-text strong { display: block; margin-bottom: 2px; font-size: 0.95rem; }
-        .step-text span { font-size: 0.88rem; color: var(--muted); }
-
-        /* ── ROLE TABLE ── */
-        .role-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 16px 0;
-            font-size: 0.88rem;
-        }
-
-        .role-table th {
-            text-align: left;
-            padding: 10px 14px;
-            background: var(--blue-light);
-            color: var(--blue-dark);
-            font-weight: 700;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .role-table td {
-            padding: 10px 14px;
-            border-bottom: 1px solid var(--border);
-            vertical-align: top;
-        }
-
-        .role-table tr:last-child td { border-bottom: none; }
-
-        .check { color: var(--green); font-weight: 700; }
-        .cross { color: #bbb; }
-
-        /* ── KBD / CODE ── */
-        kbd {
-            background: var(--code-bg);
-            border: 1px solid #ccc;
-            border-bottom: 2px solid #bbb;
-            border-radius: 4px;
-            padding: 2px 7px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.82rem;
-            font-weight: 600;
-            color: var(--text);
-        }
-
-        code {
-            background: var(--code-bg);
-            border-radius: 4px;
-            padding: 1px 6px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: var(--blue-dark);
-        }
-
-        /* ── SETTINGS TABS OVERVIEW ── */
-        .tabs-overview {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin: 16px 0;
-        }
-
-        .tab-item {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 14px 18px;
-            display: flex;
-            gap: 12px;
-            align-items: flex-start;
-        }
-
-        .tab-item .tab-icon { font-size: 1.4rem; line-height: 1; }
-
-        .tab-item h5 {
-            font-size: 0.88rem;
-            font-weight: 700;
-            margin-bottom: 3px;
-        }
-
-        .tab-item p {
-            font-size: 0.8rem;
-            color: var(--muted);
-            margin: 0;
-        }
-
-        /* ── INLINE HIGHLIGHT ── */
-        .hl {
-            background: var(--blue-light);
-            color: var(--blue-dark);
-            padding: 1px 6px;
-            border-radius: 4px;
-            font-weight: 600;
-            font-size: 0.9em;
-        }
-
-        /* ── FOOTER ── */
-        footer {
-            border-top: 1px solid var(--border);
-            padding: 32px 0 0;
-            margin-top: 32px;
-            color: var(--muted);
-            font-size: 0.85rem;
-            text-align: center;
-        }
-
-        /* ── MOBILE ── */
-        @media (max-width: 900px) {
-            .page-wrapper { grid-template-columns: 1fr; }
-            nav { display: none; }
-            main { padding: 24px 20px; }
-            .methods-grid { grid-template-columns: 1fr; }
-            .tabs-overview { grid-template-columns: 1fr; }
-            .hero { padding: 28px 24px; }
-            .hero h1 { font-size: 1.8rem; }
+        .toc strong { color: #2e7d32; font-size: 1.1rem; display: block; margin-bottom: 15px; }
+        .toc a { color: #2e7d32; text-decoration: none; font-weight: 600; display: block; margin-bottom: 10px; transition: color 0.2s; }
+        .toc a:hover { text-decoration: underline; color: #1b5e20; }
+        
+        /* Övriga komponenter */
+        .highlight { background: #e3f2fd; padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #01579b; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; color: #fff; }
+        .badge.user { background: #757575; }
+        .badge.admin { background: #ef6c00; }
+        .badge.superadmin { background: #6a1b9a; }
+        .box { background: var(--input-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; margin: 20px 0; }
+        
+        kbd { 
+            background: var(--input-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 4px; 
+            padding: 2px 5px; 
+            font-family: monospace; 
+            font-size: 0.9em; 
+            font-weight: bold; 
+            color: var(--text-color);
         }
     </style>
 </head>
 <body>
 
-<div class="page-wrapper">
+<div class="manual-container">
+    <h1>📖 Manual för STRUL</h1>
+    <p style="font-size: 1.2rem; color: var(--text-color); opacity: 0.7; margin-bottom: 30px;">Välkommen till den officiella guiden för STRUL Bemanningssystem v3.1.</p>
 
-    <!-- ══════════════════════════════════════════
-         SIDOFÄLT (dold på mobil)
-    ═══════════════════════════════════════════ -->
-    <nav>
-        <div class="nav-logo">
-            <h2>📖 STRUL Manual</h2>
-            <span>Version 3.1</span>
-        </div>
-
-        <div class="nav-section">Kom igång</div>
-        <a href="#roller">🎭 Roller &amp; behörigheter</a>
-        <a href="#login">🔐 Logga in</a>
-
-        <div class="nav-section">Medarbetare</div>
-        <a href="#mittschemat">📅 Mitt schema</a>
-        <a href="#vyer">👁 Byta vy</a>
-
-        <div class="nav-section">Administratör</div>
-        <a href="#planering">🗓 Planering</a>
-        <a href="#laggatipass">➕ Lägga till personal</a>
-        <a href="#rensa">🗑 Ta bort från pass</a>
-        <a href="#publicera">📡 Publicera</a>
-        <a href="#franvaro">🏖 Frånvaro</a>
-
-        <div class="nav-section">Inställningar</div>
-        <a href="#installningar">⚙️ Inställningar</a>
-        <a href="#konton">👥 Konton</a>
-        <a href="#stationer">🚉 Platser &amp; pass</a>
-        <a href="#tema">🎨 Tema &amp; utseende</a>
-        <a href="#export">🖨 Utskrift &amp; export</a>
-        <a href="#display">📺 TV-skärm</a>
-        <a href="#statistik">📊 Statistik</a>
-
-        <div class="nav-section">Super-Admin</div>
-        <a href="#superadmin">🏢 Flera arbetsplatser</a>
+    <nav class="toc">
+        <strong>Innehållsförteckning:</strong>
+        <a href="#roller">1. Användarroller & Rättigheter</a>
+        <a href="#anvandare">2. För Anställda (Mitt Schema)</a>
+        <a href="#admin-planering">3. För Administratörer (Planering)</a>
+        <a href="#franvaro">4. Sjukdom & Frånvaro</a>
+        <a href="#installningar">5. Inställningar & Systemhantering</a>
+        <a href="#skarm">6. TV-skärm & Displaylänk</a>
+        <a href="#superadmin">7. Super-Admin (Flera arbetsplatser)</a>
     </nav>
 
-
-    <!-- ══════════════════════════════════════════
-         HUVUDINNEHÅLL
-    ═══════════════════════════════════════════ -->
-    <main>
-
-        <!-- HERO -->
-        <div class="hero">
-            <div class="version-chip">v3.1</div>
-            <h1>STRUL Bemanningssystem</h1>
-            <p>Strategisk Tidsplanering &amp; Resurs-Utnyttjande i Ledningscentralen — komplett guide för alla roller.</p>
-        </div>
-
-
-        <!-- ══ ROLLER ══ -->
-        <section id="roller">
-            <h2>🎭 Roller &amp; behörigheter</h2>
-            <div class="section-divider"></div>
-            <p>Systemet har tre behörighetsnivåer. Vilken roll ett konto har avgör vad personen kan se och göra.</p>
-
-            <table class="role-table">
-                <thead>
-                    <tr>
-                        <th>Roll</th>
-                        <th>Se schema</th>
-                        <th>Redigera schema</th>
-                        <th>Inställningar</th>
-                        <th>Alla arbetsplatser</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><span class="badge badge-user">🧍 Användare</span></td>
-                        <td class="check">✔</td>
-                        <td class="cross">–</td>
-                        <td class="cross">–</td>
-                        <td class="cross">–</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-admin">🔧 Administratör</span></td>
-                        <td class="check">✔</td>
-                        <td class="check">✔</td>
-                        <td class="check">✔</td>
-                        <td class="cross">–</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-superadmin">👑 Super-Admin</span></td>
-                        <td class="check">✔</td>
-                        <td class="check">✔</td>
-                        <td class="check">✔</td>
-                        <td class="check">✔</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div class="card card-blue">
-                <h4>💡 Super-Admin är dold</h4>
-                <p>Super-Admin-konton syns inte i personallistan och läggs inte till på pass. De är avsedda för systemägare som administrerar flera arbetsplatser.</p>
-            </div>
-        </section>
-
-
-        <!-- ══ LOGGA IN ══ -->
-        <section id="login">
-            <h2>🔐 Logga in</h2>
-            <div class="section-divider"></div>
-
-            <p>Gå till systemets webbadress och fyll i ditt användarnamn och lösenord. Tryck <kbd>Enter</kbd> eller klicka <span class="hl">Logga in</span>.</p>
-
-            <ul class="steps">
-                <li>
-                    <div class="step-num">1</div>
-                    <div class="step-text">
-                        <strong>Användare</strong>
-                        <span>Skickas direkt till <em>Mitt schema</em>.</span>
-                    </div>
-                </li>
-                <li>
-                    <div class="step-num">2</div>
-                    <div class="step-text">
-                        <strong>Administratör / Super-Admin</strong>
-                        <span>Skickas till <em>Adminpanelen</em>.</span>
-                    </div>
-                </li>
-            </ul>
-
-            <h3>Glömt lösenordet?</h3>
-            <p>Klicka på <span class="hl">Glömt lösenord?</span> under inloggningsformuläret, ange din e-postadress och klicka <span class="hl">Skicka länk</span>. Du får ett mejl med en återställningslänk som är giltig i en timme. Länken fungerar bara en gång.</p>
-
-            <div class="card card-yellow">
-                <h4>⚠️ Inget mejl?</h4>
-                <p>Kontrollera skräppostmappen. Om adressen inte är registrerad i systemet skickas inget mejl — av säkerhetsskäl visas ändå ett lyckat meddelande. Kontakta din administratör om du inte hittar ditt konto.</p>
-            </div>
-        </section>
-
-
-        <!-- ══ MITT SCHEMA ══ -->
-        <section id="mittschemat">
-            <h2>📅 Mitt schema</h2>
-            <div class="section-divider"></div>
-            <p>Medarbetare med rollen <span class="badge badge-user">🧍 Användare</span> landar direkt här efter inloggning. Sidan är optimerad för mobil och visar det publicerade schemat.</p>
-
-            <div id="vyer">
-                <h3>Byta vy</h3>
-                <p>Längst upp i sidhuvudet finns två knappar som styr hur schemat visas:</p>
-
-                <div class="card">
-                    <h4>📅 Byt till Veckovy / Dagsvy</h4>
-                    <p>Växlar mellan att visa en enskild dag eller en hel kalendervecka (måndag–söndag).</p>
-                </div>
-
-                <div class="card">
-                    <h4>👤 Visa endast mitt / 👥 Visa alla pass</h4>
-                    <p>När <em>Visa endast mitt</em> är aktivt ser du enbart dina egna pass, rullande 7 dagar framåt från valt startdatum. Alla kollegor döljs. På mobil är detta läge aktiverat automatiskt vid inloggning.</p>
-                </div>
-            </div>
-
-            <h3>Navigera i schemat</h3>
-            <p>Använd pilknapparna <kbd>◀</kbd> och <kbd>▶</kbd> bredvid datumfältet för att bläddra dag för dag eller vecka för vecka. Du kan också klicka direkt i datumfältet och skriva in ett datum.</p>
-
-            <h3>Frånvaro</h3>
-            <p>Om du är markerad som frånvarande (sjuk, semester, VAB eller tjänstledig) av en administratör visas en färgad etikett i schemat istället för dina pass — t.ex. <span style="background:#ffebee; color:#c62828; padding:2px 8px; border-radius:4px; font-size:0.85rem; font-weight:700;">🤒 Sjuk</span> eller <span style="background:#ffebee; color:#c62828; padding:2px 8px; border-radius:4px; font-size:0.85rem; font-weight:700;">🌴 Semester</span>. Du kan inte schemaläggas under frånvaroperioden.</p>
-        </section>
-
-
-        <!-- ══ PLANERING ══ -->
-        <section id="planering">
-            <h2>🗓 Planering</h2>
-            <div class="section-divider"></div>
-            <p>Adminpanelen är verktyget där schemat byggs. Välj dag med datumväljaren längst upp, eller navigera med <kbd>◀</kbd> och <kbd>▶</kbd>. Växla till veckovy med knappen <span class="hl">📅 Byt till Veckovy</span> för att se hela veckan på en gång.</p>
-
-            <div id="laggatipass">
-                <h3>Lägga till personal på ett pass</h3>
-                <p>Det finns tre sätt att bemanna ett pass. Alla tre sparar direkt till databasen.</p>
-
-                <div class="methods-grid">
-                    <div class="method-card">
-                        <span class="method-icon">🖱️</span>
-                        <h4>Drag &amp; Drop</h4>
-                        <p>Klicka och håll på ett namn i listan till vänster. Dra det till önskad ruta och släpp.</p>
-                    </div>
-                    <div class="method-card">
-                        <span class="method-icon">➕</span>
-                        <h4>Plus-menyn</h4>
-                        <p>Håll musen över ett pass och klicka på <kbd>+</kbd>. Välj person i listan som dyker upp.</p>
-                    </div>
-                    <div class="method-card">
-                        <span class="method-icon">⌨️</span>
-                        <h4>Direktskrivning</h4>
-                        <p>Klicka på texten i ett pass. Rutan blir redigerbar — börja skriva ett namn.</p>
-                    </div>
-                </div>
-
-                <h3>Direktskrivning med autocomplete</h3>
-                <p>När du klickar på ett pass och börjar skriva föreslår systemet namn automatiskt:</p>
-                <ul class="steps">
-                    <li>
-                        <div class="step-num">1</div>
-                        <div class="step-text">
-                            <strong>Välj med tangentbordet</strong>
-                            <span>Tryck <kbd>↑</kbd> och <kbd>↓</kbd> för att bläddra i förslagslistan, <kbd>Enter</kbd> för att välja.</span>
-                        </div>
-                    </li>
-                    <li>
-                        <div class="step-num">2</div>
-                        <div class="step-text">
-                            <strong>Flera personer på samma pass</strong>
-                            <span>Skriv ett snedstreck <kbd>/</kbd> mellan namnen: <code>Anna / Kalle</code></span>
-                        </div>
-                    </li>
-                    <li>
-                        <div class="step-num">3</div>
-                        <div class="step-text">
-                            <strong>Nytt namn som inte finns</strong>
-                            <span>Skriv namnet och klicka utanför — personen läggs automatiskt till i personallistan.</span>
-                        </div>
-                    </li>
-                    <li>
-                        <div class="step-num">4</div>
-                        <div class="step-text">
-                            <strong>Spara</strong>
-                            <span>Klicka utanför rutan. Ändringen sparas direkt till databasen.</span>
-                        </div>
-                    </li>
-                </ul>
-
-                <h3>Lägga till via plus-menyn</h3>
-                <p>Klicka på <kbd>+</kbd> som visas när du håller musen över ett pass. I menyn som öppnas kan du:</p>
-                <ul style="padding-left: 20px; margin-bottom: 14px;">
-                    <li style="margin-bottom: 6px;">Klicka på ett namn i listan för att lägga till personen direkt.</li>
-                    <li>Klicka på <span class="hl">+ Skriv in eget namn...</span> för att skriva ett nytt namn och lägga till personen.</li>
-                </ul>
-            </div>
-
-            <div id="rensa">
-                <h3>Ta bort personal från ett pass</h3>
-                <p>Håll musen över ett bemannat pass. En <kbd>×</kbd>-knapp visas — klicka på den för att rensa hela passet. Om flera personer är inbokade tas alla bort samtidigt.</p>
-
-                <h3>Ta bort personal helt från systemet</h3>
-                <p>Klicka på <kbd>×</kbd> bredvid personens namn i listan till vänster.</p>
-
-                <div class="card card-red">
-                    <h4>⚠️ Obs — permanent åtgärd</h4>
-                    <p>Att ta bort en person från listan raderar kontot och tar bort personen från alla framtida pass. Konton med inloggning (lösenord) kan bara raderas via <span class="hl">Inställningar → Användare &amp; Konton</span>.</p>
-                </div>
-            </div>
-        </section>
-
-
-        <!-- ══ PUBLICERA ══ -->
-        <section id="publicera">
-            <h2>📡 Publicera schemat</h2>
-            <div class="section-divider"></div>
-
-            <p>Alla ändringar du gör i adminpanelen sparas som ett <strong>utkast</strong> — de är inte synliga för personal eller på TV-skärmar förrän du publicerar.</p>
-
-            <div class="card card-yellow">
-                <h4>⚠️ Opublicerade ändringar</h4>
-                <p>En gul banner visas högst upp i schemat när det finns ändringar som inte publicerats. Bannern försvinner automatiskt när du publicerar.</p>
-            </div>
-
-            <p>Klicka på den gröna knappen <span class="hl" style="background: #e8f5e9; color: #2e7d32;">📡 Publicera</span> längst ned på sidan.</p>
-            <ul style="padding-left: 20px; margin-bottom: 14px;">
-                <li style="margin-bottom: 6px;"><strong>Dagsvy:</strong> publicerar schemat för den valda dagen.</li>
-                <li><strong>Veckovy:</strong> publicerar hela veckans schema på en gång.</li>
-            </ul>
-            <p>Schemat visas på TV-skärmar och i medarbetarnas inloggning direkt efter publicering.</p>
-        </section>
-
-
-        <!-- ══ FRÅNVARO ══ -->
-        <section id="franvaro">
-            <h2>🏖 Frånvaro &amp; sjukdom</h2>
-            <div class="section-divider"></div>
-
-            <p>Radera inte pass manuellt när någon är sjuk — använd frånvarohanteraren istället. Det säkerställer att personen inte kan schemaläggas av misstag under perioden.</p>
-
-            <h3>Registrera frånvaro</h3>
-            <ul class="steps">
-                <li>
-                    <div class="step-num">1</div>
-                    <div class="step-text">
-                        <strong>Öppna Inställningar</strong>
-                        <span>Klicka på <span class="hl">⚙️ Inställningar</span> längst ned i adminpanelen och välj fliken <span class="hl">🏖 Hantera Frånvaro</span>.</span>
-                    </div>
-                </li>
-                <li>
-                    <div class="step-num">2</div>
-                    <div class="step-text">
-                        <strong>Fyll i formuläret</strong>
-                        <span>Välj person, typ av frånvaro (Sjuk, VAB, Semester eller Tjänstledig) samt start- och slutdatum.</span>
-                    </div>
-                </li>
-                <li>
-                    <div class="step-num">3</div>
-                    <div class="step-text">
-                        <strong>Spara</strong>
-                        <span>Systemet rensar automatiskt alla inbokade pass personen hade under perioden.</span>
-                    </div>
-                </li>
-            </ul>
-
-            <h3>Vad händer i schemat?</h3>
-            <p>Under frånvaroperioden:</p>
-            <ul style="padding-left: 20px; margin-bottom: 14px;">
-                <li style="margin-bottom: 6px;">Personens "piller" i sidopanelen markeras med en röd/gul bakgrund och en ikon (🤒 🧸 🌴 ✈️).</li>
-                <li style="margin-bottom: 6px;">Det går inte att dra-och-släppa personen till ett pass.</li>
-                <li>I medarbetarens schemavy visas frånvarotypen med ikon istället för pass.</li>
-            </ul>
-
-            <h3>Ändra eller ta bort frånvaro</h3>
-            <p>Under listan <em>Aktuell frånvaro</em> kan du klicka <kbd>✏️</kbd> för att redigera eller <kbd>🗑️</kbd> för att radera en frånvaropost. Vid redigering rensas pass i det uppdaterade intervallet automatiskt.</p>
-        </section>
-
-
-        <!-- ══ INSTÄLLNINGAR ══ -->
-        <section id="installningar">
-            <h2>⚙️ Inställningar</h2>
-            <div class="section-divider"></div>
-            <p>Nås via knappen <span class="hl">⚙️ Inställningar</span> längst ned i adminpanelen. Välj flik i vänstermenyn.</p>
-
-            <div class="tabs-overview">
-                <div class="tab-item">
-                    <div class="tab-icon">📢</div>
-                    <div>
-                        <h5>Allmänt &amp; Meddelanden</h5>
-                        <p>Löpande text på TV-skärmen, standard exportdagar och displaylänk.</p>
-                    </div>
-                </div>
-                <div class="tab-item">
-                    <div class="tab-icon">🌤️</div>
-                    <div>
-                        <h5>Väder &amp; Plats</h5>
-                        <p>Sök en stad för att visa lokalt väder i skärmens sidhuvud.</p>
-                    </div>
-                </div>
-                <div class="tab-item">
-                    <div class="tab-icon">🖨️</div>
-                    <div>
-                        <h5>Utskrift &amp; Export</h5>
-                        <p>Skriv ut till PDF eller spara schemat som bild/ZIP-fil.</p>
-                    </div>
-                </div>
-                <div class="tab-item">
-                    <div class="tab-icon">🚉</div>
-                    <div>
-                        <h5>Platser / Stationer</h5>
-                        <p>Skapa, redigera, sortera och ta bort arbetsstationer med färgkoder.</p>
-                    </div>
-                </div>
-                <div class="tab-item">
-                    <div class="tab-icon">⏰</div>
-                    <div>
-                        <h5>Arbetspass</h5>
-                        <p>Lägg till och sortera pass (t.ex. Förmiddag 06:30–14:00).</p>
-                    </div>
-                </div>
-                <div class="tab-item">
-                    <div class="tab-icon">🎨</div>
-                    <div>
-                        <h5>Utseende &amp; Tema</h5>
-                        <p>Välj aktivt tema, skapa egna CSS-teman med live-förhandsgranskning.</p>
-                    </div>
-                </div>
-                <div class="tab-item">
-                    <div class="tab-icon">👥</div>
-                    <div>
-                        <h5>Användare &amp; Konton</h5>
-                        <p>Skapa och redigera inloggningskonton, tilldela roller och återställ lösenord.</p>
-                    </div>
-                </div>
-                <div class="tab-item">
-                    <div class="tab-icon">🏖️</div>
-                    <div>
-                        <h5>Hantera Frånvaro</h5>
-                        <p>Registrera sjukdom, semester, VAB och tjänstledighet.</p>
-                    </div>
-                </div>
-                <div class="tab-item">
-                    <div class="tab-icon">📊</div>
-                    <div>
-                        <h5>Statistik</h5>
-                        <p>Se hur många pass varje person haft under en valfri period.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-
-        <!-- ══ KONTON ══ -->
-        <section id="konton">
-            <h2>👥 Användare &amp; Konton</h2>
-            <div class="section-divider"></div>
-
-            <h3>Skapa ett nytt konto</h3>
-            <p>Fyll i formuläret under <span class="hl">Skapa eller redigera konto</span>:</p>
-            <ul style="padding-left: 20px; margin-bottom: 14px;">
-                <li style="margin-bottom: 6px;"><strong>Visningsnamn</strong> — hur personen visas på schemat (t.ex. ett smeknamn eller <em>Johan K</em> för att skilja på två Johan).</li>
-                <li style="margin-bottom: 6px;"><strong>Förnamn / Efternamn</strong> — används för rapporter och statistik.</li>
-                <li style="margin-bottom: 6px;"><strong>E-postadress</strong> — krävs för att personen ska kunna återställa sitt lösenord själv.</li>
-                <li style="margin-bottom: 6px;"><strong>Användarnamn</strong> — det som används vid inloggning.</li>
-                <li style="margin-bottom: 6px;"><strong>Lösenord</strong> — lämna tomt för personal som bara ska synas i schemat utan att logga in. Minst 6 tecken om det anges.</li>
-                <li><strong>Roll</strong> — se tabellen under <a href="#roller" style="color: var(--blue);">Roller &amp; behörigheter</a>.</li>
-            </ul>
-
-            <h3>Redigera ett konto</h3>
-            <p>Klicka på <kbd>✏️</kbd> bredvid kontot i listan. Formuläret fylls i med befintliga uppgifter. Lämna lösenordsfältet tomt om du inte vill byta lösenord. Klicka <span class="hl">Spara / Skapa konto</span> när du är klar.</p>
-
-            <h3>Återställa lösenord</h3>
-            <p>Som administratör kan du skriva in ett nytt lösenord direkt i redigeringsvyn. Personen kan också klicka <span class="hl">Glömt lösenord?</span> på inloggningssidan om de har en e-postadress registrerad.</p>
-
-            <h3>Söka i kontolistan</h3>
-            <p>Använd sökfältet ovanför listan för att filtrera på namn, användarnamn eller roll. Listan uppdateras direkt medan du skriver.</p>
-
-            <div class="card card-red">
-                <h4>⚠️ Radera konton</h4>
-                <p>Klicka på <kbd>🗑️</kbd> bredvid ett konto för att radera det permanent. Kontot och all kopplad data tas bort. Åtgärden kan inte ångras.</p>
-            </div>
-        </section>
-
-
-        <!-- ══ STATIONER ══ -->
-        <section id="stationer">
-            <h2>🚉 Platser, stationer &amp; pass</h2>
-            <div class="section-divider"></div>
-
-            <h3>Hantera stationer</h3>
-            <p>Under fliken <span class="hl">🚉 Platser / Stationer</span> skapar du de rader som visas i schemat (t.ex. <em>Växeln</em>, <em>Ledningscentralen</em>).</p>
-            <ul style="padding-left: 20px; margin-bottom: 14px;">
-                <li style="margin-bottom: 6px;"><strong>Lägg till:</strong> fyll i namn och välj en färg, klicka <span class="hl">Lägg till</span>.</li>
-                <li style="margin-bottom: 6px;"><strong>Redigera:</strong> klicka <kbd>✏️</kbd> bredvid stationen.</li>
-                <li style="margin-bottom: 6px;"><strong>Sortera:</strong> dra i handtaget <kbd>☰</kbd> för att ändra ordningen.</li>
-                <li style="margin-bottom: 6px;"><strong>Mellanrum:</strong> klicka <span class="hl">➕ Lägg till "Mellanrum"</span> för att lägga in ett visuellt avstånd mellan stationsgrupper.</li>
-                <li><strong>Ta bort:</strong> klicka <kbd>🗑️</kbd>.</li>
-            </ul>
-
-            <h3>Hantera arbetspass</h3>
-            <p>Under fliken <span class="hl">⏰ Arbetspass</span> skapar du kolumnerna i schemat (t.ex. <em>Förmiddag 06:30–14:00</em>).</p>
-            <ul style="padding-left: 20px; margin-bottom: 14px;">
-                <li style="margin-bottom: 6px;"><strong>Namn:</strong> det korta namn som visas i kolumnrubriken (t.ex. <em>Förmiddag</em>).</li>
-                <li style="margin-bottom: 6px;"><strong>Tid:</strong> tidsintervall som visas under rubriken (t.ex. <code>06:30 - 14:00</code>).</li>
-                <li>Sortera och ta bort på samma sätt som stationer.</li>
-            </ul>
-        </section>
-
-
-        <!-- ══ TEMA ══ -->
-        <section id="tema">
-            <h2>🎨 Utseende &amp; Tema</h2>
-            <div class="section-divider"></div>
-
-            <h3>Byta tema</h3>
-            <p>Under fliken <span class="hl">🎨 Utseende &amp; Tema</span> väljer du vilket tema som är aktivt på TV-skärmen. Välj i rullgardinen <em>Aktivt tema</em> och klicka <span class="hl">Aktivera Tema</span>.</p>
-
-            <h3>Skapa ett eget tema</h3>
-            <p>Skriv CSS-kod i textrutan under <em>Skapa / Redigera Tema</em>. Förhandsgranskningen till höger uppdateras i realtid och visar exakt hur skärmen kommer att se ut med ditt tema.</p>
-
-            <div class="card card-blue">
-                <h4>💡 Tips för CSS-teman</h4>
-                <p>Byt ut CSS-variablerna som är definierade i <code>:root</code> — t.ex. <code>--bg-color</code>, <code>--card-bg</code>, <code>--header-bg</code> — för att snabbt ändra hela utseendet utan att skriva om specifika klasser.</p>
-            </div>
-
-            <h3>Ta bort ett tema</h3>
-            <p>Välj temat i rullgardinen under <em>Skapa / Redigera Tema</em> och klicka <span class="hl">🗑️ Ta bort valt tema</span>. Om det raderade temat var aktivt återgår skärmen automatiskt till standardtemat (Ljus).</p>
-        </section>
-
-
-        <!-- ══ EXPORT ══ -->
-        <section id="export">
-            <h2>🖨 Utskrift &amp; Export</h2>
-            <div class="section-divider"></div>
-
-            <p>Välj ett datumintervall under fliken <span class="hl">🖨️ Utskrift &amp; Export</span>. Snabbknapparna <span class="hl">Idag</span>, <span class="hl">Denna vecka</span> och <span class="hl">Nästa vecka</span> fyller i datumen åt dig.</p>
-
-            <div class="card">
-                <h4>🖨️ Skriv ut (PDF)</h4>
-                <p>Skriver ut schemat formaterat för A4-papper i liggande läge. En sida per dag. Öppnar webbläsarens utskriftsdialog där du kan välja <em>Spara som PDF</em>.</p>
-            </div>
-
-            <div class="card">
-                <h4>📷 Spara som bild / ZIP</h4>
-                <p>Genererar en PNG-bild (1920×1080 px) per dag i valt intervall, formaterad som TV-skärmsläget. Är det en enda dag sparas en PNG direkt. Är det flera dagar packas de i en ZIP-fil.</p>
-            </div>
-
-            <h3>Standard antal dagar</h3>
-            <p>Under <span class="hl">📢 Allmänt &amp; Meddelanden → Övriga inställningar</span> kan du ange hur många dagar som ska förfyllas automatiskt när du öppnar Export-fliken. Standardvärdet är 1 (dagens datum).</p>
-        </section>
-
-
-        <!-- ══ TV-SKÄRM ══ -->
-        <section id="display">
-            <h2>📺 TV-skärm (Display)</h2>
-            <div class="section-divider"></div>
-
-            <p>Display-vyn är avsedd att köra dygnet runt på en TV i lunchrummet eller korridoren. Den hämtar det senaste publicerade schemat automatiskt var 60:e sekund, medan klockan uppdateras varje sekund.</p>
-
-            <h3>Skapa en displaylänk</h3>
-            <ul class="steps">
-                <li>
-                    <div class="step-num">1</div>
-                    <div class="step-text">
-                        <strong>Öppna Inställningar</strong>
-                        <span>Gå till <span class="hl">📢 Allmänt &amp; Meddelanden</span>.</span>
-                    </div>
-                </li>
-                <li>
-                    <div class="step-num">2</div>
-                    <div class="step-text">
-                        <strong>Ange display-nyckeln</strong>
-                        <span>Skriv in den hemliga display-nyckeln (konfigurerad av IT/Super-Admin som miljövariabeln <code>DISPLAY_SECRET</code>).</span>
-                    </div>
-                </li>
-                <li>
-                    <div class="step-num">3</div>
-                    <div class="step-text">
-                        <strong>Generera länken</strong>
-                        <span>Klicka <span class="hl">Skapa displaylänk</span>. En säker länk genereras som är låst till din arbetsplats.</span>
-                    </div>
-                </li>
-                <li>
-                    <div class="step-num">4</div>
-                    <div class="step-text">
-                        <strong>Kopiera och öppna</strong>
-                        <span>Klicka <span class="hl">📋 Kopiera länk</span> och klistra in den i webbläsaren på TV:n. Sätt webbläsaren i helskärmsläge (<kbd>F11</kbd>).</span>
-                    </div>
-                </li>
-            </ul>
-
-            <h3>Löpande textmeddelande</h3>
-            <p>Under <span class="hl">📢 Allmänt &amp; Meddelanden</span> kan du aktivera ett meddelande som rullar längst upp på TV-skärmen. Bocka i <em>Visa meddelande på skärmen</em>, skriv texten och klicka <span class="hl">Uppdatera Meddelande</span>. Kom ihåg att publicera schemat för att ändringen ska synas.</p>
-
-            <h3>Vädervisning</h3>
-            <p>Konfigurera en stad under <span class="hl">🌤️ Väder &amp; Plats</span>. Sök på stadsnamnet, välj plats i listan och klicka <span class="hl">Spara</span>. Temperaturen och en väderikon visas i TV-skärmens sidhuvud och uppdateras var 15:e minut.</p>
-        </section>
-
-
-        <!-- ══ STATISTIK ══ -->
-        <section id="statistik">
-            <h2>📊 Statistik</h2>
-            <div class="section-divider"></div>
-
-            <p>Under fliken <span class="hl">📊 Statistik</span> kan du se hur många publicerade pass varje person haft under en valfri period.</p>
-            <ol style="padding-left: 20px; margin-bottom: 14px;">
-                <li style="margin-bottom: 6px;">Välj start- och slutdatum.</li>
-                <li style="margin-bottom: 6px;">Klicka <span class="hl">🔍 Hämta Statistik</span>.</li>
-                <li>Listan sorteras med den som haft flest pass högst upp. Varje rad visar totalt antal pass och fördelningen per station.</li>
-            </ol>
-
-            <div class="card card-blue">
-                <h4>💡 Obs — bara publicerade pass</h4>
-                <p>Statistiken räknar bara pass som har publicerats. Utkast syns inte.</p>
-            </div>
-        </section>
-
-
-        <!-- ══ SUPER-ADMIN ══ -->
-        <section id="superadmin">
-            <h2>🏢 Super-Admin — Flera arbetsplatser</h2>
-            <div class="section-divider"></div>
-
-            <p>Ett Super-Admin-konto kan administrera hela organisationen. Varje arbetsplats är helt isolerad — de delar inte personal, schema eller inställningar.</p>
-
-            <h3>Skapa en ny arbetsplats</h3>
-            <ul class="steps">
-                <li>
-                    <div class="step-num">1</div>
-                    <div class="step-text">
-                        <strong>Öppna arbetsplatsfliken</strong>
-                        <span>Gå till <span class="hl">Inställningar → 🏢 Arbetsplatser</span> (syns bara för Super-Admin).</span>
-                    </div>
-                </li>
-                <li>
-                    <div class="step-num">2</div>
-                    <div class="step-text">
-                        <strong>Ange ett namn</strong>
-                        <span>T.ex. <em>Stockholm Huvudkontor</em> eller <em>Boden</em>.</span>
-                    </div>
-                </li>
-                <li>
-                    <div class="step-num">3</div>
-                    <div class="step-text">
-                        <strong>Klicka Skapa Ny</strong>
-                        <span>Arbetsplatsen skapas och sidan laddas om.</span>
-                    </div>
-                </li>
-            </ul>
-
-            <h3>Byta arbetsplats i adminpanelen</h3>
-            <p>Super-Admin ser en rullgardin <span class="hl">🏢 Arbetsplats</span> i sidhuvudets högra del. Välj önskad arbetsplats i listan — sidan laddas om och du administrerar nu den valda platsen.</p>
-
-            <div class="card card-orange">
-                <h4>💡 Super-Admin syns inte i schemat</h4>
-                <p>Super-Admin-konton visas inte i personallistan och kan inte läggas på pass. Vill du synas i schemat behöver du ett separat användarkonto.</p>
-            </div>
-        </section>
-
-
-        <footer>
-            <p>STRUL Bemanningssystem v3.1 &nbsp;·&nbsp; Optimerad för molnet, hastighet och PostgreSQL.</p>
-        </footer>
-
-    </main>
+    <h2 id="roller">1. Användarroller & Rättigheter</h2>
+    <p>Systemet har tre olika nivåer av behörighet:</p>
+    <ul>
+        <li><span class="badge user">Användare</span> - Den vanliga personalen. De kan logga in och se schemat, men kan inte ändra något.</li>
+        <li><span class="badge admin">Admin</span> - Chefer och schemaläggare. De har tillgång till Planeringsverktyget, Frånvarohanteringen och Inställningarna.</li>
+        <li><span class="badge superadmin">Super-Admin</span> - Systemägare. Kan göra allt en Admin kan, men kan dessutom skapa helt nya isolerade <em>Arbetsplatser</em> (t.ex. olika städer eller avdelningar). Super-Admins syns normalt inte i personal-listan.</li>
+    </ul>
+
+    <h2 id="anvandare">2. För Anställda (Mitt Schema)</h2>
+    <p>När du loggar in med ett Användar-konto landar du direkt i <strong>Mitt Schema</strong>. Denna vy är optimerad för mobilen.</p>
+    <ul>
+        <li><strong>👤 Visa endast mitt schema:</strong> Genom att klicka på denna knapp döljer du alla kollegor och ser dina egna pass <em>rullande 7 dagar framåt</em> räknat från valt startdatum.</li>
+        <li><strong>👥 Visa alla pass:</strong> Visar en klassisk kalendervecka (Mån-Sön) där du ser vilka kollegor du jobbar med.</li>
+        <li><strong>Frånvaro:</strong> Om du är schemalagd under en period men blir sjuk, kommer administratören att lägga in det, och en röd/gul ikon (t.ex. 🤒 Sjuk eller 🌴 Semester) syns istället för dina pass.</li>
+    </ul>
+
+    <h2 id="admin-planering">3. För Administratörer (Planering)</h2>
+    <p>Planeringsvyn är hjärtat i systemet där schemat byggs. Det finns tre sätt att bemanna ett pass på:</p>
+    
+    <div class="box">
+        <h3 style="margin-top: 0;">Metod 1: Drag and Drop 🖱️</h3>
+        <p>Klicka och håll inne musknappen på ett namn i listan till vänster. Dra namnet till önskad ruta i schemat och släpp.</p>
+        
+        <h3>Metod 2: Menyn (+) 📋</h3>
+        <p>Håll muspekaren över ett pass och klicka på <kbd>+</kbd>-knappen som dyker upp. En rullgardin visas där du kan klicka på valfri person i databasen för att snabbt lägga till dem. Om personen inte finns, klicka på <em>"+ Skriv in eget namn..."</em> så skapas ett nytt konto åt dem automatiskt.</p>
+        
+        <h3>Metod 3: Snabb inmatning (Tangentbord & Autocomplete) ⌨️</h3>
+        <p>Klicka direkt på texten i ett tomt (eller bemannat) pass. Rutan blir nu en textruta!</p>
+        <ul>
+            <li>Börja skriva ett namn. Systemet föreslår automatiskt namn från personal-listan i en meny.</li>
+            <li><strong>NYTT:</strong> Du kan nu använda <kbd>↑</kbd> och <kbd>↓</kbd> (pil upp/ner) på tangentbordet för att bläddra i listan, och trycka <kbd>Enter</kbd> för att välja en person blixtsnabbt.</li>
+            <li>Om du vill ha flera personer på samma pass, skriv ett snedstreck <kbd>/</kbd> mellan namnen (ex: <code>Anna / Kalle</code>).</li>
+            <li>Klicka utanför rutan när du är klar – systemet sparar direkt till databasen! <em>(Om du skrev ett namn som inte fanns förut, läggs personen till i personal-listan automatiskt).</em></li>
+        </ul>
+    </div>
+
+    <h3>Rensa pass och Ta bort personal</h3>
+    <ul>
+        <li><strong>Ta bort någon från ett pass:</strong> Håll musen över passet och klicka på krysset <kbd>×</kbd>.</li>
+        <li><strong>Ta bort personal helt:</strong> Klicka på krysset bredvid namnet i listan till vänster. <em>Varning: Detta raderar personens konto och framtida pass!</em></li>
+    </ul>
+
+    <h3>📡 Publicera schemat</h3>
+    <p>Ändringar du gör i schemat är <strong>Dolda (Utkast)</strong> fram till att du publicerar dem. Det visas en gul varningsbanner om det finns opublicerade ändringar. När du är nöjd, klicka på den gröna knappen <span class="highlight">📡 Publicera</span> i botten av skärmen för att skicka utkastet till TV-skärmarna och de anställdas inloggning.</p>
+
+    <h2 id="franvaro">4. Sjukdom & Frånvaro</h2>
+    <p>Om någon blir sjuk eller ska ha semester ska du <strong>inte</strong> bara radera deras pass manuellt. Använd Frånvarohanteraren för att undvika schemakrockar!</p>
+    <ol>
+        <li>Gå till <strong>Inställningar ⚙️</strong> och klicka på fliken <strong>🏖️ Hantera Frånvaro</strong>.</li>
+        <li>Välj person, typ av frånvaro (Sjuk, VAB, Semester, Tjänstledig) och ett datumintervall.</li>
+        <li><strong>Krock-Systemet:</strong> När du sparar kommer systemet automatiskt att radera personen från alla pass de var inbokade på under den perioden.</li>
+        <li>I Planeringsvyn blir personens "piller" i sidopanelen nu rödmarkerat, och det är omöjligt att schemalägga personen av misstag under denna period.</li>
+    </ol>
+
+    <h2 id="installningar">5. Inställningar & Systemhantering</h2>
+    <p>Under Inställningar styr du hur systemet fungerar och ser ut.</p>
+    
+    <div class="box">
+        <ul style="margin: 0;">
+            <li><strong>Allmänt & Meddelanden:</strong> Skriv en textrad som ska rulla på display-skärmen. Du kan nu även <strong>schemalägga meddelandet</strong> genom att ange start-/slutdatum och specifika klockslag.</li>
+            <li><strong>Väder & Plats:</strong> Sök efter din stad för att visa lokalt väder uppe i hörnet på TV-skärmen.</li>
+            <li><strong>Utskrift & Export:</strong> Välj ett datumintervall och skriv ut schemat till en pappersskrivare (PDF), eller spara schemat som en färdig <strong>Bild / ZIP-fil</strong>.</li>
+            <li><strong>Platser & Pass:</strong> Skapa arbetsstationer (med färgkoder) och tider. Dra och släpp dem i listan för att byta ordning. Du kan även lägga in "Mellanrum" för att gruppera stationer snyggt på skärmen.</li>
+            <li><strong>Utseende & Tema:</strong> Välj hur TV-skärmen ska se ut. Du kan även skriva din egen CSS-kod för att skapa unika teman. Live-preview låter dig testa direkt i webbläsaren!</li>
+        </ul>
+    </div>
+
+    <h3>👥 Användare, Konton & Lösenord</h3>
+    <p>I fliken Användare & Konton skapar du inloggningar för din personal.</p>
+    <ul>
+        <li><strong>Visningsnamn:</strong> Det namn som visas externt på schemat (perfekt för smeknamn eller för att skilja på två "Johan").</li>
+        <li><strong>Återställa lösenord:</strong> Om en person har glömt sitt lösenord kan du som Admin redigera deras konto och skriva in ett nytt lösenord direkt.</li>
+        <li><strong>E-poståterställning:</strong> Om användaren har sin E-post inlagd på kontot kan de själva klicka på "Glömt lösenord" på inloggningssidan för att få en återställningslänk skickad till sig.</li>
+    </ul>
+
+    <h2 id="skarm">6. TV-skärm & Displaylänk</h2>
+    <p>Display-vyn är gjord för att rulla dygnet runt på en TV i lunchrummet. Systemet hämtar det senaste publicerade schemat automatiskt <strong>varje minut</strong> (60 sekunder) för att vara resurssnålt, medan klockan och schemalagda meddelanden alltid tickar i realtid.</p>
+    <ul>
+        <li>Gå till <strong>Inställningar ⚙️ > Allmänt & Meddelanden</strong>.</li>
+        <li>Skriv in er hemliga display-nyckel i fältet (konfigurerad av IT/Super-Admin) och klicka på "Skapa displaylänk".</li>
+        <li>En säker länk genereras som är låst till er specifika arbetsplats. Kopiera länken och klistra in den i webbläsaren på TV-skärmen.</li>
+    </ul>
+
+    <h2 id="superadmin">7. Super-Admin (Flera arbetsplatser)</h2>
+    <p>Ett Super-Admin konto hanterar hela organisationen. Om ni t.ex. har en anläggning i Boden och en i Stockholm, vill de inte dela schema, inställningar och personal.</p>
+    <p>I inställningarna har en Super-Admin en orange flik som heter <strong>🏢 Arbetsplatser</strong>. Här kan du skapa hur många oberoende arbetsplatser som helst. Varje arbetsplats får en helt egen, isolerad miljö i databasen.</p>
+    <p>I Planeringsvyn får Super-Admins fram en rullgardin i toppmenyn där de snabbt kan hoppa mellan de olika anläggningarna för att administrera dem.</p>
+
+    <div style="text-align: center; margin-top: 50px; color: var(--text-color); opacity: 0.6; border-top: 1px solid var(--border-color); padding-top: 20px;">
+        <em>STRUL Bemanningssystem v3.1 - Optimerad för molnet, hastighet och PostgreSQL.</em>
+    </div>
 </div>
 
 </body>
