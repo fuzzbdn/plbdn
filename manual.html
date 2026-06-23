@@ -4,54 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manual - STRUL Bemanningssystem</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Länka till appens bas-css för att ärva typsnitt och teman -->
+    <link rel="stylesheet" href="css/base.css">
+    
     <style>
-        :root {
-            --primary: #0277bd;
-            --text: #333;
-            --bg: #fff;
-            --light-bg: #f8f9fa;
-            --border: #e0e0e0;
-        }
+        /* Specifika stilar för manualen som kompletterar base.css */
         body {
-            font-family: 'Inter', sans-serif;
-            color: var(--text);
-            background: var(--bg);
+            background-color: transparent; /* Gör att iframen smälter in i bakgrunden */
             line-height: 1.6;
-            margin: 0;
-            padding: 0;
         }
-        .container {
+        .manual-container {
             max-width: 800px;
             margin: 0 auto;
             padding: 40px 20px;
         }
-        h1 { color: var(--primary); font-size: 2.5rem; margin-bottom: 10px; }
-        h2 { border-bottom: 2px solid var(--primary); padding-bottom: 5px; margin-top: 40px; color: #222; }
-        h3 { color: #444; margin-top: 25px; }
+        h1 { color: #0277bd; font-size: 2.5rem; margin-bottom: 10px; }
+        h2 { border-bottom: 2px solid #0277bd; padding-bottom: 5px; margin-top: 40px; color: var(--header-text); }
+        h3 { color: var(--header-text); margin-top: 25px; }
         p, li { font-size: 1.05rem; }
         ul { padding-left: 20px; }
         li { margin-bottom: 8px; }
+        
         .highlight { background: #e3f2fd; padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #01579b; }
+        
         .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; color: #fff; }
         .badge.user { background: #757575; }
         .badge.admin { background: #ef6c00; }
         .badge.superadmin { background: #6a1b9a; }
-        .box { background: var(--light-bg); border: 1px solid var(--border); padding: 20px; border-radius: 8px; margin: 20px 0; }
-        .toc { background: #f1f8e9; border: 1px solid #c5e1a5; padding: 20px; border-radius: 8px; margin-bottom: 40px; }
+        
+        .box { background: var(--input-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; margin: 20px 0; }
+        
+        .toc { background: #f1f8e9; border: 1px solid #c5e1a5; padding: 20px; border-radius: 8px; margin-bottom: 40px; color: #2e7d32; }
         .toc a { color: #2e7d32; text-decoration: none; font-weight: 600; display: block; margin-bottom: 8px; }
         .toc a:hover { text-decoration: underline; }
-        kbd { background: #eee; border: 1px solid #ccc; border-radius: 4px; padding: 2px 5px; font-family: monospace; font-size: 0.9em; font-weight: bold; }
+        
+        kbd { 
+            background: var(--input-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 4px; 
+            padding: 2px 5px; 
+            font-family: monospace; 
+            font-size: 0.9em; 
+            font-weight: bold; 
+            color: var(--text-color);
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="manual-container">
     <h1>📖 Manual för STRUL</h1>
-    <p style="font-size: 1.2rem; color: #666;">Välkommen till den officiella guiden för STRUL Bemanningssystem v2.2.</p>
+    <p style="font-size: 1.2rem; color: var(--text-color); opacity: 0.7;">Välkommen till den officiella guiden för STRUL Bemanningssystem v3.1.</p>
 
     <div class="toc">
-        <strong>Innehållsförteckning:</strong><br><br>
+        <strong style="color: #2e7d32;">Innehållsförteckning:</strong><br><br>
         <a href="#roller">1. Användarroller & Rättigheter</a>
         <a href="#anvandare">2. För Anställda (Mitt Schema)</a>
         <a href="#admin-planering">3. För Administratörer (Planering)</a>
@@ -81,7 +88,7 @@
     <p>Planeringsvyn är hjärtat i systemet där schemat byggs. Det finns tre sätt att bemanna ett pass på:</p>
     
     <div class="box">
-        <h3>Metod 1: Drag and Drop 🖱️</h3>
+        <h3 style="margin-top: 0;">Metod 1: Drag and Drop 🖱️</h3>
         <p>Klicka och håll inne musknappen på ett namn i listan till vänster. Dra namnet till önskad ruta i schemat och släpp.</p>
         
         <h3>Metod 2: Menyn (+) 📋</h3>
@@ -91,7 +98,7 @@
         <p>Klicka direkt på texten i ett tomt (eller bemannat) pass. Rutan blir nu en textruta!</p>
         <ul>
             <li>Börja skriva ett namn. Systemet föreslår automatiskt namn från personal-listan i en meny.</li>
-            <li><strong>NYTT i v2.2:</strong> Du kan nu använda <kbd>↑</kbd> och <kbd>↓</kbd> (pil upp/ner) på tangentbordet för att bläddra i listan, och trycka <kbd>Enter</kbd> för att välja en person blixtsnabbt.</li>
+            <li><strong>NYTT:</strong> Du kan nu använda <kbd>↑</kbd> och <kbd>↓</kbd> (pil upp/ner) på tangentbordet för att bläddra i listan, och trycka <kbd>Enter</kbd> för att välja en person blixtsnabbt.</li>
             <li>Om du vill ha flera personer på samma pass, skriv ett snedstreck <kbd>/</kbd> mellan namnen (ex: <code>Anna / Kalle</code>).</li>
             <li>Klicka utanför rutan när du är klar – systemet sparar direkt till databasen! <em>(Om du skrev ett namn som inte fanns förut, läggs personen till i personal-listan automatiskt).</em></li>
         </ul>
@@ -119,7 +126,7 @@
     <p>Under Inställningar styr du hur systemet fungerar och ser ut.</p>
     
     <div class="box">
-        <ul>
+        <ul style="margin: 0;">
             <li><strong>Allmänt & Meddelanden:</strong> Skriv en textrad som ska rulla på display-skärmen. Du kan nu även <strong>schemalägga meddelandet</strong> genom att ange start-/slutdatum och specifika klockslag (t.ex. visa "Rondmöte" bara mellan 08:00 och 10:00). Dessutom kan du här ställa in hur många dagar som ska väljas som standard vid utskrift.</li>
             <li><strong>Väder & Plats:</strong> Sök efter din stad för att visa lokalt väder uppe i hörnet på TV-skärmen.</li>
             <li><strong>Utskrift & Export:</strong> Välj ett datumintervall och skriv ut schemat till en pappersskrivare (PDF), eller spara schemat som en färdig <strong>Bild / ZIP-fil</strong> som kan mailas eller läggas upp på intranätet.</li>
@@ -149,8 +156,8 @@
     <p>I inställningarna har en Super-Admin en orange flik som heter <strong>🏢 Arbetsplatser</strong>. Här kan du skapa hur många oberoende arbetsplatser som helst. Varje arbetsplats får en helt egen, isolerad miljö i databasen.</p>
     <p>I Planeringsvyn får Super-Admins fram en rullgardin i toppmenyn där de snabbt kan hoppa mellan de olika anläggningarna för att administrera dem.</p>
 
-    <div style="text-align: center; margin-top: 50px; color: #888; border-top: 1px solid #ddd; padding-top: 20px;">
-        <em>STRUL Bemanningssystem v2.2 - Optimerad för molnet, hastighet och PostgreSQL.</em>
+    <div style="text-align: center; margin-top: 50px; color: var(--text-color); opacity: 0.6; border-top: 1px solid var(--border-color); padding-top: 20px;">
+        <em>STRUL Bemanningssystem v3.1 - Optimerad för molnet, hastighet och PostgreSQL.</em>
     </div>
 </div>
 
