@@ -1,128 +1,105 @@
-import { fetchData, saveData } from '../service.js';
+import { fetchData, saveData, apiAction } from '../service.js';
 import { showToast } from '../utils.js';
 
-export function initGeneralTab(currentSettings) {
-    // ==========================================
-    // 1. Hantering av Meddelanden på display-skärmen
-    // ==========================================
-    const msgIn = document.getElementById('displayMessageInput');
-    const msgCheck = document.getElementById('showMessageCheckbox');
-    const saveBtn = document.getElementById('saveMessageBtn');
+export function initGeneralTab() {
+    const msgIn = document.getElementById('messageInput');
+    const msgCheck = document.getElementById('showMessageCheck');
+    const saveMsgBtn = document.getElementById('saveMessageBtn');
     
-    if (msgIn && msgCheck) {
-        fetchData('message').then(msg => {
-            if (msg) {
-                msgIn.value = msg.text || "";
-                msgCheck.checked = msg.show || false;
-            }
-        });
-        
-        if (saveBtn) {
-            saveBtn.onclick = async () => {
-                await saveData('message', { text: msgIn.value, show: msgCheck.checked });
-                showToast("Meddelande uppdaterat!", "success");
-            };
-        }
-    }
-
-    // ==========================================
-    // 2. Hantering av export-dagar
-    // ==========================================
-    const daysInp = document.getElementById('exportDefaultDaysInput');
-    const saveMiscBtn = document.getElementById('saveMiscSettingsBtn');
+    const daysIn = document.getElementById('defaultDaysInput');
+    const saveDaysBtn = document.getElementById('saveDaysBtn');
     
-    if (daysInp) {
-        // Standard är 1 dag (idag) om inget annat sparats
-        daysInp.value = currentSettings?.exportDefaultDays || 1; 
-    }
-    
-    if (saveMiscBtn) {
-        saveMiscBtn.onclick = async () => {
-            const currentSets = await fetchData('settings') || {};
-            // Tvinga till ett heltal, lägst 1
-            const newDays = Math.max(1, parseInt(daysInp.value) || 1);
-            currentSets.exportDefaultDays = newDays;
-            
-            await saveData('settings', currentSets);
-            showToast("Inställning sparad!", "success");
-
-            // -- NY KOD: Uppdatera Export-fliken live --
-            // När vi sparar, hämtar vi datumfälten från Export-fliken och räknar om 
-            // slutdatumet baserat på det nya värdet för antal dagar.
-            const printStartDate = document.getElementById('printStartDate');
-            const printEndDate = document.getElementById('printEndDate');
-            
-            if (printStartDate && printEndDate && printStartDate.value) {
-                // Skapa ett datum-objekt från startdatumet
-                const startD = new Date(printStartDate.value);
-                // Lägg till de nya dagarna (minus 1 eftersom startdagen räknas)
-                startD.setDate(startD.getDate() + (newDays - 1));
-                
-                // Formatera tillbaka till YYYY-MM-DD med hänsyn till lokal tidszon och uppdatera fältet
-                const localDateStr = new Date(startD.getTime() - (startD.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                printEndDate.value = localDateStr;
-            }
-        };
-    }
-
-    // ==========================================
-    // 3. Hantering av Displaylänk
-    // ==========================================
     const generateDisplayLinkBtn = document.getElementById('generateDisplayLinkBtn');
-    const displaySecretInput = document.getElementById('displaySecretInput');
     const displayLinkContainer = document.getElementById('displayLinkContainer');
     const generatedDisplayLink = document.getElementById('generatedDisplayLink');
     const copyDisplayLinkBtn = document.getElementById('copyDisplayLinkBtn');
 
+    // ==========================================
+    // 0. INITIERA VÄRDEN VID LADDNING
+    // ==========================================
+    
+    // Hämta export-inställningar
+    fetchData('settings').then(res => {
+        if (res?.success && res.data) {
+            if (daysIn) daysIn.value = res.data.exportDefaultDays || 1;
+        }
+    });
+
+    // Hämta meddelande
+    fetchData('message').then(res => {
+        if (res?.success && res.data) {
+            msgIn.value = res.data.text || "";
+            msgCheck.checked = res.data.show || false;
+        }
+    });
+
+    // ==========================================
+    // 1. Hantering av Meddelande
+    // ==========================================
+    saveMsgBtn.onclick = async () => {
+        const res = await saveData('message', { 
+            text: msgIn.value, 
+            show: msgCheck.checked 
+        });
+        
+        if (res?.success) {
+            showToast("Meddelande uppdaterat!", "success");
+        } else {
+            showToast(res?.error || "Kunde inte spara meddelande", "error");
+        }
+    };
+
+    // ==========================================
+    // 2. Hantering av Export-inställningar
+    // ==========================================
+    saveDaysBtn.onclick = async () => {
+        const newDays = parseInt(daysIn.value);
+        if (isNaN(newDays) || newDays < 1) return showToast("Ange ett giltigt antal dagar", "error");
+
+        const res = await fetchData('settings');
+        const currentSets = res?.success ? (res.data || {}) : {};
+        
+        currentSets.exportDefaultDays = newDays;
+        
+        const saveRes = await saveData('settings', currentSets);
+        if (saveRes?.success) {
+            showToast("Inställningar sparade!", "success");
+        } else {
+            showToast("Kunde inte spara inställningar", "error");
+        }
+    };
+
+    // ==========================================
+    // 3. Generering av Displaylänk (JWT-baserad)
+    // ==========================================
     if (generateDisplayLinkBtn) {
-        generateDisplayLinkBtn.onclick = () => {
-            const secret = displaySecretInput.value.trim();
+        generateDisplayLinkBtn.onclick = async () => {
+            // Anropa servern för att generera en säker JWT via vår nya action
+            const res = await apiAction('generate_display_link', {});
             
-            if (!secret) {
-                showToast("Du måste ange en display-nyckel!", "error");
-                return;
+            if (res?.success) {
+                const origin = window.location.origin;
+                let pathname = window.location.pathname.replace('settings.html', '').replace('admin.html', '');
+                if (!pathname.endsWith('/')) pathname += '/';
+
+                // Baka in den signerade JWT-tokenen i URL:en
+                const link = `${origin}${pathname}display.html?token=${encodeURIComponent(res.token)}`;
+                
+                generatedDisplayLink.value = link;
+                displayLinkContainer.style.display = 'block';
+                showToast("Säker länk genererad!", "success");
+            } else {
+                showToast(res?.error || "Kunde inte generera länk", "error");
             }
-
-            // Skapa länken baserat på nuvarande domän, sökväg, arbetsplats och nyckeln
-            const currentUrl = window.location.origin;
-            const workplace = localStorage.getItem('activeWorkplace') || 'default';
-
-            // Räkna ut korrekt bassökväg (fungerar även om appen ligger i en undermapp)
-            let pathname = window.location.pathname;
-            pathname = pathname.replace('settings.html', '').replace('admin.html', '');
-            if (!pathname.endsWith('/')) pathname += '/';
-
-            // Vi använder ?token= eftersom display.js förväntar sig det!
-            const link = `${currentUrl}${pathname}display.html?token=${encodeURIComponent(secret)}&workplace=${encodeURIComponent(workplace)}`;
-            
-            generatedDisplayLink.value = link;
-            displayLinkContainer.style.display = 'block';
-            showToast("Länk genererad!", "success");
         };
     }
 
-    // Kod för att kopiera länken när man klickar på "Kopiera länk"
     if (copyDisplayLinkBtn) {
         copyDisplayLinkBtn.onclick = () => {
             generatedDisplayLink.select();
-            generatedDisplayLink.setSelectionRange(0, 99999);
-
-            const fallbackCopy = () => {
-                try {
-                    document.execCommand('copy');
-                    showToast("Länken kopierades till urklipp!", "success");
-                } catch {
-                    showToast("Kunde inte kopiera länken automatiskt", "error");
-                }
-            };
-
-            if (navigator.clipboard?.writeText) {
-                navigator.clipboard.writeText(generatedDisplayLink.value)
-                    .then(() => showToast("Länken kopierades till urklipp!", "success"))
-                    .catch(fallbackCopy);
-            } else {
-                fallbackCopy();
-            }
+            navigator.clipboard.writeText(generatedDisplayLink.value)
+                .then(() => showToast("Länken kopierad!", "success"))
+                .catch(() => showToast("Kunde inte kopiera", "error"));
         };
     }
 }
