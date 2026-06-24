@@ -159,12 +159,11 @@ export default async function handler(req, res) {
                 switch (action) {
 
                     // Generera JWT för display-enhet
-                    case 'generate_display_link': {
-                        const token = jwt.sign(
-                            { purpose: 'display', workplaceId: auth.workplace },
-                            JWT_SECRET
-                            // TODO: Lägg till { expiresIn: '1y' } för ökad säkerhet
-                        );
+                    const token = jwt.sign(
+                        { purpose: 'display', workplaceId: auth.workplace },
+                        JWT_SECRET,
+                        { expiresIn: '1y' }
+                    );
                         return res.status(200).json({ success: true, token });
                     }
 
