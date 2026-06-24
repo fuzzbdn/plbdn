@@ -169,7 +169,15 @@ body.display-view {
 
 /* Dölj ::before-etiketter i desktopläget (syns bara på mobil) */
 .shift-card::before { content: none; }
-
+/* =========================================
+   VÄDER-WIDGET (Display)
+   ========================================= */
+.weather-location-text {
+    font-size: 0.6em;
+    color: var(--sub-text, #666);
+    margin-right: 8px;
+    text-transform: uppercase;
+}
 
 /* =========================================
    MOBILANPASSNING (≤ 850px)
