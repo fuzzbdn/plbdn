@@ -59,7 +59,7 @@ export function initUsersTab() {
                 if(a.role === 'admin') roleBadge = '<span style="background:#fff3e0; color:#e65100; padding:3px 8px; border-radius:12px; border: 1px solid #ffe0b2; font-size:0.75em; font-weight:bold;">🔧 Admin</span>';
                 if(a.role === 'superadmin') roleBadge = '<span style="background:#f3e5f5; color:#4a148c; padding:3px 8px; border-radius:12px; border: 1px solid #e1bee7; font-size:0.75em; font-weight:bold;">👑 Super-Admin</span>';
                 
-                const fullName = `${a.first_name || ''} ${a.last_name || ''}`.trim() || "<em style='color:#999'>Namn saknas</em>";
+                const fullName = `${escapeHTML(a.first_name || '')} ${escapeHTML(a.last_name || '')}`.trim() || "<em style='color:#999'>Namn saknas</em>";
                 const displayNameSub = a.display_name ? `<br><span style="font-size:0.85em; color:#0277bd; font-weight: 600;">➔ Visas som: ${escapeHTML(a.display_name)}</span>` : "";
                 
                 return `
