@@ -1,20 +1,10 @@
-// ============================================================================
-// SERVICE.JS - API-Hantering och Nätverksanrop (Slutgiltig version)
-// ============================================================================
+const DEFAULT_TIMEOUT_MS = 10000;
 
-const DEFAULT_TIMEOUT_MS = 10000; // 10 sekunder
-
-/**
- * Hanterar utkastning av användare på ett atomärt och säkert sätt.
- */
 function handleExpiredSession() {
     localStorage.clear();
     window.location.replace('index.html?session=expired');
 }
 
-/**
- * Returnerar endpoint baserat på GET-typ. Kastar fel om typen är okänd.
- */
 function getEndpointForType(type) {
     const userTypes = ['users', 'admins'];
     const scheduleTypes = ['schedule', 'absences'];
@@ -27,14 +17,10 @@ function getEndpointForType(type) {
     throw new Error(`Okänd GET-typ för API-anrop: ${type}`);
 }
 
-/**
- * Returnerar endpoint baserat på POST-action. Kastar fel om action är okänd.
- */
 function getEndpointForAction(action) {
-    // Lade till 'switch_workplace' här så att den skickas till '/api/auth'
     const authActions = ['login', 'logout', 'request_reset', 'perform_reset', 'switch_workplace'];
     const userActions = ['quick_add_user', 'remove_user', 'add_admin', 'edit_admin', 'remove_admin'];
-    const scheduleActions = ['assign_shift', 'remove_shift', 'publish_schedule', 'save_absence', 'delete_absence'];
+    const scheduleActions = ['assign_shift', 'remove_shift', 'publish_schedule', 'save_absence', 'delete_absence', 'update_note'];
     const settingsActions = ['reorder_stations', 'reorder_shifts', 'save_workplace', 'save_station', 'save_shift', 'delete_station', 'delete_shift', 'generate_display_link'];
     
     if (authActions.includes(action)) return '/api/auth';
@@ -45,21 +31,14 @@ function getEndpointForAction(action) {
     throw new Error(`Okänd POST-action för API-anrop: ${action}`);
 }
 
-/**
- * Intern basfunktion för alla fetch-anrop.
- * Hanterar timeout, session-interceptors och standardiserad felhantering.
- */
 async function _apiFetch(url, options = {}) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
 
-    // TODO (Säkerhet): activeWorkplace bör flyttas till en HttpOnly-cookie
     const headers = {
-        'x-workplace-id': localStorage.getItem('activeWorkplace') || 'default',
         ...options.headers
     };
 
-    // Sätt endast Content-Type om vi faktiskt skickar en body (t.ex. vid POST)
     if (options.body) {
         headers['Content-Type'] = 'application/json';
     }
@@ -68,9 +47,7 @@ async function _apiFetch(url, options = {}) {
         const res = await fetch(url, { ...options, headers, signal: controller.signal });
         clearTimeout(timeoutId);
 
-        // --- SESSION INTERCEPTOR ---
         if (res.status === 401) {
-            // Redirecta INTE om vi redan är på inloggningssidan
             if (!window.location.pathname.endsWith('index.html') && 
                 window.location.pathname !== '/') {
                 handleExpiredSession();
@@ -78,7 +55,6 @@ async function _apiFetch(url, options = {}) {
             return { success: false, error: 'Sessionen har gått ut.', status: 401 };
         }
 
-        // --- FELHANTERING (HTTP 4xx/5xx) ---
         if (!res.ok) {
             return { 
                 success: false, 
@@ -87,10 +63,8 @@ async function _apiFetch(url, options = {}) {
             };
         }
 
-        // --- LYCKAT ANROP ---
         const data = await res.json();
         
-        // Defensiv wrapper för GET-anrop som returnerar rena listor från backend
         if (options.method === 'GET' && typeof data === 'object' && !data.hasOwnProperty('success')) {
             return { success: true, data: data };
         }
@@ -100,7 +74,6 @@ async function _apiFetch(url, options = {}) {
     } catch (err) {
         clearTimeout(timeoutId);
         
-        // --- TIMEOUT-HANTERING ---
         if (err.name === 'AbortError') {
             return { success: false, error: 'Anropet tog för lång tid (Timeout)' };
         }
@@ -110,9 +83,6 @@ async function _apiFetch(url, options = {}) {
     }
 }
 
-/**
- * Hämtar data från backend via GET.
- */
 export async function fetchData(type, paramsObj = {}) {
     try {
         const endpoint = getEndpointForType(type);
@@ -133,9 +103,6 @@ export async function fetchData(type, paramsObj = {}) {
     }
 }
 
-/**
- * Skickar data till backend via POST.
- */
 export async function apiAction(action, payload) {
     try {
         const endpoint = getEndpointForAction(action);
@@ -149,9 +116,6 @@ export async function apiAction(action, payload) {
     }
 }
 
-/**
- * Sparar generisk inställningsdata (JSON) i databasen.
- */
 export async function saveData(type, data) {
     try {
         return await _apiFetch('/api/settings', {
