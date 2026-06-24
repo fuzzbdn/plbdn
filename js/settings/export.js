@@ -20,11 +20,16 @@ export function initExportTab(currentSettings) {
         endInp.value = new Date(end.getTime() - tz).toISOString().split('T')[0];
     };
 
-    const defaultDays = parseInt(currentSettings?.exportDefaultDays) || 1;
-    const dStart = new Date();
-    const dEnd = new Date(dStart);
-    dEnd.setDate(dStart.getDate() + defaultDays - 1); 
-    setDates(dStart, dEnd);
+    const applyDefaultDates = async () => {
+        const res = await fetchData('settings');
+        const days = parseInt(res?.success ? res.data?.exportDefaultDays : currentSettings?.exportDefaultDays) || 1;
+        const dStart = new Date();
+        const dEnd = new Date(dStart);
+        dEnd.setDate(dStart.getDate() + days - 1);
+        setDates(dStart, dEnd);
+    };
+
+    applyDefaultDates();
 
     if(btnToday) btnToday.onclick = () => { const d = new Date(); setDates(d, d); };
     if(btnWeek) btnWeek.onclick = () => {
@@ -132,7 +137,6 @@ export function initExportTab(currentSettings) {
 
         showToast("Hämtar data för export...", "info");
 
-        // --- HÄMTA DATA SÄKERT OCH STRUKTURERAT ---
         const results = await Promise.allSettled([
             fetchData('stations'), 
             fetchData('shifts'),
@@ -180,7 +184,6 @@ export function initExportTab(currentSettings) {
             iframe.style.cssText = "position:absolute; top:-9999px; left:0; width:1920px; height:1080px; border:none;";
             document.body.appendChild(iframe);
 
-            // --- TRY/FINALLY FÖR ATT GARANTERA UPPSTÄDNING ---
             try {
                 let loopDate = new Date(sDate);
                 let count = 0;
@@ -191,7 +194,6 @@ export function initExportTab(currentSettings) {
                 while (loopDate <= eDate) {
                     const doc = iframe.contentDocument;
                     
-                    // Skapa ett promise som väntar på att iframen faktiskt laddat klart
                     const iframeLoaded = new Promise(resolve => {
                         iframe.onload = resolve;
                     });
@@ -203,8 +205,8 @@ export function initExportTab(currentSettings) {
                         <head>
                             <base href="${window.location.href}">
                             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-                                <link rel="stylesheet" href="css/base.css">
-                                <link rel="stylesheet" href="css/display.css">
+                            <link rel="stylesheet" href="css/base.css">
+                            <link rel="stylesheet" href="css/display.css">
                             <style>
                                 ${customCss}
                                 * { transition: none !important; animation: none !important; }
@@ -217,12 +219,9 @@ export function initExportTab(currentSettings) {
                         </body>
                         </html>
                     `);
-                    doc.close(); // Triggar onload
+                    doc.close();
 
-                    // Istället för skör setTimeout: Vänta tills iframe meddelar att den laddat klart
                     await iframeLoaded;
-
-                    // Ge webbläsaren en liten stund (motsvarande en frame) att rita upp DOM-trädet
                     await new Promise(r => requestAnimationFrame(r));
 
                     try {
@@ -250,7 +249,9 @@ export function initExportTab(currentSettings) {
 
                 if (count === 1 && singleImageBase64) {
                     const link = document.createElement('a');
-                    link.download = singleImageName; link.href = singleImageBase64; link.click();
+                    link.download = singleImageName; 
+                    link.href = singleImageBase64; 
+                    link.click();
                     showToast("Bild sparad!", "success");
                 } else if (count > 1) {
                     showToast("Packar ZIP-fil...", "info");
@@ -259,7 +260,8 @@ export function initExportTab(currentSettings) {
                         const link = document.createElement('a');
                         link.download = `Scheman_${startInp.value}_till_${endInp.value}.zip`;
                         const url = URL.createObjectURL(content);
-                        link.href = url; link.click();
+                        link.href = url; 
+                        link.click();
                         setTimeout(() => URL.revokeObjectURL(url), 1000); 
                         showToast(`Klar! ${count} bilder sparade i en ZIP.`, "success");
                     } catch(e) { 
@@ -267,7 +269,6 @@ export function initExportTab(currentSettings) {
                     }
                 }
             } finally {
-                // Denna körs oavsett om loopen lyckas eller om ett oväntat fel kastas
                 if (document.body.contains(iframe)) {
                     document.body.removeChild(iframe);
                 }
