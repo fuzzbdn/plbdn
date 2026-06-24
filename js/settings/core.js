@@ -1,4 +1,3 @@
-import { fetchData } from '../service.js';
 import { showToast } from '../utils.js';
 import { setAllInitialData } from '../store.js';
 import { fetchData, apiAction } from '../service.js';
