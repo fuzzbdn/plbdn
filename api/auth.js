@@ -67,8 +67,9 @@ export default async function handler(req, res) {
 
                 const resetToken = jwt.sign({ id: resetUser.id, purpose: 'reset' }, JWT_SECRET, { expiresIn: '1h' });
                 
-                const protocol = req.headers.host.includes('localhost') ? 'http' : 'https';
-                const resetLink = `${protocol}://${req.headers.host}/reset.html?token=${resetToken}`;
+                
+                const baseUrl = process.env.BASE_URL || `https://${req.headers.host}`;
+                const resetLink = `${baseUrl}/reset.html?token=${resetToken}`;
                 
                 try {
                     await resend.emails.send({
@@ -95,7 +96,12 @@ export default async function handler(req, res) {
             case 'perform_reset': {
                 if (!tokenBody || !newPassword) return res.status(400).json({ error: "Saknar data" });
                 
-                const decoded = jwt.verify(tokenBody, JWT_SECRET);
+                let decoded;
+                try {
+                    decoded = jwt.verify(tokenBody, JWT_SECRET);
+                } catch {
+                    return res.status(400).json({ error: "Ogiltig eller utgången återställningslänk." });
+                }
                 
                 if (decoded.purpose !== 'reset') return res.status(400).json({ error: "Ogiltig token typ" });
                 
