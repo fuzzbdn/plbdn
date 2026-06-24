@@ -26,11 +26,11 @@ export function initUsersTab() {
         }
     }
 
-    const renderAdmins = async (skipFetch = false) => {
-        if (!skipFetch) {
-            let admins = await fetchData('admins');
-            localAdmins = Array.isArray(admins) ? admins : []; 
-        }
+        const renderAdmins = async (skipFetch = false) => {
+            if (!skipFetch) {
+                const res = await fetchData('admins');
+                localAdmins = (res?.success && Array.isArray(res.data)) ? res.data : [];
+            }
         
         const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
         
