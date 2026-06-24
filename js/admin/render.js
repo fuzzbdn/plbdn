@@ -166,13 +166,13 @@ export function renderRoster() {
                 const res = await apiAction('remove_user', { id: userId });
                 if (res.success) {
                     showToast('Personal borttagen', 'info');
-                    const fetchedUsers = await fetchData('users');
-                    if (fetchedUsers) {
-                        setUsers(fetchedUsers);
-                        renderViews();
-                    } else {
-                        showToast('Kunde inte ladda om personallistan', 'error');
-                    }
+                const fetchedUsers = await fetchData('users');
+                if (fetchedUsers?.success) {
+                    setUsers(fetchedUsers.data);
+                    renderViews();
+                } else {
+                    showToast('Kunde inte ladda om personallistan', 'error');
+                }
                 } else {
                     showToast(res.error || 'Kunde inte ta bort användaren', 'error');
                 }
