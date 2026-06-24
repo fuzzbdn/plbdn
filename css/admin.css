@@ -804,3 +804,9 @@
     color: #2e7d32;
     border-top: 2px solid #c8e6c9;
 }
+.pill-note {
+    color: #888;
+    font-weight: 400;
+    font-size: 0.85em;
+    margin-left: 3px;
+}
