@@ -32,7 +32,6 @@ export function initExportTab(currentSettings) {
 
     applyDefaultDates();
 
-    // Kör applyDefaultDates varje gång exportfliken öppnas
     const exportTabBtn = document.querySelector('button[onclick="openTab(\'tab-export\')"]');
     if (exportTabBtn) {
         exportTabBtn.addEventListener('click', () => {
@@ -55,6 +54,15 @@ export function initExportTab(currentSettings) {
         const end = new Date(start); end.setDate(start.getDate() + 6);
         setDates(start, end);
     };
+
+    function buildShiftCellContent(assignedRows) {
+        // Bygg innehållet som en säker HTML-sträng med escapeHTML på all användardata
+        return assignedRows.map(a => {
+            const name = escapeHTML(a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim());
+            const note = a.note ? `<span style="color:#888; font-size:0.8em; font-weight:400;"> (${escapeHTML(a.note)})</span>` : '';
+            return `<span style="font-weight:700;">${name}</span>${note}`;
+        }).join(' / ');
+    }
 
     function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
         const iso = getISOWeek(dateObj);
@@ -83,12 +91,12 @@ export function initExportTab(currentSettings) {
                 return; 
             }
             
-            const bg = st.color;
-            const fg = isLight(bg) ? '#000' : '#fff';
+            const bg = escapeHTML(st.color);
+            const fg = isLight(st.color) ? '#000' : '#fff';
 
             html += `
             <div class="print-grid-row print-data-row" style="grid-template-columns: 200px repeat(${shifts.length}, 1fr);">
-                <div class="print-station-cell" style="background:${escapeHTML(bg)}; color:${fg};">
+                <div class="print-station-cell" style="background:${bg}; color:${fg};">
                     ${escapeHTML(st.name)}
                 </div>`;
 
@@ -99,12 +107,7 @@ export function initExportTab(currentSettings) {
                     r.station_id === st.id && 
                     r.shift_id === sh.id
                 );
-                const val = assignedRows.map(a => {
-                    const name = a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim();
-                    const note = a.note ? ` <span style="color:#888; font-size:0.8em; font-weight:400;">(${escapeHTML(a.note)})</span>` : '';
-                    return `${escapeHTML(name)}${note}`;
-                }).join(' / ');
-                html += `<div class="print-shift-cell">${val}</div>`;
+                html += `<div class="print-shift-cell">${buildShiftCellContent(assignedRows)}</div>`;
             });
             html += `</div>`;
         });
@@ -133,9 +136,10 @@ export function initExportTab(currentSettings) {
         stations.forEach(st => {
             if (st.is_spacer) { html += `<div class="display-row spacer-row"></div>`; return; }
             const contrast = isLight(st.color) ? '#000' : '#fff';
-            const vars = `style="--station-color:${escapeHTML(st.color)}; --contrast-color:${contrast};"`;
+            const safeColor = escapeHTML(st.color);
 
-            html += `<div class="display-row" ${vars}><div class="station-label">${escapeHTML(st.name)}</div>`;
+            html += `<div class="display-row" style="--station-color:${safeColor}; --contrast-color:${contrast};">`;
+            html += `<div class="station-label">${escapeHTML(st.name)}</div>`;
 
             shifts.forEach(sh => {
                 const assignedRows = schedule.filter(r => 
@@ -144,13 +148,8 @@ export function initExportTab(currentSettings) {
                     r.station_id === st.id && 
                     r.shift_id === sh.id
                 );
-                const val = assignedRows.map(a => {
-                    const name = a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim();
-                    const note = a.note ? ` <span style="color:#888; font-size:0.8em; font-weight:400;">(${escapeHTML(a.note)})</span>` : '';
-                    return `${escapeHTML(name)}${note}`;
-                }).join(' / ');
                 const isEmpty = assignedRows.length === 0;
-                html += `<div class="shift-card ${isEmpty ? 'empty' : ''}" data-label="${escapeHTML(sh.label)}">${isEmpty ? '' : val}</div>`;
+                html += `<div class="shift-card ${isEmpty ? 'empty' : ''}" data-label="${escapeHTML(sh.label)}">${isEmpty ? '' : buildShiftCellContent(assignedRows)}</div>`;
             });
             html += `</div>`;
         });
@@ -236,7 +235,6 @@ export function initExportTab(currentSettings) {
                             <link rel="stylesheet" href="css/base.css">
                             <link rel="stylesheet" href="css/display.css">
                             <style>
-                                ${customCss}
                                 * { transition: none !important; animation: none !important; }
                                 body { margin: 0; overflow: hidden; background-color: var(--bg-color, #f0f2f5); }
                                 ::-webkit-scrollbar { display: none; }
@@ -248,6 +246,13 @@ export function initExportTab(currentSettings) {
                         </html>
                     `);
                     doc.close();
+
+                    // Injicera custom CSS säkert via DOM efter doc.close()
+                    if (customCss) {
+                        const styleEl = iframe.contentDocument.createElement('style');
+                        styleEl.textContent = customCss;
+                        iframe.contentDocument.head.appendChild(styleEl);
+                    }
 
                     await iframeLoaded;
                     await new Promise(r => requestAnimationFrame(r));
