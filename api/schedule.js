@@ -165,12 +165,13 @@ export default async function handler(req, res) {
                             );
 
                             // Rensa pass inom det sammanslagna intervallet (gammalt + nytt)
-                            const clearFrom = oldAbsRes.rows[0].start_date < payload.start_date
-                                ? oldAbsRes.rows[0].start_date
-                                : payload.start_date;
-                            const clearTo = oldAbsRes.rows[0].end_date > payload.end_date
-                                ? oldAbsRes.rows[0].end_date
-                                : payload.end_date;
+                            const oldStart = new Date(oldAbsRes.rows[0].start_date);
+                            const oldEnd = new Date(oldAbsRes.rows[0].end_date);
+                            const newStart = new Date(payload.start_date);
+                            const newEnd = new Date(payload.end_date);
+                            
+                            const clearFrom = oldStart < newStart ? oldAbsRes.rows[0].start_date : payload.start_date;
+                            const clearTo = oldEnd > newEnd ? oldAbsRes.rows[0].end_date : payload.end_date;
 
                             await client.query(`
                                 DELETE FROM schedule_assignments
