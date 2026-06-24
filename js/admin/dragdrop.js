@@ -138,7 +138,7 @@ async function syncShiftTextToDB(date, stationId, shiftId, text) {
         if (!u) {
             await apiAction('quick_add_user', { fullName: name });
             const newUsers = await fetchData('users');
-            if (newUsers) setUsers(newUsers);
+            if (newUsers?.success) setUsers(newUsers.data);
             u = getUsers().find(u => getFriendlyName(u).toLowerCase() === name.toLowerCase());
         }
 
@@ -318,7 +318,7 @@ export function setupSidebarAddUser() {
                     showToast('Personal tillagd i databasen', 'success');
                     inp.value = '';
                     const users = await fetchData('users');
-                    if (users) setUsers(users);
+                    if (users?.success) setUsers(users.data);
                     renderViews();
                     updatePublishBanner();
                 } else {
