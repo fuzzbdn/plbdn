@@ -73,8 +73,8 @@ export function initShiftsTab() {
             label: shLabel.value,
             time_range: shTime.value
         });
-        const fetched = await fetchData('shifts');
-        setShifts(fetched);
+        const res = await fetchData('shifts');
+        if (res?.success) setShifts(res.data);
         renderShifts();
         resetSh();
         showToast("Arbetspass sparat", "success");
@@ -83,8 +83,8 @@ export function initShiftsTab() {
     window.deleteShift = async (id) => {
         if (await showConfirm("Ta bort arbetspasset?")) {
             await apiAction('delete_shift', { id });
-            const fetched = await fetchData('shifts');
-            setShifts(fetched);
+            const res = await fetchData('shifts');
+            if (res?.success) setShifts(res.data);
             renderShifts();
         }
     };
