@@ -43,7 +43,6 @@ export function initThemeTab(currentSettings) {
         const currentStations = getStations();
         const currentShifts   = getShifts();
 
-        // Bygg lokal lookup med samma nyckelformat som display.js: "${station_id}_${shift_id}"
         const rawScheduleData = getScheduleData();
         const previewSchedule = {};
         Object.entries(rawScheduleData).forEach(([key, rows]) => {
@@ -56,7 +55,6 @@ export function initThemeTab(currentSettings) {
             previewSchedule[displayKey].push(...rows);
         });
 
-        // Bygg #mainContainer-innehållet med EXAKT samma logik som display.js renderGrid()
         let gridHtml = `<div class="time-header-row"><div></div>${currentShifts.map(s => `<div class="time-header">${escapeHTML(s.label)}</div>`).join('')}</div>`;
 
         currentStations.forEach(st => {
@@ -74,15 +72,19 @@ export function initThemeTab(currentSettings) {
                 const assignments = (previewSchedule[`${st.id}_${sh.id}`] || [])
                     .filter(r => r.is_published);
                 const val = assignments
-                    .map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim())
+                    .map(a => {
+                        const name = escapeHTML(a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim());
+                        const note = a.note ? `<span style="color:#888; font-size:0.8em; font-weight:400;"> (${escapeHTML(a.note)})</span>` : '';
+                        return `<span>${name}${note}</span>`;
+                    })
                     .join(' / ');
-                gridHtml += `<div class="shift-card ${val ? '' : 'empty'}" data-label="${escapeHTML(sh.label)}">${escapeHTML(val)}</div>`;
+                const isEmpty = assignments.length === 0;
+                gridHtml += `<div class="shift-card ${isEmpty ? 'empty' : ''}" data-label="${escapeHTML(sh.label)}">${isEmpty ? '' : val}</div>`;
             });
 
             gridHtml += `</div>`;
         });
 
-        // Skriv EXAKT samma HTML-skelett som display.html — iframen blir en kopia av display-sidan
         const doc = iframe.contentDocument;
         doc.open();
         doc.write(`<!DOCTYPE html>
@@ -93,10 +95,7 @@ export function initThemeTab(currentSettings) {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/display.css">
-    <style>
-        ::-webkit-scrollbar { display: none; }
-        ${customCss}
-    </style>
+    <style>::-webkit-scrollbar { display: none; }</style>
 </head>
 <body class="display-view" id="page-display">
 <div class="display-wrapper">
@@ -115,6 +114,13 @@ export function initThemeTab(currentSettings) {
 </body>
 </html>`);
         doc.close();
+
+        // Injicera custom CSS säkert via DOM efter doc.close()
+        if (customCss) {
+            const styleEl = iframe.contentDocument.createElement('style');
+            styleEl.textContent = customCss;
+            iframe.contentDocument.head.appendChild(styleEl);
+        }
     }
 
     function populate() {
