@@ -70,7 +70,7 @@ export default async function handler(req, res) {
             const { action, payload } = req.body;
 
             // Normalisera: stöd både { action, payload } och flat body för bakåtkompatibilitet
-            const data = payload || req.body;
+            const data = payload || {};
             const { username, password, id, firstName, lastName, displayName, email, role } = data;
 
             switch (action) {
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
                 // Snabb-lägg till en person utan lösenord (från sidopanelen i admin)
                 // ----------------------------------------------------------------
                 case 'quick_add_user': {
-                    const nameToAdd = data.fullName;
+                    const nameToAdd = payload?.fullName;
                     if (!nameToAdd || !nameToAdd.trim()) {
                         return res.status(400).json({ error: "Namn saknas" });
                     }
@@ -166,13 +166,13 @@ export default async function handler(req, res) {
                     // Lösenordet är valfritt (personen kan sakna inloggning)
                     // men om det anges måste det vara minst 6 tecken
                     let newHashedPass = null;
-                    const passwordStr = password ? String(password) : '';
-                    if (passwordStr.trim().length >= 6) {
-                        newHashedPass = await bcrypt.hash(passwordStr.trim(), 10);
-                    } else if (passwordStr.trim().length > 0 && passwordStr.trim().length < 6) {
+                    const passwordStr = password ? String(password).trim() : '';
+                    if (passwordStr.length > 0 && passwordStr.length < 6) {
                         return res.status(400).json({
                             error: "Lösenordet måste vara minst 6 tecken långt om det anges."
                         });
+                    } else if (passwordStr.length >= 6) {
+                        newHashedPass = await bcrypt.hash(passwordStr, 10);
                     }
 
                     // Fallback-hierarki för förnamn om inga namnfält är ifyllda
