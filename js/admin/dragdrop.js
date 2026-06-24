@@ -6,7 +6,6 @@ import { updateGrid, updatePublishBanner } from './core.js';
 import { renderViews } from './render.js';
 
 export function setupDragAndDrop() {
-    // Global Drop-hanterare (Drag & Drop funktionalitet)
     window.handleDrop = async (e) => {
         e.preventDefault();
         const date = e.currentTarget.getAttribute('data-date');
@@ -29,7 +28,7 @@ export function setupDragAndDrop() {
     const scheduleContainer = document.getElementById('scheduleContainer');
     if (scheduleContainer) {
         scheduleContainer.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('clear-btn') || e.target.classList.contains('add-user-btn')) {
+            if (e.target.classList.contains('clear-user-btn') || e.target.classList.contains('add-user-btn')) {
                 e.preventDefault();
             }
         });
@@ -73,18 +72,16 @@ export function setupDragAndDrop() {
         }
 
         scheduleContainer.addEventListener('click', async (e) => {
-            if (e.target.classList.contains('clear-btn')) {
+            // Ta bort en enskild person från passet
+            if (e.target.classList.contains('clear-user-btn')) {
+                e.stopPropagation();
                 const date = e.target.getAttribute('data-date');
                 const stationId = e.target.getAttribute('data-station');
                 const shiftId = e.target.getAttribute('data-shift');
-                const key = `${date}_${stationId}_${shiftId}`;
-                const scheduleData = getScheduleData();
-
-                const assignments = scheduleData[key] || [];
-                for (let a of assignments) {
-                    await apiAction('remove_shift', { date, user_id: a.user_id, station_id: stationId, shift_id: shiftId });
-                }
+                const userId = e.target.getAttribute('data-userid');
+                await apiAction('remove_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
                 updateGrid(getCurrentPickerDate());
+                return;
             }
 
             if (e.target.classList.contains('add-user-btn')) {
