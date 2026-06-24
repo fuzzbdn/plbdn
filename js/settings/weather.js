@@ -13,20 +13,46 @@ export function initWeatherTab() {
 
     if (!hiddenName) return;
 
+    // Säker rendering av väder-display via DOM istället för innerHTML
+    const setWeatherDisplay = (name, lat = null, lon = null, pendingSave = false) => {
+        currentDisplay.innerHTML = '';
+        
+        const icon = document.createTextNode('📍 ');
+        const strong = document.createElement('strong');
+        strong.textContent = name;
+        
+        currentDisplay.appendChild(icon);
+        currentDisplay.appendChild(strong);
+        
+        if (lat && lon) {
+            const coords = document.createElement('span');
+            coords.style.cssText = 'color:#999; font-size:0.9em;';
+            coords.textContent = ` (${lat}, ${lon})`;
+            currentDisplay.appendChild(coords);
+            
+            if (pendingSave) {
+                currentDisplay.appendChild(document.createTextNode(' — Klicka "Spara" för att bekräfta.'));
+            }
+        }
+    };
+
     // Hämta befintlig väderkonfiguration
-        fetchData('weather_config').then(res => {
-            const data = res?.success ? res.data : null;
-            if (data && data.name) {
-            currentDisplay.innerHTML = `📍 <strong>${escapeHTML(data.name)}</strong>`;
+    fetchData('weather_config').then(res => {
+        const data = res?.success ? res.data : null;
+        if (data && data.name) {
+            setWeatherDisplay(data.name);
             hiddenName.value  = data.name;
             hiddenLat.value   = data.latitude;
             hiddenLong.value  = data.longitude;
         } else {
-            currentDisplay.innerHTML = '<em style="color:#999">Ingen plats vald ännu.</em>';
+            const em = document.createElement('em');
+            em.style.color = '#999';
+            em.textContent = 'Ingen plats vald ännu.';
+            currentDisplay.innerHTML = '';
+            currentDisplay.appendChild(em);
         }
     });
 
-    // Sök-knappen: anropar Open-Meteo geocoding API
     if (searchBtn && searchInput) {
         const doSearch = async () => {
             const query = searchInput.value.trim();
@@ -48,15 +74,12 @@ export function initWeatherTab() {
                     return;
                 }
 
-                // Fyll rullgardinen med resultaten
                 resultsSelect.innerHTML = data.results.map(r => {
                     const label = [r.name, r.admin1, r.country].filter(Boolean).join(', ');
                     return `<option value="${r.latitude}|${r.longitude}|${escapeHTML(r.name)}">${escapeHTML(label)}</option>`;
                 }).join('');
 
                 resultsContainer.style.display = 'block';
-
-                // Välj automatiskt det första resultatet
                 updateHiddenFromSelect();
 
             } catch (err) {
@@ -70,13 +93,11 @@ export function initWeatherTab() {
 
         searchBtn.onclick = doSearch;
 
-        // Enter i sökfältet triggar sökning
         searchInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
         });
     }
 
-    // När användaren väljer i rullgardinen — uppdatera de dolda fälten och visningsrutan
     if (resultsSelect) {
         resultsSelect.addEventListener('change', updateHiddenFromSelect);
     }
@@ -87,10 +108,9 @@ export function initWeatherTab() {
         hiddenLat.value  = lat;
         hiddenLong.value = lon;
         hiddenName.value = name;
-        currentDisplay.innerHTML = `📍 <strong>${escapeHTML(name)}</strong> <span style="color:#999; font-size:0.9em;">(${lat}, ${lon})</span> — Klicka "Spara" för att bekräfta.`;
+        setWeatherDisplay(name, lat, lon, true);
     }
 
-    // Spara-knappen
     document.getElementById('saveWeatherBtn').onclick = async () => {
         if (!hiddenLat.value || !hiddenLong.value || !hiddenName.value) {
             return showToast("Sök och välj en plats innan du sparar", "info");
@@ -101,8 +121,7 @@ export function initWeatherTab() {
             longitude: hiddenLong.value
         });
         showToast("Väderplats sparad!", "success");
-        currentDisplay.innerHTML = `📍 <strong>${escapeHTML(hiddenName.value)}</strong>`;
-        // Dölj sökresultaten efter sparande
+        setWeatherDisplay(hiddenName.value);
         if (resultsContainer) resultsContainer.style.display = 'none';
     };
 }
