@@ -166,9 +166,10 @@ export default async function handler(req, res) {
                     // Lösenordet är valfritt (personen kan sakna inloggning)
                     // men om det anges måste det vara minst 6 tecken
                     let newHashedPass = null;
-                    if (password && password.trim().length >= 6) {
-                        newHashedPass = await bcrypt.hash(password, 10);
-                    } else if (password && password.trim().length > 0 && password.trim().length < 6) {
+                    const passwordStr = password ? String(password) : '';
+                    if (passwordStr.trim().length >= 6) {
+                        newHashedPass = await bcrypt.hash(passwordStr.trim(), 10);
+                    } else if (passwordStr.trim().length > 0 && passwordStr.trim().length < 6) {
                         return res.status(400).json({
                             error: "Lösenordet måste vara minst 6 tecken långt om det anges."
                         });
@@ -234,13 +235,14 @@ export default async function handler(req, res) {
                     }
 
                     // Om ett nytt lösenord anges — validera och hasha det
-                    if (password && password.trim() !== "") {
-                        if (password.trim().length < 6) {
+                        const passwordStr = password ? String(password) : '';
+                        if (passwordStr.trim() !== "") {
+                            if (passwordStr.trim().length < 6) {
                             return res.status(400).json({
                                 error: "Lösenordet måste vara minst 6 tecken långt."
                             });
                         }
-                        const updatedHash = await bcrypt.hash(password, 10);
+                        const updatedHash = await bcrypt.hash(passwordStr.trim(), 10);
                         await pool.query(
                             `UPDATE admin_users 
                              SET username=$1, password=$2, first_name=$3, last_name=$4,
