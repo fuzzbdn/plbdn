@@ -70,7 +70,7 @@ export default async function handler(req, res) {
                             [auth.workplace]
                         ),
                         pool.query(`
-                            SELECT sa.id, sa.work_date, sa.user_id, sa.station_id, sa.shift_id, sa.is_published,
+                            SELECT sa.id, sa.work_date, sa.user_id, sa.station_id, sa.shift_id, sa.is_published, sa.note,
                                    u.first_name, u.last_name, u.display_name
                             FROM schedule_assignments sa
                             JOIN admin_users u ON sa.user_id = u.id
