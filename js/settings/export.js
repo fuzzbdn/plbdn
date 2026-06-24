@@ -32,6 +32,14 @@ export function initExportTab(currentSettings) {
 
     applyDefaultDates();
 
+    // Kör applyDefaultDates varje gång exportfliken öppnas
+    const exportTabBtn = document.querySelector('button[onclick="openTab(\'tab-export\')"]');
+    if (exportTabBtn) {
+        exportTabBtn.addEventListener('click', () => {
+            applyDefaultDates();
+        });
+    }
+
     if(btnToday) btnToday.onclick = () => { const d = new Date(); setDates(d, d); };
     if(btnWeek) btnWeek.onclick = () => {
         const d = new Date();
@@ -85,9 +93,18 @@ export function initExportTab(currentSettings) {
                 </div>`;
 
             shifts.forEach(sh => {
-                const assignedRows = schedule.filter(r => r.is_published && r.work_date.split('T')[0] === targetDateStr && r.station_id === st.id && r.shift_id === sh.id);
-                const val = assignedRows.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
-                html += `<div class="print-shift-cell">${escapeHTML(val)}</div>`;
+                const assignedRows = schedule.filter(r => 
+                    r.is_published && 
+                    r.work_date.split('T')[0] === targetDateStr && 
+                    r.station_id === st.id && 
+                    r.shift_id === sh.id
+                );
+                const val = assignedRows.map(a => {
+                    const name = a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim();
+                    const note = a.note ? ` <span style="color:#888; font-size:0.8em; font-weight:400;">(${escapeHTML(a.note)})</span>` : '';
+                    return `${escapeHTML(name)}${note}`;
+                }).join(' / ');
+                html += `<div class="print-shift-cell">${val}</div>`;
             });
             html += `</div>`;
         });
@@ -121,9 +138,19 @@ export function initExportTab(currentSettings) {
             html += `<div class="display-row" ${vars}><div class="station-label">${escapeHTML(st.name)}</div>`;
 
             shifts.forEach(sh => {
-                const assignedRows = schedule.filter(r => r.is_published && r.work_date.split('T')[0] === targetDateStr && r.station_id === st.id && r.shift_id === sh.id);
-                const val = assignedRows.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
-                html += `<div class="shift-card ${val ? '' : 'empty'}" data-label="${escapeHTML(sh.label)}">${escapeHTML(val)}</div>`;
+                const assignedRows = schedule.filter(r => 
+                    r.is_published && 
+                    r.work_date.split('T')[0] === targetDateStr && 
+                    r.station_id === st.id && 
+                    r.shift_id === sh.id
+                );
+                const val = assignedRows.map(a => {
+                    const name = a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim();
+                    const note = a.note ? ` <span style="color:#888; font-size:0.8em; font-weight:400;">(${escapeHTML(a.note)})</span>` : '';
+                    return `${escapeHTML(name)}${note}`;
+                }).join(' / ');
+                const isEmpty = assignedRows.length === 0;
+                html += `<div class="shift-card ${isEmpty ? 'empty' : ''}" data-label="${escapeHTML(sh.label)}">${isEmpty ? '' : val}</div>`;
             });
             html += `</div>`;
         });
@@ -280,11 +307,4 @@ export function initExportTab(currentSettings) {
 
     if(printBtn) printBtn.onclick = () => runExport('print');
     if(imgBtn) imgBtn.onclick = () => runExport('image');
-    // Kör applyDefaultDates varje gång exportfliken öppnas
-const exportTabBtn = document.querySelector('button[onclick="openTab(\'tab-export\')"]');
-if (exportTabBtn) {
-    exportTabBtn.addEventListener('click', () => {
-        applyDefaultDates();
-    });
-}
 }
