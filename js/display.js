@@ -288,11 +288,16 @@ function renderGrid() {
 
             const key         = `${st.id}_${sh.id}`;
             const assignments = globalScheduleData[key] || [];
-            const val         = assignments
-                .map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim())
+            const val = assignments
+                .map(a => {
+                    const name = a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim();
+                    const note = a.note ? ` <span style="color:#888; font-size:0.8em; font-weight:400;">(${escapeHTML(a.note)})</span>` : '';
+                    return `<span>${escapeHTML(name)}${note}</span>`;
+                })
                 .join(' / ');
-
-            html += `<div class="shift-card ${val ? '' : 'empty'}" data-label="${escapeHTML(sh.label)}">${escapeHTML(val)}</div>`;
+            
+            const isEmpty = assignments.length === 0;
+            html += `<div class="shift-card ${isEmpty ? 'empty' : ''}" data-label="${escapeHTML(sh.label)}">${isEmpty ? '' : val}</div>`;
         });
 
         html += `</div>`;
