@@ -83,8 +83,8 @@ export function initAbsencesTab() {
             }
             // FIX: Felhantering om fetchData misslyckas
             const fetched = await fetchData('absences');
-            if (fetched) {
-                setAbsences(fetched);
+            if (fetched?.success) {
+                setAbsences(fetched.data);
                 renderAbsences();
                 resetForm();
             } else {
@@ -164,13 +164,13 @@ export function initAbsencesTab() {
                 showToast(editingAbsenceId ? "Frånvaro uppdaterad!" : "Frånvaro sparad!", "success");
                 resetForm();
                 // FIX: Felhantering om fetchData misslyckas
-                const fetched = await fetchData('absences');
-                if (fetched) {
-                    setAbsences(fetched);
-                    renderAbsences();
-                } else {
-                    showToast('Kunde inte ladda om frånvarolistan', 'error');
-                }
+            const fetched = await fetchData('absences');
+            if (fetched?.success) {
+                setAbsences(fetched.data);
+                renderAbsences();
+            } else {
+                showToast('Kunde inte ladda om frånvarolistan', 'error');
+            }
             } else {
                 showToast(res.error || "Ett fel uppstod", "error");
             }
