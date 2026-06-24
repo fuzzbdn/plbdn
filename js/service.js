@@ -31,7 +31,8 @@ function getEndpointForType(type) {
  * Returnerar endpoint baserat på POST-action. Kastar fel om action är okänd.
  */
 function getEndpointForAction(action) {
-    const authActions = ['login', 'logout', 'request_reset', 'perform_reset'];
+    // Lade till 'switch_workplace' här så att den skickas till '/api/auth'
+    const authActions = ['login', 'logout', 'request_reset', 'perform_reset', 'switch_workplace'];
     const userActions = ['quick_add_user', 'remove_user', 'add_admin', 'edit_admin', 'remove_admin'];
     const scheduleActions = ['assign_shift', 'remove_shift', 'publish_schedule', 'save_absence', 'delete_absence'];
     const settingsActions = ['reorder_stations', 'reorder_shifts', 'save_workplace', 'save_station', 'save_shift', 'delete_station', 'delete_shift'];
