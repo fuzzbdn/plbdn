@@ -35,7 +35,7 @@ function getEndpointForAction(action) {
     const authActions = ['login', 'logout', 'request_reset', 'perform_reset', 'switch_workplace'];
     const userActions = ['quick_add_user', 'remove_user', 'add_admin', 'edit_admin', 'remove_admin'];
     const scheduleActions = ['assign_shift', 'remove_shift', 'publish_schedule', 'save_absence', 'delete_absence'];
-    const settingsActions = ['reorder_stations', 'reorder_shifts', 'save_workplace', 'save_station', 'save_shift', 'delete_station', 'delete_shift'];
+    const settingsActions = ['reorder_stations', 'reorder_shifts', 'save_workplace', 'save_station', 'save_shift', 'delete_station', 'delete_shift', 'generate_display_link'];
     
     if (authActions.includes(action)) return '/api/auth';
     if (userActions.includes(action)) return '/api/users';
