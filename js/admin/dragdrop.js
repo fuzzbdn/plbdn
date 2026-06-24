@@ -197,7 +197,7 @@ function manualAdd(e, date, stationId, shiftId) {
                 if (!name) return;
                 await apiAction('quick_add_user', { fullName: name });
                 const users = await fetchData('users');
-                if (users) setUsers(users);
+                if (users?.success) setUsers(users.data);
                 const newUser = getUsers().find(u => getFriendlyName(u).toLowerCase() === name.trim().toLowerCase());
 
                 if (newUser) {
