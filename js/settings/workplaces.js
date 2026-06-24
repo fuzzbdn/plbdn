@@ -5,9 +5,9 @@ export function initWorkplaceSettings() {
     const wpName = document.getElementById('newWorkplaceName');
     const wpBtn = document.getElementById('addWorkplaceBtn');
     
-    const renderWorkplaces = async () => {
-        let wps = await fetchData('workplaces');
-        if (!Array.isArray(wps)) wps = [];
+        const renderWorkplaces = async () => {
+            const res = await fetchData('workplaces');
+            let wps = (res?.success && Array.isArray(res.data)) ? res.data : [];
         
         const cont = document.getElementById('workplaceListContainer');
         if (cont) {
