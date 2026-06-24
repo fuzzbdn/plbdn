@@ -231,37 +231,59 @@ function showNotePopup(pill) {
         left: 0;
     `;
 
-    popup.innerHTML = `
-        <div style="font-weight: 800; margin-bottom: 8px; color: #333; font-size: 0.95rem;">${name}</div>
-        <input type="text" id="noteInput" placeholder="Lägg till notering..." 
-            value="${currentNote}"
-            style="width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; 
-                   font-size: 0.9rem; box-sizing: border-box; margin-bottom: 8px;">
-        <div style="display: flex; gap: 6px;">
-            <button id="saveNoteBtn" style="flex:1; background:#0277bd; color:#fff; border:none; 
-                    padding: 6px; border-radius: 4px; cursor:pointer; font-weight: bold; font-size: 0.9rem;">Spara</button>
-            <button id="clearNoteBtn" style="background:#ffebee; color:#c62828; border:none; 
-                    padding: 6px 10px; border-radius: 4px; cursor:pointer;" title="Rensa notering">✕</button>
-            <button id="cancelNoteBtn" style="background:#f5f5f5; color:#333; border:none; 
-                    padding: 6px 10px; border-radius: 4px; cursor:pointer;">Avbryt</button>
-        </div>
-    `;
+    // Bygg popup med DOM istället för innerHTML för att undvika XSS
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = 'font-weight: 800; margin-bottom: 8px; color: #333; font-size: 0.95rem;';
+    nameEl.textContent = name;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'noteInput';
+    input.placeholder = 'Lägg till notering...';
+    input.style.cssText = 'width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; margin-bottom: 8px;';
+    input.value = currentNote; // Säkert via DOM-property
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display: flex; gap: 6px;';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.id = 'saveNoteBtn';
+    saveBtn.textContent = 'Spara';
+    saveBtn.style.cssText = 'flex:1; background:#0277bd; color:#fff; border:none; padding: 6px; border-radius: 4px; cursor:pointer; font-weight: bold; font-size: 0.9rem;';
+
+    const clearBtn = document.createElement('button');
+    clearBtn.id = 'clearNoteBtn';
+    clearBtn.textContent = '✕';
+    clearBtn.title = 'Rensa notering';
+    clearBtn.style.cssText = 'background:#ffebee; color:#c62828; border:none; padding: 6px 10px; border-radius: 4px; cursor:pointer;';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.id = 'cancelNoteBtn';
+    cancelBtn.textContent = 'Avbryt';
+    cancelBtn.style.cssText = 'background:#f5f5f5; color:#333; border:none; padding: 6px 10px; border-radius: 4px; cursor:pointer;';
+
+    btnRow.appendChild(saveBtn);
+    btnRow.appendChild(clearBtn);
+    btnRow.appendChild(cancelBtn);
+
+    popup.appendChild(nameEl);
+    popup.appendChild(input);
+    popup.appendChild(btnRow);
 
     pill.style.position = 'relative';
     pill.appendChild(popup);
 
-    const input = popup.querySelector('#noteInput');
     input.focus();
     input.select();
 
     const closePopup = () => popup.remove();
 
-    popup.querySelector('#cancelNoteBtn').onclick = (e) => {
+    cancelBtn.onclick = (e) => {
         e.stopPropagation();
         closePopup();
     };
 
-    popup.querySelector('#clearNoteBtn').onclick = async (e) => {
+    clearBtn.onclick = async (e) => {
         e.stopPropagation();
         const res = await apiAction('update_note', { id: assignmentId, note: '' });
         if (res.success) {
@@ -272,7 +294,7 @@ function showNotePopup(pill) {
         }
     };
 
-    popup.querySelector('#saveNoteBtn').onclick = async (e) => {
+    saveBtn.onclick = async (e) => {
         e.stopPropagation();
         const note = input.value.trim();
         const res = await apiAction('update_note', { id: assignmentId, note });
@@ -287,7 +309,7 @@ function showNotePopup(pill) {
     input.addEventListener('keydown', async (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            popup.querySelector('#saveNoteBtn').click();
+            saveBtn.click();
         }
         if (e.key === 'Escape') closePopup();
     });
