@@ -23,7 +23,8 @@ export function initExportTab(currentSettings) {
     const applyDefaultDates = async () => {
         const res = await fetchData('settings');
         const days = parseInt(res?.success ? res.data?.exportDefaultDays : currentSettings?.exportDefaultDays) || 1;
-        const dStart = new Date();
+        const now = new Date();
+        const dStart = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
         const dEnd = new Date(dStart);
         dEnd.setDate(dStart.getDate() + days - 1);
         setDates(dStart, dEnd);
