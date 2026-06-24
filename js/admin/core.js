@@ -135,8 +135,8 @@ export async function initAdmin() {
     // FIX: Utloggning som faktiskt rensar HTTPOnly-cookies på servern!
     document.getElementById('logoutBtn').onclick = async () => {
         await apiAction('logout', {});
-        localStorage.clear();
-        window.location.replace('index.html');
+        localStorage.clear(); 
+        window.location.href = "index.html"; 
     };
 
     const toggleBtn = document.getElementById('toggleViewBtn');
