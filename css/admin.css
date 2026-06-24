@@ -536,7 +536,81 @@
     .print-page:last-child { page-break-after: auto; break-after: auto; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+.print-page-wrapper {
+    padding: 10px;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    box-sizing: border-box;
+}
 
+.print-header {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.print-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+.print-grid-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    justify-content: space-between;
+}
+
+.print-grid-row {
+    display: grid;
+    gap: 10px;
+}
+
+.print-col-title {
+    text-align: center;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #555;
+    font-size: 0.85rem;
+}
+
+.print-col-title small {
+    font-weight: 400;
+}
+
+.print-spacer {
+    flex-grow: 0.2;
+}
+
+.print-data-row {
+    flex: 1;
+}
+
+.print-station-cell {
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    border: 1px solid #ddd;
+    justify-content: center;
+}
+
+.print-shift-cell {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #000;
+}
 
 /* =========================================
    14. MOBILANPASSNING — ADMIN.HTML (≤ 850px)
