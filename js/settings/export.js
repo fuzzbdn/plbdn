@@ -241,11 +241,13 @@ export function initExportTab(currentSettings) {
                             </style>
                         </head>
                         <body class="display-view" id="page-display">
-                            ${generateDisplayHtmlForImage(new Date(loopDate), stations, shifts, schedule)}
+                            <div id="__export_content__"></div>
                         </body>
                         </html>
                     `);
                     doc.close();
+                    iframe.contentDocument.getElementById('__export_content__').innerHTML =
+                        generateDisplayHtmlForImage(new Date(loopDate), stations, shifts, schedule);
 
                     // Injicera custom CSS säkert via DOM efter doc.close()
                     if (customCss) {
