@@ -18,20 +18,20 @@ export const setButtonLoading = (btn, isLoading, originalText) => {
  */
 async function applyCustomTheme() {
     try {
-        // ÄNDRAT: Nu använder vi vår nya fetchData från service.js istället för direkt-anrop
-        const settings = await fetchData('settings');
-        if (!settings?.theme) return;
+        const settingsRes = await fetchData('settings');
+        if (!settingsRes?.success || !settingsRes.data?.theme) return;
 
-        const themes = await fetchData('custom_themes');
-        const theme = (themes || []).find(x => x.id === settings.theme);
-
+        const themesRes = await fetchData('custom_themes');
+        if (!themesRes?.success) return;
+        
+        const theme = themesRes.data.find(x => x.id === settingsRes.data.theme);
         if (theme?.css) {
             const style = document.createElement('style');
-            style.innerHTML = theme.css;
+            style.textContent = theme.css; // textContent istället för innerHTML
             document.head.appendChild(style);
         }
     } catch {
-        // Ignorera tyst – ett saknat tema är inte ett kritiskt fel
+        // Ignorera tyst
     }
 }
 
