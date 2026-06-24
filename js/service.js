@@ -70,8 +70,12 @@ async function _apiFetch(url, options = {}) {
 
         // --- SESSION INTERCEPTOR ---
         if (res.status === 401) {
-            handleExpiredSession();
-            return { success: false, error: 'Sessionen har gått ut. Du har loggats ut.' };
+            // Redirecta INTE om vi redan är på inloggningssidan
+            if (!window.location.pathname.endsWith('index.html') && 
+                window.location.pathname !== '/') {
+                handleExpiredSession();
+            }
+            return { success: false, error: 'Sessionen har gått ut.', status: 401 };
         }
 
         // --- FELHANTERING (HTTP 4xx/5xx) ---
