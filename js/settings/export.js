@@ -279,4 +279,11 @@ export function initExportTab(currentSettings) {
 
     if(printBtn) printBtn.onclick = () => runExport('print');
     if(imgBtn) imgBtn.onclick = () => runExport('image');
+    // Kör applyDefaultDates varje gång exportfliken öppnas
+const exportTabBtn = document.querySelector('button[onclick="openTab(\'tab-export\')"]');
+if (exportTabBtn) {
+    exportTabBtn.addEventListener('click', () => {
+        applyDefaultDates();
+    });
+}
 }
