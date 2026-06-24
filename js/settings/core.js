@@ -41,30 +41,36 @@ export async function initSettings() {
     try {
         const todayStr = new Date().toISOString().split('T')[0];
 
-        const [settings, themes, stations, shifts, scheduleData, users, absences] = await Promise.all([
-            fetchData('settings'),
-            fetchData('custom_themes'),
-            fetchData('stations'),
-            fetchData('shifts'),
-            fetchData('schedule', { start_date: todayStr, end_date: todayStr }),
-            fetchData('users'),
-            fetchData('absences')
-        ]);
+const [settingsRes, themesRes, stationsRes, shiftsRes, scheduleRes, usersRes, absencesRes] = await Promise.all([
+    fetchData('settings'),
+    fetchData('custom_themes'),
+    fetchData('stations'),
+    fetchData('shifts'),
+    fetchData('schedule', { start_date: todayStr, end_date: todayStr }),
+    fetchData('users'),
+    fetchData('absences')
+]);
 
-        setAllInitialData({
-            users, stations, shifts, absences, themes, scheduleData
-        });
+setAllInitialData({
+    users:        usersRes?.success     ? usersRes.data     : [],
+    stations:     stationsRes?.success  ? stationsRes.data  : [],
+    shifts:       shiftsRes?.success    ? shiftsRes.data    : [],
+    absences:     absencesRes?.success  ? absencesRes.data  : [],
+    themes:       themesRes?.success    ? themesRes.data    : [],
+    scheduleData: scheduleRes?.success  ? scheduleRes.data  : []
+});
 
-        // Starta upp alla flikarna!
-        initGeneralTab(settings);
-        initWeatherTab();
-        initStationsTab();
-        initShiftsTab();
-        initThemeTab(settings);
-        initUsersTab();
-        initAbsencesTab();
-        initExportTab(settings);
-        initStatisticsTab();
+const currentSettings = settingsRes?.success ? settingsRes.data : {};
+
+initGeneralTab();
+initWeatherTab();
+initStationsTab();
+initShiftsTab();
+initThemeTab(currentSettings);
+initUsersTab();
+initAbsencesTab();
+initExportTab(currentSettings);
+initStatisticsTab();
 
     } catch (e) {
         console.error(e);
