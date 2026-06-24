@@ -3,12 +3,14 @@ import { getISOWeek, isLight, escapeHTML } from './utils.js';
 import { DAYS } from './config.js';
 
 // ==========================================
-// KONSTANTER
-// FIX: Ersätter magiska tal med namngivna konstanter för läsbarhet
+// KONSTANTER & GLOBALA TIMERS
 // ==========================================
 const CONFIG_CACHE_MS  = 5  * 60 * 1000;  // 5 minuter
 const WEATHER_CACHE_MS = 15 * 60 * 1000;  // 15 minuter
-const POLL_INTERVAL_MS = 60 * 1000;        // 1 minut
+const POLL_INTERVAL_MS = 60 * 1000;       // 1 minut
+
+let pollTimer = null;
+let clockTimer = null;
 
 // ==========================================
 // GLOBALT TILLSTÅND
@@ -20,7 +22,7 @@ let globalScheduleData   = {};
 
 let lastWeatherFetchTime = 0;
 let cachedWeatherHtml    = '';
-let lastWeatherCoords    = ''; // FIX: Spårar koordinater för att rensa cache vid byte
+let lastWeatherCoords    = ''; 
 let lastDataSnapshot     = '';
 
 let cachedConfig = {
@@ -45,12 +47,6 @@ function getWeatherIcon(code) {
     return '🌡️';
 }
 
-/**
- * Tolkar data som kan vara antingen ett objekt eller en JSON-sträng.
- * Skyddar mot fall där databasen returnerar en textsträng istället för objekt.
- * @param {*} data
- * @returns {Object}
- */
 function parseSafe(data) {
     if (typeof data === 'string') {
         try { return JSON.parse(data); } catch { return {}; }
@@ -58,13 +54,6 @@ function parseSafe(data) {
     return data || {};
 }
 
-/**
- * Validerar att ett koordinatpar är inom rimliga geografiska gränser.
- * FIX: Förhindrar att ogiltiga värden från databasen skickas till väder-API:et.
- * @param {*} lat
- * @param {*} lon
- * @returns {{ lat: number, lon: number } | null}
- */
 function parseCoords(lat, lon) {
     const parsedLat = parseFloat(lat);
     const parsedLon = parseFloat(lon);
@@ -81,19 +70,17 @@ function parseCoords(lat, lon) {
 // ==========================================
 
 export async function initDisplay() {
-    const urlParams     = new URLSearchParams(window.location.search);
-    const displayToken  = urlParams.get('token');
-    const displayWorkplace = urlParams.get('workplace') || 'default';
+    const urlParams    = new URLSearchParams(window.location.search);
+    const displayToken = urlParams.get('token');
 
-    // FIX: Token visas i felmeddelande men skickas också med i alla API-anrop nedan
     if (!displayToken) {
         document.body.innerHTML = "<h1 style='color:red;text-align:center;padding-top:10%;'>Åtkomst nekad. Display-nyckel saknas i URL:en.</h1>";
         return;
     }
 
-    // FIX: Skicka med workplace + token även i detta anrop, annars hämtas
-    // alltid 'default'-arbetsplatsens teman på en oinloggad display-enhet.
-    globalCustomThemes = await fetchData('custom_themes', `&workplace=${encodeURIComponent(displayWorkplace)}&token=${encodeURIComponent(displayToken)}`) || [];
+    // --- HÄMTA TEMAN SÄKERT OCH STRUKTURERAT ---
+    const themesRes = await fetchData('custom_themes', { token: displayToken });
+    globalCustomThemes = (themesRes?.success && Array.isArray(themesRes.data)) ? themesRes.data : [];
 
     async function updateDisplay() {
         try {
@@ -101,18 +88,24 @@ export async function initDisplay() {
             const tzoffset  = now.getTimezoneOffset() * 60000;
             const todayStr  = (new Date(now.getTime() - tzoffset)).toISOString().slice(0, 10);
 
-            // Kolla om vi behöver hämta inställningar (var CONFIG_CACHE_MS)
             const fetchConfig = (now.getTime() - cachedConfig.lastConfigFetch > CONFIG_CACHE_MS);
 
-            // FIX: Skicka med displayToken och workplace i varje anrop så att
-            // servern kan autentisera förfrågan och slå upp rätt arbetsplats.
-            const bundleData = await fetchData(
-                'display_bundle',
-                `&start_date=${todayStr}&end_date=${todayStr}&include_config=${fetchConfig}&token=${encodeURIComponent(displayToken)}&workplace=${encodeURIComponent(displayWorkplace)}`
-            );
+            // --- HÄMTA SCHEMADATA ---
+            // TODO: På sikt kan displayToken flyttas till en Authorization-header i service.js, 
+            // men just nu skickas den säkert nog via URL:en då den redan exponeras i webbläsarens fält.
+            const bundleRes = await fetchData('display_bundle', {
+                start_date: todayStr,
+                end_date: todayStr,
+                include_config: fetchConfig,
+                token: displayToken
+            });
 
-            if (!bundleData) return;
+            if (!bundleRes?.success || !bundleRes.data) {
+                console.error("Kunde inte hämta schemadata:", bundleRes?.error);
+                return;
+            }
 
+            const bundleData = bundleRes.data;
 
             globalStations = Array.isArray(bundleData.stations) ? bundleData.stations : [];
             globalShifts   = Array.isArray(bundleData.shifts)   ? bundleData.shifts   : [];
@@ -135,8 +128,6 @@ export async function initDisplay() {
             }
 
             // --- SNAPSHOT-LOGIK ---
-            // FIX: Inverterat villkor – den tomma if-grenen är borttagen.
-            // DOM:en ritas bara om om något faktiskt har ändrats.
             const currentSnapshot = JSON.stringify({
                 sch:     globalScheduleData,
                 st:      globalStations,
@@ -169,10 +160,7 @@ export async function initDisplay() {
                     }
                 }
 
-                // Tema
-                // SÄKERHETSNOTERING: t.css injiceras direkt i DOM:en.
-                // Säkerställ att CSS valideras/saneras server-side innan lagring,
-                // och att en Content Security Policy (CSP) är konfigurerad.
+                // --- SÄKER TEMA-INJEKTION ---
                 const themeId = cachedConfig.settings?.theme;
                 let styleEl = document.getElementById('custom-theme-style');
 
@@ -184,7 +172,8 @@ export async function initDisplay() {
                             styleEl.id = 'custom-theme-style';
                             document.head.appendChild(styleEl);
                         }
-                        if (styleEl.innerHTML !== t.css) styleEl.innerHTML = t.css;
+                        // Använder textContent istället för innerHTML för att förhindra HTML-injektion
+                        if (styleEl.textContent !== t.css) styleEl.textContent = t.css;
                     }
                 } else {
                     if (styleEl) styleEl.remove();
@@ -192,18 +181,14 @@ export async function initDisplay() {
             }
 
             // --- VÄDERHANTERING ---
-            // Körs oavsett snapshot, men har egen cooldown via WEATHER_CACHE_MS
             const wc = cachedConfig.weatherConfig;
             if (wc?.latitude && wc?.longitude) {
-
-                // FIX: Validera koordinater innan de skickas till externt API
                 const coords = parseCoords(wc.latitude, wc.longitude);
                 if (!coords) {
                     console.warn('Ogiltiga väderkoordinater i inställningarna:', wc.latitude, wc.longitude);
                 } else {
                     const coordKey = `${coords.lat},${coords.lon}`;
 
-                    // FIX: Rensa väder-cache om koordinaterna har bytts
                     if (coordKey !== lastWeatherCoords) {
                         cachedWeatherHtml    = '';
                         lastWeatherFetchTime = 0;
@@ -221,7 +206,6 @@ export async function initDisplay() {
                                 if (weatherData?.current_weather) {
                                     const temp = Math.round(weatherData.current_weather.temperature);
                                     const icon = getWeatherIcon(weatherData.current_weather.weathercode);
-                                    // Spara icon och temperatur separat för säker rendering
                                     cachedWeatherHtml = { icon, temp };
                                     lastWeatherFetchTime = nowMs;
                                 }
@@ -231,14 +215,13 @@ export async function initDisplay() {
                         }
                     }
 
-                    // FIX: Använd textContent på separata element istället för innerHTML
-                    // med data från ett externt API för att undvika XSS
                     const weatherEl = document.getElementById('weatherWidget');
                     if (weatherEl && cachedWeatherHtml) {
                         weatherEl.innerHTML = '';
 
+                        // Säker rendering av väder-elementen med dedikerade CSS-klasser
                         const locationSpan = document.createElement('span');
-                        locationSpan.style.cssText = 'font-size:0.6em; color:var(--sub-text,#666); margin-right:8px; text-transform:uppercase;';
+                        locationSpan.className = 'weather-location-text';
                         locationSpan.textContent = wc.name || '';
 
                         const weatherSpan = document.createElement('span');
@@ -255,18 +238,19 @@ export async function initDisplay() {
         }
     }
 
+    // Rensa gamla timers vid ominitiering (t.ex. vid hot-reload)
+    if (pollTimer) clearInterval(pollTimer);
+    if (clockTimer) clearInterval(clockTimer);
+
     // Starta cykeln
     await updateDisplay();
 
-    // FIX: Yttre try/catch i setInterval-callbacken fångar upp oväntade fel
-    // och förhindrar att displayloopen slutar köra tyst
-    setInterval(async () => {
+    pollTimer = setInterval(async () => {
         try { await updateDisplay(); }
         catch (e) { console.error('Kritiskt fel i displayloop:', e); }
     }, POLL_INTERVAL_MS);
 
-    // Klockan uppdateras separat för att vara exakt på sekunden
-    setInterval(() => {
+    clockTimer = setInterval(() => {
         const now = new Date();
         const clk = document.getElementById('clock');
         if (clk) clk.innerText = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
@@ -276,11 +260,6 @@ export async function initDisplay() {
 // ==========================================
 // RENDERING
 // ==========================================
-
-/**
- * Ritar upp schemarutnätet i DOM:en.
- * FIX: Tidigt avbrott med feedback om grunddata saknas.
- */
 function renderGrid() {
     const cont = document.getElementById('mainContainer');
     if (!cont) return;
