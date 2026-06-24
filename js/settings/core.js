@@ -1,7 +1,7 @@
 import { fetchData } from '../service.js';
 import { showToast } from '../utils.js';
 import { setAllInitialData } from '../store.js';
-
+import { fetchData, apiAction } from '../service.js';
 // Importera alla dina nya fina flik-moduler:
 import { initGeneralTab } from './general.js';
 import { initWeatherTab } from './weather.js';
@@ -27,7 +27,8 @@ export async function initSettings() {
         currentUserDisplay.innerText = "Inloggad: " + (localStorage.getItem('adminName') || 'Admin');
     }
 
-    document.getElementById('logoutBtn').onclick = () => { 
+    document.getElementById('logoutBtn').onclick = async () => {
+        await apiAction('logout', {});
         localStorage.clear(); 
         window.location.href = "index.html"; 
     };
