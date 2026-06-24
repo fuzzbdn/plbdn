@@ -46,7 +46,7 @@ export async function initSettings() {
             fetchData('custom_themes'),
             fetchData('stations'),
             fetchData('shifts'),
-            fetchData('schedule', `&start_date=${todayStr}&end_date=${todayStr}`),
+            fetchData('schedule', { start_date: todayStr, end_date: todayStr }),
             fetchData('users'),
             fetchData('absences')
         ]);
