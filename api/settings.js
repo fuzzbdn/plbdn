@@ -266,19 +266,27 @@ export default async function handler(req, res) {
                         return res.status(200).json({ success: true });
                     }
 
-                    // Sortera om stationer
+                                      // Sortera om stationer
                     case 'reorder_stations': {
                         if (!Array.isArray(payload)) {
                             return res.status(400).json({ success: false, error: "Payload måste vara en array" });
                         }
-                        await Promise.all(
-                            payload.map(item =>
-                                pool.query(
+                        const rsClient = await pool.connect();
+                        try {
+                            await rsClient.query('BEGIN');
+                            for (const item of payload) {
+                                await rsClient.query(
                                     'UPDATE stations SET sort_order = $1 WHERE id = $2 AND workplace_id = $3',
                                     [item.sort_order, item.id, auth.workplace]
-                                )
-                            )
-                        );
+                                );
+                            }
+                            await rsClient.query('COMMIT');
+                        } catch (err) {
+                            await rsClient.query('ROLLBACK');
+                            throw err;
+                        } finally {
+                            rsClient.release();
+                        }
                         return res.status(200).json({ success: true });
                     }
 
@@ -287,14 +295,22 @@ export default async function handler(req, res) {
                         if (!Array.isArray(payload)) {
                             return res.status(400).json({ success: false, error: "Payload måste vara en array" });
                         }
-                        await Promise.all(
-                            payload.map(item =>
-                                pool.query(
+                        const rfClient = await pool.connect();
+                        try {
+                            await rfClient.query('BEGIN');
+                            for (const item of payload) {
+                                await rfClient.query(
                                     'UPDATE shifts SET sort_order = $1 WHERE id = $2 AND workplace_id = $3',
                                     [item.sort_order, item.id, auth.workplace]
-                                )
-                            )
-                        );
+                                );
+                            }
+                            await rfClient.query('COMMIT');
+                        } catch (err) {
+                            await rfClient.query('ROLLBACK');
+                            throw err;
+                        } finally {
+                            rfClient.release();
+                        }
                         return res.status(200).json({ success: true });
                     }
 
