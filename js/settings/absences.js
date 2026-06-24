@@ -15,8 +15,10 @@ export function initAbsencesTab() {
 
     if (!saveBtn || !userSelect) return;
 
-    // FIX: Beräkna dagens datum dynamiskt så det inte blir fel om fliken är öppen över midnatt
-    const getToday = () => new Date().toISOString().split('T')[0];
+    const getToday = () => {
+        const now = new Date();
+        return new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    };
 
     // Skapa en Avbryt-knapp dynamiskt
     let cancelBtn = document.getElementById('cancelAbsenceEditBtn');
