@@ -86,8 +86,8 @@ export function initStationsTab() {
             color: stColor.value,
             is_spacer: false
         });
-        const fetched = await fetchData('stations');
-        setStations(fetched);
+        const res = await fetchData('stations');
+        if (res?.success) setStations(res.data);
         renderStations();
         resetSt();
         showToast("Station sparad", "success");
@@ -97,8 +97,8 @@ export function initStationsTab() {
     if (spacerBtn) {
         spacerBtn.onclick = async () => {
             await apiAction('save_station', { is_spacer: true });
-            const fetched = await fetchData('stations');
-            setStations(fetched);
+            const res = await fetchData('stations');
+            if (res?.success) setStations(res.data);
             renderStations();
         };
     }
@@ -106,8 +106,8 @@ export function initStationsTab() {
     window.deleteStation = async (id) => {
         if (await showConfirm("Ta bort platsen?")) {
             await apiAction('delete_station', { id });
-            const fetched = await fetchData('stations');
-            setStations(fetched);
+            const res = await fetchData('stations');
+            if (res?.success) setStations(res.data);
             renderStations();
         }
     };
