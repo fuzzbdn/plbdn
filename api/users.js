@@ -11,7 +11,7 @@
 //   POST action=edit_admin     → Redigerar ett befintligt konto
 //   POST action=remove_admin   → Tar bort ett konto permanent (från inställningar)
 // ============================================================================
-
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { pool, authenticate, handleDatabaseError, setupCors } from './_shared.js';
 
