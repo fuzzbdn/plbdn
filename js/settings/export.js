@@ -50,34 +50,38 @@ export function initExportTab(currentSettings) {
         const targetDateStr = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
         let html = `
-        <div class="print-page" style="padding: 10px; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box;">
-            <div style="text-align:center; margin-bottom:15px;">
-                <h1 style="margin:0; font-size: 1.8rem;">Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
+        <div class="print-page-wrapper">
+            <div class="print-header">
+                <h1>Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
             </div>
-            <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px; justify-content: space-between;">
-                <div style="display:grid; grid-template-columns: 200px repeat(${shifts.length}, 1fr); gap: 10px;">
+            <div class="print-grid-container">
+                <div class="print-grid-row" style="grid-template-columns: 200px repeat(${shifts.length}, 1fr);">
                     <div></div>
                     ${shifts.map(s => `
-                        <div style="text-align:center; font-weight:800; text-transform:uppercase; color:#555; font-size:0.85rem;">
-                            ${escapeHTML(s.label)}<br><small style="font-weight:400;">${escapeHTML(s.time_range || s.time || '')}</small>
+                        <div class="print-col-title">
+                            ${escapeHTML(s.label)}<br><small>${escapeHTML(s.time_range || s.time || '')}</small>
                         </div>`).join('')}
                 </div>`;
 
         stations.forEach(st => {
-            if (st.is_spacer) { html += `<div style="flex-grow: 0.2;"></div>`; return; }
+            if (st.is_spacer) { 
+                html += `<div class="print-spacer"></div>`; 
+                return; 
+            }
+            
             const bg = st.color;
             const fg = isLight(bg) ? '#000' : '#fff';
 
             html += `
-            <div style="display:grid; grid-template-columns: 200px repeat(${shifts.length}, 1fr); gap: 10px; flex: 1;">
-                <div style="background:${escapeHTML(bg)}; color:${fg}; padding:10px; border-radius:6px; font-weight:800; font-size:1.1rem; display:flex; align-items:center; border: 1px solid #ddd; justify-content: center;">
+            <div class="print-grid-row print-data-row" style="grid-template-columns: 200px repeat(${shifts.length}, 1fr);">
+                <div class="print-station-cell" style="background:${escapeHTML(bg)}; color:${fg};">
                     ${escapeHTML(st.name)}
                 </div>`;
 
             shifts.forEach(sh => {
                 const assignedRows = schedule.filter(r => r.is_published && r.work_date.split('T')[0] === targetDateStr && r.station_id === st.id && r.shift_id === sh.id);
                 const val = assignedRows.map(a => a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim()).join(' / ');
-                html += `<div style="background:#fff; border: 1px solid #ccc; border-radius:6px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:700; font-size:1.2rem;">${escapeHTML(val)}</div>`;
+                html += `<div class="print-shift-cell">${escapeHTML(val)}</div>`;
             });
             html += `</div>`;
         });
@@ -128,13 +132,20 @@ export function initExportTab(currentSettings) {
 
         showToast("Hämtar data för export...", "info");
 
-        // Hämtar dagsfärsk data för den exakta perioden
-        const [stations, shifts, schedule] = await Promise.all([
-            fetchData('stations'), fetchData('shifts'),
-            fetchData('schedule', `&start_date=${startInp.value}&end_date=${endInp.value}`)
+        // --- HÄMTA DATA SÄKERT OCH STRUKTURERAT ---
+        const results = await Promise.allSettled([
+            fetchData('stations'), 
+            fetchData('shifts'),
+            fetchData('schedule', { start_date: startInp.value, end_date: endInp.value })
         ]);
 
-        if(!schedule) return showToast("Kunde inte hämta schemat.", "error");
+        if (results.some(r => r.status === 'rejected' || !r.value?.success)) {
+            return showToast("Kunde inte hämta data för export. Kontrollera nätverket.", "error");
+        }
+
+        const stations = results[0].value.data || [];
+        const shifts = results[1].value.data || [];
+        const schedule = results[2].value.data || [];
 
         if (mode === 'print') {
             const pc = document.getElementById('print-container') || document.createElement('div');
@@ -169,78 +180,98 @@ export function initExportTab(currentSettings) {
             iframe.style.cssText = "position:absolute; top:-9999px; left:0; width:1920px; height:1080px; border:none;";
             document.body.appendChild(iframe);
 
-            let loopDate = new Date(sDate);
-            let count = 0;
-            const zip = new JSZip(); 
-            let singleImageBase64 = null; 
-            let singleImageName = "";
+            // --- TRY/FINALLY FÖR ATT GARANTERA UPPSTÄDNING ---
+            try {
+                let loopDate = new Date(sDate);
+                let count = 0;
+                const zip = new JSZip(); 
+                let singleImageBase64 = null; 
+                let singleImageName = "";
 
-            while (loopDate <= eDate) {
-                const doc = iframe.contentDocument;
-                doc.open();
-                doc.write(`
-                    <!DOCTYPE html>
-                    <html lang="sv">
-                    <head>
-                        <base href="${window.location.href}">
-                        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-                            <link rel="stylesheet" href="css/base.css">
-                            <link rel="stylesheet" href="css/display.css">
-                        <style>
-                            ${customCss}
-                            * { transition: none !important; animation: none !important; }
-                            body { margin: 0; overflow: hidden; background-color: var(--bg-color, #f0f2f5); }
-                            ::-webkit-scrollbar { display: none; }
-                        </style>
-                    </head>
-                    <body class="display-view" id="page-display">
-                        ${generateDisplayHtmlForImage(new Date(loopDate), stations, shifts, schedule)}
-                    </body>
-                    </html>
-                `);
-                doc.close();
-
-                await new Promise(r => setTimeout(r, 1000));
-
-                try {
-                    const canvas = await html2canvas(doc.body, {
-                        scale: 2, useCORS: true, backgroundColor: doc.body.style.backgroundColor || '#f0f2f5'
+                while (loopDate <= eDate) {
+                    const doc = iframe.contentDocument;
+                    
+                    // Skapa ett promise som väntar på att iframen faktiskt laddat klart
+                    const iframeLoaded = new Promise(resolve => {
+                        iframe.onload = resolve;
                     });
 
-                    const lDateStr = new Date(loopDate.getTime() - (loopDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                    const base64Img = canvas.toDataURL('image/png');
+                    doc.open();
+                    doc.write(`
+                        <!DOCTYPE html>
+                        <html lang="sv">
+                        <head>
+                            <base href="${window.location.href}">
+                            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+                                <link rel="stylesheet" href="css/base.css">
+                                <link rel="stylesheet" href="css/display.css">
+                            <style>
+                                ${customCss}
+                                * { transition: none !important; animation: none !important; }
+                                body { margin: 0; overflow: hidden; background-color: var(--bg-color, #f0f2f5); }
+                                ::-webkit-scrollbar { display: none; }
+                            </style>
+                        </head>
+                        <body class="display-view" id="page-display">
+                            ${generateDisplayHtmlForImage(new Date(loopDate), stations, shifts, schedule)}
+                        </body>
+                        </html>
+                    `);
+                    doc.close(); // Triggar onload
 
-                    if (count === 0) {
-                        singleImageBase64 = base64Img;
-                        singleImageName = `Schema-${lDateStr}.png`;
+                    // Istället för skör setTimeout: Vänta tills iframe meddelar att den laddat klart
+                    await iframeLoaded;
+
+                    // Ge webbläsaren en liten stund (motsvarande en frame) att rita upp DOM-trädet
+                    await new Promise(r => requestAnimationFrame(r));
+
+                    try {
+                        const canvas = await html2canvas(doc.body, {
+                            scale: 2, useCORS: true, backgroundColor: doc.body.style.backgroundColor || '#f0f2f5'
+                        });
+
+                        const lDateStr = new Date(loopDate.getTime() - (loopDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                        const base64Img = canvas.toDataURL('image/png');
+
+                        if (count === 0) {
+                            singleImageBase64 = base64Img;
+                            singleImageName = `Schema-${lDateStr}.png`;
+                        }
+
+                        const base64Data = base64Img.split('base64,')[1];
+                        zip.file(`Schema-${lDateStr}.png`, base64Data, {base64: true});
+                        count++;
+                    } catch (e) { 
+                        console.error("Kunde inte skapa bild:", e); 
                     }
 
-                    const base64Data = base64Img.split('base64,')[1];
-                    zip.file(`Schema-${lDateStr}.png`, base64Data, {base64: true});
-                    count++;
-                } catch (e) { console.error("Kunde inte skapa bild:", e); }
+                    loopDate.setDate(loopDate.getDate() + 1);
+                }
 
-                loopDate.setDate(loopDate.getDate() + 1);
-            }
-
-            document.body.removeChild(iframe);
-            btn.innerText = txt;
-
-            if (count === 1) {
-                const link = document.createElement('a');
-                link.download = singleImageName; link.href = singleImageBase64; link.click();
-                showToast("Bild sparad!", "success");
-            } else if (count > 1) {
-                showToast("Packar ZIP-fil...", "info");
-                try {
-                    const content = await zip.generateAsync({type: "blob"});
+                if (count === 1 && singleImageBase64) {
                     const link = document.createElement('a');
-                    link.download = `Scheman_${startInp.value}_till_${endInp.value}.zip`;
-                    const url = URL.createObjectURL(content);
-                    link.href = url; link.click();
-                    setTimeout(() => URL.revokeObjectURL(url), 1000); 
-                    showToast(`Klar! ${count} bilder sparade i en ZIP.`, "success");
-                } catch(e) { showToast("Kunde inte skapa ZIP", "error"); }
+                    link.download = singleImageName; link.href = singleImageBase64; link.click();
+                    showToast("Bild sparad!", "success");
+                } else if (count > 1) {
+                    showToast("Packar ZIP-fil...", "info");
+                    try {
+                        const content = await zip.generateAsync({type: "blob"});
+                        const link = document.createElement('a');
+                        link.download = `Scheman_${startInp.value}_till_${endInp.value}.zip`;
+                        const url = URL.createObjectURL(content);
+                        link.href = url; link.click();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000); 
+                        showToast(`Klar! ${count} bilder sparade i en ZIP.`, "success");
+                    } catch(e) { 
+                        showToast("Kunde inte skapa ZIP", "error"); 
+                    }
+                }
+            } finally {
+                // Denna körs oavsett om loopen lyckas eller om ett oväntat fel kastas
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+                btn.innerText = txt;
             }
         }
     };
