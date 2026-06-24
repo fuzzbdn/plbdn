@@ -76,7 +76,7 @@ export function initUsersTab() {
                     </div>
                     <div style="width: 80px; display: flex; justify-content: flex-end; gap: 8px;">
                         <button class="list-btn" onclick="startEditAdmin('${a.id}')" title="Redigera" style="background:#f5f5f5;">✏️</button>
-                        <button class="list-btn" onclick="deleteAdmin('${escapeHTML(a.username)}')" title="Ta bort" style="background:#ffebee; color: #d32f2f;">🗑️</button>
+                        <button class="list-btn" onclick="deleteAdmin('${escapeHTML(String(a.id))}', '${escapeHTML(a.username)}')" title="Ta bort" ...>🗑️</button>
                     </div>
                 </div>`;
             }).join('');
@@ -148,9 +148,9 @@ export function initUsersTab() {
         }
     };
 
-    window.deleteAdmin = async (u) => {
-        if (await showConfirm(`Ta bort kontot @${escapeHTML(u)}?`)) {
-            const res = await apiAction('remove_admin', { username: u });
+    window.deleteAdmin = async (id, username) => {
+        if (await showConfirm(`Ta bort kontot @${escapeHTML(username)}?`)) {
+            const res = await apiAction('remove_admin', { id });
             
             if (res.success) {
                 showToast("Användare raderad", "info");
