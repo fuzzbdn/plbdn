@@ -88,33 +88,33 @@ export function initThemeTab(currentSettings) {
         const doc = iframe.contentDocument;
         doc.open();
         doc.write(`<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <base href="${window.location.href}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/display.css">
-    <style>::-webkit-scrollbar { display: none; }</style>
-</head>
-<body class="display-view" id="page-display">
-<div class="display-wrapper">
-    <div class="top-bar">
-        <h1 id="mainTitle">Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
-        <div style="display:flex; align-items:center;">
-            <div id="weatherWidget" style="margin-right:20px; font-weight:700;">☀️ 20°C</div>
-            <div id="clock">${now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</div>
+        <html lang="sv">
+        <head>
+            <meta charset="UTF-8">
+            <base href="${window.location.href}">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="css/base.css">
+            <link rel="stylesheet" href="css/display.css">
+            <style>::-webkit-scrollbar { display: none; }</style>
+        </head>
+        <body class="display-view" id="page-display">
+        <div class="display-wrapper">
+            <div class="top-bar">
+                <h1 id="mainTitle">Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
+                <div style="display:flex; align-items:center;">
+                    <div id="weatherWidget" style="margin-right:20px; font-weight:700;">☀️ 20°C</div>
+                    <div id="clock">${now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+            </div>
+            <div id="marqueeContainer" style="display:none;">
+                <marquee id="marqueeText" scrollamount="10"></marquee>
+            </div>
+            <div id="__theme_content__"></div>
         </div>
-    </div>
-    <div id="marqueeContainer" style="display:none;">
-        <marquee id="marqueeText" scrollamount="10"></marquee>
-    </div>
-    <div id="mainContainer">${gridHtml}</div>
-</div>
-</body>
-</html>`);
+        </body>
+        </html>`);
         doc.close();
-
+        iframe.contentDocument.getElementById('__theme_content__').innerHTML = gridHtml;
         // Injicera custom CSS säkert via DOM efter doc.close()
         if (customCss) {
             const styleEl = iframe.contentDocument.createElement('style');
