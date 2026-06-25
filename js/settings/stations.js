@@ -58,7 +58,7 @@ export function initStationsTab() {
         }).join('');
     };
 
-    window.startEditStation = (id) => {
+    globalThis.startEditStation = (id) => {
         const st = getStations().find(s => String(s.id) === String(id));
         if (!st) return;
         editingStationId = st.id;
@@ -103,7 +103,7 @@ export function initStationsTab() {
         };
     }
 
-    window.deleteStation = async (id) => {
+    globalThis.deleteStation = async (id) => {
         if (await showConfirm("Ta bort platsen?")) {
             await apiAction('delete_station', { id });
             const res = await fetchData('stations');
