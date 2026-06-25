@@ -6,7 +6,7 @@ import { updateGrid, updatePublishBanner } from './core.js';
 import { renderViews } from './render.js';
 
 export function setupDragAndDrop() {
-    window.handleDrop = async (e) => {
+    globalThis.handleDrop = async (e) => {
         e.preventDefault();
         const date = e.currentTarget.getAttribute('data-date');
         const stationId = e.currentTarget.getAttribute('data-station');
