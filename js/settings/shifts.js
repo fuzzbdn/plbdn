@@ -45,7 +45,7 @@ export function initShiftsTab() {
         }).join('');
     };
 
-    window.startEditShift = (id) => {
+    globalThis.startEditShift = (id) => {
         const sh = getShifts().find(s => String(s.id) === String(id));
         if (!sh) return;
         editingShiftId = sh.id;
@@ -80,7 +80,7 @@ export function initShiftsTab() {
         showToast("Arbetspass sparat", "success");
     };
 
-    window.deleteShift = async (id) => {
+    globalThis.deleteShift = async (id) => {
         if (await showConfirm("Ta bort arbetspasset?")) {
             await apiAction('delete_shift', { id });
             const res = await fetchData('shifts');
