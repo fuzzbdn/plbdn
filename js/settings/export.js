@@ -37,10 +37,7 @@ function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
             </div>`;
 
     stations.forEach(st => {
-        if (st.is_spacer) {
-            html += `<div class="print-spacer"></div>`;
-            return;
-        }
+        if (st.is_spacer) { html += `<div class="print-spacer"></div>`; return; }
         const bg = escapeHTML(st.color);
         const fg = isLight(st.color) ? '#000' : '#fff';
         const shiftCells = shifts.map(sh => {
@@ -52,7 +49,6 @@ function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
             );
             return `<div class="print-shift-cell">${buildShiftCellContent(assignedRows)}</div>`;
         }).join('');
-
         html += `
         <div class="print-grid-row print-data-row" style="grid-template-columns: 200px repeat(${shifts.length}, 1fr);">
             <div class="print-station-cell" style="background:${bg}; color:${fg};">${escapeHTML(st.name)}</div>
@@ -63,46 +59,90 @@ function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
     return html;
 }
 
-function generateDisplayHtmlForImage(dateObj, stations, shifts, schedule) {
+// Bygger iframe-innehållet via DOM-manipulation (inga innerHTML-tilldelningar med användardata)
+function buildDisplayDomForImage(doc, dateObj, stations, shifts, schedule) {
     const iso = getISOWeek(dateObj);
     const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1;
     const dayName = DAYS[dayIndex];
     const dateStr = `${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
     const targetDateStr = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
-    const timeHeaders = shifts.map(s => `<div class="time-header">${escapeHTML(s.label)}</div>`).join('');
+    const wrapper = doc.createElement('div');
+    wrapper.className = 'display-wrapper';
 
-    let html = `
-    <div class="display-wrapper">
-        <div class="top-bar">
-            <h1 id="mainTitle">Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
-        </div>
-        <div id="mainContainer">
-            <div class="time-header-row"><div></div>${timeHeaders}</div>`;
+    const topBar = doc.createElement('div');
+    topBar.className = 'top-bar';
+    const h1 = doc.createElement('h1');
+    h1.id = 'mainTitle';
+    h1.textContent = `Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})`;
+    topBar.appendChild(h1);
+    wrapper.appendChild(topBar);
+
+    const mainContainer = doc.createElement('div');
+    mainContainer.id = 'mainContainer';
+
+    const headerRow = doc.createElement('div');
+    headerRow.className = 'time-header-row';
+    headerRow.appendChild(doc.createElement('div'));
+    shifts.forEach(sh => {
+        const th = doc.createElement('div');
+        th.className = 'time-header';
+        th.textContent = sh.label;
+        headerRow.appendChild(th);
+    });
+    mainContainer.appendChild(headerRow);
 
     stations.forEach(st => {
-        if (st.is_spacer) { html += `<div class="display-row spacer-row"></div>`; return; }
-        const contrast = isLight(st.color) ? '#000' : '#fff';
-        const safeColor = escapeHTML(st.color);
+        if (st.is_spacer) {
+            const spacer = doc.createElement('div');
+            spacer.className = 'display-row spacer-row';
+            mainContainer.appendChild(spacer);
+            return;
+        }
 
-        const shiftCards = shifts.map(sh => {
+        const contrast = isLight(st.color) ? '#000' : '#fff';
+        const row = doc.createElement('div');
+        row.className = 'display-row';
+        row.style.setProperty('--station-color', st.color);
+        row.style.setProperty('--contrast-color', contrast);
+
+        const stationLabel = doc.createElement('div');
+        stationLabel.className = 'station-label';
+        stationLabel.textContent = st.name;
+        row.appendChild(stationLabel);
+
+        shifts.forEach(sh => {
             const assignedRows = schedule.filter(r =>
                 r.is_published &&
                 r.work_date.split('T')[0] === targetDateStr &&
                 r.station_id === st.id &&
                 r.shift_id === sh.id
             );
-            const isEmpty = assignedRows.length === 0;
-            return `<div class="shift-card ${isEmpty ? 'empty' : ''}" data-label="${escapeHTML(sh.label)}">${isEmpty ? '' : buildShiftCellContent(assignedRows)}</div>`;
-        }).join('');
+            const card = doc.createElement('div');
+            card.className = `shift-card${assignedRows.length === 0 ? ' empty' : ''}`;
+            card.dataset.label = sh.label;
 
-        html += `<div class="display-row" style="--station-color:${safeColor}; --contrast-color:${contrast};">
-            <div class="station-label">${escapeHTML(st.name)}</div>
-            ${shiftCards}
-        </div>`;
+            assignedRows.forEach((a, i) => {
+                if (i > 0) card.appendChild(doc.createTextNode(' / '));
+                const nameSpan = doc.createElement('span');
+                nameSpan.style.fontWeight = '700';
+                nameSpan.textContent = a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim();
+                card.appendChild(nameSpan);
+                if (a.note) {
+                    const noteSpan = doc.createElement('span');
+                    noteSpan.style.cssText = 'color:#888; font-size:0.8em; font-weight:400;';
+                    noteSpan.textContent = ` (${a.note})`;
+                    card.appendChild(noteSpan);
+                }
+            });
+
+            row.appendChild(card);
+        });
+        mainContainer.appendChild(row);
     });
-    html += `</div></div>`;
-    return html;
+
+    wrapper.appendChild(mainContainer);
+    return wrapper;
 }
 
 function getCustomCss() {
@@ -148,46 +188,41 @@ async function runImageExport(sDate, eDate, stations, shifts, schedule, customCs
         let singleImageName = "";
 
         while (loopDate <= eDate) {
-            const doc = iframe.contentDocument;
+            const iframeDoc = iframe.contentDocument;
             const iframeLoaded = new Promise(resolve => { iframe.onload = resolve; });
 
-            doc.open();
-            doc.write(`
-                <!DOCTYPE html>
-                <html lang="sv">
-                <head>
-                    <base href="${globalThis.location.href}">
-                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-                    <link rel="stylesheet" href="css/base.css">
-                    <link rel="stylesheet" href="css/display.css">
-                    <style>
-                        * { transition: none !important; animation: none !important; }
-                        body { margin: 0; overflow: hidden; background-color: var(--bg-color, #f0f2f5); }
-                        ::-webkit-scrollbar { display: none; }
-                    </style>
-                </head>
-                <body class="display-view" id="page-display">
-                    <div id="__export_content__"></div>
-                </body>
-                </html>
-            `);
-            doc.close();
+            // Skriv statiskt HTML-skelett utan användardata
+            iframeDoc.open();
+            iframeDoc.write(`<!DOCTYPE html>
+<html lang="sv">
+<head>
+<base href="${globalThis.location.href}">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/display.css">
+<style>* { transition: none !important; animation: none !important; } body { margin: 0; overflow: hidden; background-color: var(--bg-color, #f0f2f5); } ::-webkit-scrollbar { display: none; }</style>
+</head>
+<body class="display-view" id="page-display"></body>
+</html>`);
+            iframeDoc.close();
 
-            iframe.contentDocument.getElementById('__export_content__').innerHTML =
-                generateDisplayHtmlForImage(new Date(loopDate), stations, shifts, schedule);
+            // Bygg innehållet via DOM — ingen innerHTML med användardata
+            iframeDoc.body.appendChild(
+                buildDisplayDomForImage(iframeDoc, new Date(loopDate), stations, shifts, schedule)
+            );
 
             if (customCss) {
-                const styleEl = iframe.contentDocument.createElement('style');
+                const styleEl = iframeDoc.createElement('style');
                 styleEl.textContent = customCss;
-                iframe.contentDocument.head.appendChild(styleEl);
+                iframeDoc.head.appendChild(styleEl);
             }
 
             await iframeLoaded;
             await new Promise(r => requestAnimationFrame(r));
 
             try {
-                const canvas = await html2canvas(doc.body, {
-                    scale: 2, useCORS: true, backgroundColor: doc.body.style.backgroundColor || '#f0f2f5'
+                const canvas = await html2canvas(iframeDoc.body, {
+                    scale: 2, useCORS: true, backgroundColor: iframeDoc.body.style.backgroundColor || '#f0f2f5'
                 });
 
                 const lDateStr = new Date(loopDate.getTime() - (loopDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
@@ -198,8 +233,7 @@ async function runImageExport(sDate, eDate, stations, shifts, schedule, customCs
                     singleImageName = `Schema-${lDateStr}.png`;
                 }
 
-                const base64Data = base64Img.split('base64,')[1];
-                zip.file(`Schema-${lDateStr}.png`, base64Data, { base64: true });
+                zip.file(`Schema-${lDateStr}.png`, base64Img.split('base64,')[1], { base64: true });
                 count++;
             } catch (e) {
                 console.error("Kunde inte skapa bild:", e);
@@ -268,9 +302,7 @@ export function initExportTab(currentSettings) {
     applyDefaultDates();
 
     const exportTabBtn = document.querySelector('button[onclick="openTab(\'tab-export\')"]');
-    if (exportTabBtn) {
-        exportTabBtn.addEventListener('click', () => applyDefaultDates());
-    }
+    if (exportTabBtn) exportTabBtn.addEventListener('click', () => applyDefaultDates());
 
     if (btnToday) btnToday.onclick = () => { const d = new Date(); setDates(d, d); };
     if (btnWeek) btnWeek.onclick = () => {
