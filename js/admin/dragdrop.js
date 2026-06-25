@@ -33,61 +33,24 @@ export function setupDragAndDrop() {
             }
         });
 
-        scheduleContainer.addEventListener('keydown', (e) => {
-            if (e.target.classList.contains('shift-text')) {
-                const dropdown = document.getElementById('autocomplete-dropdown');
-                if (!dropdown) return;
-
-                const items = dropdown.querySelectorAll('.dropdown-item');
-                if (items.length === 0) return;
-
-                let currentIndex = Array.from(items).findIndex(item => item.classList.contains('active-item'));
-
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    currentIndex = (currentIndex < items.length - 1) ? currentIndex + 1 : 0;
-                    updateDropdownHighlight(items, currentIndex);
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    currentIndex = (currentIndex > 0) ? currentIndex - 1 : items.length - 1;
-                    updateDropdownHighlight(items, currentIndex);
-                } else if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (currentIndex >= 0 && currentIndex < items.length) {
-                        const event = new MouseEvent('mousedown');
-                        items[currentIndex].dispatchEvent(event);
-                    }
-                } else if (e.key === 'Escape') {
-                    closeAutocomplete();
-                }
-            }
-        });
-
-        function updateDropdownHighlight(items, index) {
-            items.forEach(item => item.classList.remove('active-item'));
-            if (index >= 0 && index < items.length) {
-                items[index].classList.add('active-item');
-                items[index].scrollIntoView({ block: 'nearest' });
-            }
-        }
+        scheduleContainer.addEventListener('keydown', handleScheduleKeydown);
 
         scheduleContainer.addEventListener('click', async (e) => {
-            // Ta bort en enskild person från passet
             if (e.target.classList.contains('clear-user-btn')) {
                 e.stopPropagation();
-                const date = e.target.getAttribute('data-date');
-                const stationId = e.target.getAttribute('data-station');
-                const shiftId = e.target.getAttribute('data-shift');
-                const userId = e.target.getAttribute('data-userid');
+                const date = e.target.dataset.date;
+                const stationId = e.target.dataset.station;
+                const shiftId = e.target.dataset.shift;
+                const userId = e.target.dataset.userid;
                 await apiAction('remove_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
                 updateGrid(getCurrentPickerDate());
                 return;
             }
 
             if (e.target.classList.contains('add-user-btn')) {
-                const date = e.target.getAttribute('data-date');
-                const stationId = e.target.getAttribute('data-station');
-                const shiftId = e.target.getAttribute('data-shift');
+                const date = e.target.dataset.date;
+                const stationId = e.target.dataset.station;
+                const shiftId = e.target.dataset.shift;
                 manualAdd(e, date, stationId, shiftId);
             }
         });
@@ -98,9 +61,9 @@ export function setupDragAndDrop() {
 
         scheduleContainer.addEventListener('focusout', (e) => {
             if (e.target.classList.contains('shift-text')) {
-                const date = e.target.getAttribute('data-date');
-                const stationId = e.target.getAttribute('data-station');
-                const shiftId = e.target.getAttribute('data-shift');
+                const date = e.target.dataset.date;
+                const stationId = e.target.dataset.station;
+                const shiftId = e.target.dataset.shift;
                 const text = e.target.innerText;
                 const scheduleData = getScheduleData();
 
@@ -116,6 +79,43 @@ export function setupDragAndDrop() {
     document.addEventListener('click', (e) => {
         if (!e.target.classList.contains('shift-text')) closeAutocomplete();
     });
+}
+
+function handleScheduleKeydown(e) {
+    if (!e.target.classList.contains('shift-text')) return;
+
+    const dropdown = document.getElementById('autocomplete-dropdown');
+    if (!dropdown) return;
+
+    const items = dropdown.querySelectorAll('.dropdown-item');
+    if (items.length === 0) return;
+
+    let currentIndex = Array.from(items).findIndex(item => item.classList.contains('active-item'));
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        currentIndex = (currentIndex < items.length - 1) ? currentIndex + 1 : 0;
+        updateDropdownHighlight(items, currentIndex);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        currentIndex = (currentIndex > 0) ? currentIndex - 1 : items.length - 1;
+        updateDropdownHighlight(items, currentIndex);
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (currentIndex >= 0 && currentIndex < items.length) {
+            items[currentIndex].dispatchEvent(new MouseEvent('mousedown'));
+        }
+    } else if (e.key === 'Escape') {
+        closeAutocomplete();
+    }
+}
+
+function updateDropdownHighlight(items, index) {
+    items.forEach(item => item.classList.remove('active-item'));
+    if (index >= 0 && index < items.length) {
+        items[index].classList.add('active-item');
+        items[index].scrollIntoView({ block: 'nearest' });
+    }
 }
 
 async function syncShiftTextToDB(date, stationId, shiftId, text) {
@@ -141,10 +141,10 @@ async function syncShiftTextToDB(date, stationId, shiftId, text) {
 
         if (u) {
             const abs = getUserAbsence(u.id, date);
-            if (!abs) {
-                await apiAction('assign_shift', { date, user_id: u.id, station_id: stationId, shift_id: shiftId });
-            } else {
+            if (abs) {
                 showToast(`${getFriendlyName(u)} lades inte till eftersom de är frånvarande.`, 'error');
+            } else {
+                await apiAction('assign_shift', { date, user_id: u.id, station_id: stationId, shift_id: shiftId });
             }
         }
     }
