@@ -29,7 +29,8 @@ export function renderAdminGrid() {
     const currentDateStr = adminState.datesOfWeek[adminState.currentAdminDayIndex];
     const safeDate = escapeHTML(currentDateStr);
 
-    let html = `<div class="header-row"><div></div>${currentShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
+    const shiftHeaders = currentShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('');
+    let html = `<div class="header-row"><div></div>${shiftHeaders}</div>`;
 
     currentStations.forEach(st => {
         if (st.is_spacer) {
@@ -45,7 +46,7 @@ export function renderAdminGrid() {
         html += `<div class="station-row"><div class="station-label" style="${styles}">${escapeHTML(st.name)}</div>`;
 
         currentShifts.forEach(sh => {
-            if (!sh || sh.id == null) return;
+            if (sh?.id == null) return;
 
             const safeShiftId = escapeHTML(String(sh.id));
             const key = `${currentDateStr}_${st.id}_${sh.id}`;
