@@ -58,7 +58,7 @@ function parseCoords(lat, lon) {
     const parsedLat = parseFloat(lat);
     const parsedLon = parseFloat(lon);
     if (
-        isNaN(parsedLat) || isNaN(parsedLon) ||
+        Number.isNaN(parsedLat) || Number.isNaN(parsedLon) ||
         parsedLat < -90  || parsedLat > 90   ||
         parsedLon < -180 || parsedLon > 180
     ) return null;
