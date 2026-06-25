@@ -89,7 +89,7 @@ export function initUsersTab() {
         searchInput.addEventListener('input', () => renderAdmins(true));
     }
 
-    window.startEditAdmin = (id) => {
+    globalThis.startEditAdmin = (id) => {
         const u = localAdmins.find(admin => String(admin.id) === String(id));
         if (!u) return;
 
@@ -148,7 +148,7 @@ export function initUsersTab() {
         }
     };
 
-    window.deleteAdmin = async (id, username) => {
+    globalThis.deleteAdmin = async (id, username) => {
         if (await showConfirm(`Ta bort kontot @${escapeHTML(username)}?`)) {
             const res = await apiAction('remove_admin', { id });
             
