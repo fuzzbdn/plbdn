@@ -186,8 +186,8 @@ export function renderRoster() {
 
     list.querySelectorAll('.remove-user-btn').forEach(btn => {
         btn.onclick = async (e) => {
-            const userId = e.target.getAttribute('data-userid');
-            const name = e.target.getAttribute('data-fullname');
+            const userId = e.target.dataset.userid;
+            const name = e.target.dataset.fullname;
 
             if (await showConfirm(`Ta bort ${name} från databasen?`)) {
                 const res = await apiAction('remove_user', { id: userId });
@@ -212,9 +212,9 @@ function showNotePopup(pill) {
     const existing = document.getElementById('note-popup');
     if (existing) existing.remove();
 
-    const assignmentId = pill.getAttribute('data-assignment-id');
-    const name = pill.getAttribute('data-name');
-    const currentNote = pill.getAttribute('data-note') || '';
+    const assignmentId = pill.dataset.assignmentId;
+    const name = pill.dataset.name;
+    const currentNote = pill.dataset.note || '';
 
     const popup = document.createElement('div');
     popup.id = 'note-popup';
