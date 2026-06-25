@@ -136,7 +136,7 @@ export async function initAdmin() {
     document.getElementById('logoutBtn').onclick = async () => {
         await apiAction('logout', {});
         localStorage.clear(); 
-        window.location.href = "index.html"; 
+        globalThis.location.href = "index.html";
     };
 
     const toggleBtn = document.getElementById('toggleViewBtn');
