@@ -48,8 +48,8 @@ async function _apiFetch(url, options = {}) {
         clearTimeout(timeoutId);
 
         if (res.status === 401) {
-            if (!window.location.pathname.endsWith('index.html') && 
-                window.location.pathname !== '/') {
+            if (!globalThis.location.pathname.endsWith('index.html') &&
+                globalThis.location.pathname !== '/') {
                 handleExpiredSession();
             }
             return { success: false, error: 'Sessionen har gått ut.', status: 401 };
@@ -86,7 +86,7 @@ async function _apiFetch(url, options = {}) {
 export async function fetchData(type, paramsObj = {}) {
     try {
         const endpoint = getEndpointForType(type);
-        const url = new URL(endpoint, window.location.origin);
+        const url = new URL(endpoint, globalThis.location.origin);
         
         url.searchParams.append('type', type);
         
