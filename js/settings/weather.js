@@ -39,7 +39,7 @@ export function initWeatherTab() {
     // Hämta befintlig väderkonfiguration
     fetchData('weather_config').then(res => {
         const data = res?.success ? res.data : null;
-        if (data && data.name) {
+        if (data?.name) {
             setWeatherDisplay(data.name);
             hiddenName.value  = data.name;
             hiddenLat.value   = data.latitude;
