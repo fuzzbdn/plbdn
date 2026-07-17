@@ -7,10 +7,17 @@ import { DAYS } from './config.js';
 // ==========================================
 const CONFIG_CACHE_MS  = 5  * 60 * 1000;  // 5 minuter
 const WEATHER_CACHE_MS = 15 * 60 * 1000;  // 15 minuter
-const POLL_INTERVAL_MS = 60 * 1000;       // 1 minut
+const FALLBACK_POLL_MS = 10 * 60 * 1000;  // Skyddsnät ifall Pusher tappar anslutningen
 
-let pollTimer = null;
-let clockTimer = null;
+// NYTT: Pusher-nycklar är publika (inte hemliga) och kan ligga i klientkoden.
+// PUSHER_SECRET ska ALDRIG placeras här - den ligger bara i backend (api/_pusher.js).
+const PUSHER_KEY     = 'bd3dbd5cbb9abb426d43';
+const PUSHER_CLUSTER = 'eu'; // Samma kluster som i Vercels miljövariabler
+
+let fallbackTimer = null;
+let clockTimer    = null;
+let pusherClient  = null;
+let pusherChannel = null;
 
 // ==========================================
 // GLOBALT TILLSTÅND
@@ -65,6 +72,22 @@ function parseCoords(lat, lon) {
     return { lat: parsedLat, lon: parsedLon };
 }
 
+/**
+ * Läser ut payloaden ur en JWT utan att verifiera signaturen.
+ * JWT-payloaden är bara base64-kodad (inte krypterad), så detta avslöjar
+ * ingenting som inte redan är läsbart för den som har token. Vi använder
+ * den bara för att plocka ut workplaceId till Pusher-kanalens namn.
+ */
+function decodeJwtPayload(token) {
+    try {
+        const payload = token.split('.')[1];
+        const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+        return JSON.parse(decoded);
+    } catch {
+        return null;
+    }
+}
+
 // ==========================================
 // HUVUD-FUNKTION
 // ==========================================
@@ -91,8 +114,6 @@ export async function initDisplay() {
             const fetchConfig = (now.getTime() - cachedConfig.lastConfigFetch > CONFIG_CACHE_MS);
 
             // --- HÄMTA SCHEMADATA ---
-            // TODO: På sikt kan displayToken flyttas till en Authorization-header i service.js, 
-            // men just nu skickas den säkert nog via URL:en då den redan exponeras i webbläsarens fält.
             const bundleRes = await fetchData('display_bundle', {
                 start_date: todayStr,
                 end_date: todayStr,
@@ -172,7 +193,6 @@ export async function initDisplay() {
                             styleEl.id = 'custom-theme-style';
                             document.head.appendChild(styleEl);
                         }
-                        // Använder textContent istället för innerHTML för att förhindra HTML-injektion
                         if (styleEl.textContent !== t.css) styleEl.textContent = t.css;
                     }
                 } else {
@@ -219,7 +239,6 @@ export async function initDisplay() {
                     if (weatherEl && cachedWeatherHtml) {
                         weatherEl.innerHTML = '';
 
-                        // Säker rendering av väder-elementen med dedikerade CSS-klasser
                         const locationSpan = document.createElement('span');
                         locationSpan.className = 'weather-location-text';
                         locationSpan.textContent = wc.name || '';
@@ -238,18 +257,48 @@ export async function initDisplay() {
         }
     }
 
-    // Rensa gamla timers vid ominitiering (t.ex. vid hot-reload)
-    if (pollTimer) clearInterval(pollTimer);
+    // Rensa gamla timers/anslutningar vid ominitiering (t.ex. vid hot-reload)
+    if (fallbackTimer) clearInterval(fallbackTimer);
     if (clockTimer) clearInterval(clockTimer);
+    if (pusherChannel) {
+        pusherChannel.unbind_all();
+        pusherChannel.unsubscribe();
+        pusherChannel = null;
+    }
+    if (pusherClient) {
+        pusherClient.disconnect();
+        pusherClient = null;
+    }
 
-    // Starta cykeln
+    // Starta med en initial hämtning
     await updateDisplay();
 
-    pollTimer = setInterval(async () => {
-        try { await updateDisplay(); }
-        catch (e) { console.error('Kritiskt fel i displayloop:', e); }
-    }, POLL_INTERVAL_MS);
+    // --- REALTIDSLYSSNARE VIA PUSHER ---
+    const payload      = decodeJwtPayload(displayToken);
+    const workplaceId  = payload?.workplaceId;
 
+    if (workplaceId && typeof Pusher !== 'undefined') {
+        try {
+            pusherClient = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
+            pusherChannel = pusherClient.subscribe(`workplace-${workplaceId}`);
+
+            pusherChannel.bind('schedule-updated', () => {
+                updateDisplay();
+            });
+        } catch (err) {
+            console.error('Kunde inte ansluta till Pusher:', err);
+        }
+    } else {
+        console.warn('Kunde inte ansluta till Pusher - saknar workplaceId i token, eller Pusher-biblioteket kunde inte laddas.');
+    }
+
+    // --- SKYDDSNÄT: mycket gles polling ifall websocket-anslutningen tappas ---
+    fallbackTimer = setInterval(async () => {
+        try { await updateDisplay(); }
+        catch (e) { console.error('Kritiskt fel i fallback-polling:', e); }
+    }, FALLBACK_POLL_MS);
+
+    // Klockan tickar i realtid, oberoende av Pusher/polling
     clockTimer = setInterval(() => {
         const now = new Date();
         const clk = document.getElementById('clock');
