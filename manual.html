@@ -121,7 +121,7 @@
     </ul>
 
     <h3>📡 Publicera schemat</h3>
-    <p>Ändringar du gör i schemat är <strong>Dolda (Utkast)</strong> fram till att du publicerar dem. Det visas en gul varningsbanner om det finns opublicerade ändringar. När du är nöjd, klicka på den gröna knappen <span class="highlight">📡 Publicera</span> i botten av skärmen för att skicka utkastet till TV-skärmarna och de anställdas inloggning.</p>
+    <p>Ändringar du gör i schemat är <strong>Dolda (Utkast)</strong> fram till att du publicerar dem. Det visas en gul varningsbanner om det finns opublicerade ändringar. När du är nöjd, klicka på den gröna knappen <span class="highlight">📡 Publicera</span> i botten av skärmen. TV-skärmar som är anslutna uppdateras då <strong>omedelbart i realtid</strong> — utan att någon behöver ladda om sidan.</p>
 
     <h2 id="franvaro">4. Sjukdom & Frånvaro</h2>
     <p>Om någon blir sjuk eller ska ha semester ska du <strong>inte</strong> bara radera deras pass manuellt. Använd Frånvarohanteraren för att undvika schemakrockar!</p>
@@ -154,11 +154,12 @@
     </ul>
 
     <h2 id="skarm">6. TV-skärm & Displaylänk</h2>
-    <p>Display-vyn är gjord för att rulla dygnet runt på en TV i lunchrummet. Systemet hämtar det senaste publicerade schemat automatiskt <strong>varje minut</strong> (60 sekunder) för att vara resurssnålt, medan klockan och schemalagda meddelanden alltid tickar i realtid.</p>
+    <p>Display-vyn är gjord för att rulla dygnet runt på en TV i lunchrummet. Schemat uppdateras nu <strong>i realtid</strong> via en direktanslutning — när du klickar Publicera syns ändringarna på skärmen inom sekunder, utan att sidan laddas om. Som backup hämtas schemat automatiskt var 10:e minut ifall anslutningen skulle tappas.</p>
     <ul>
         <li>Gå till <strong>Inställningar ⚙️ > Allmänt & Meddelanden</strong>.</li>
         <li>Skriv in er hemliga display-nyckel i fältet (konfigurerad av IT/Super-Admin) och klicka på "Skapa displaylänk".</li>
         <li>En säker länk genereras som är låst till er specifika arbetsplats. Kopiera länken och klistra in den i webbläsaren på TV-skärmen.</li>
+        <li><strong>Anslutningsindikator:</strong> En liten punkt uppe till höger på skärmen visar statusen — <span style="color:#4caf50; font-weight:bold;">grön</span> = realtidsanslutning aktiv, <span style="color:#f44336; font-weight:bold;">röd</span> = anslutning bruten (backup-polling aktiv).</li>
     </ul>
 
     <h2 id="superadmin">7. Super-Admin (Flera arbetsplatser)</h2>
@@ -167,7 +168,7 @@
     <p>I Planeringsvyn får Super-Admins fram en rullgardin i toppmenyn där de snabbt kan hoppa mellan de olika anläggningarna för att administrera dem.</p>
 
     <div style="text-align: center; margin-top: 50px; color: var(--text-color); opacity: 0.6; border-top: 1px solid var(--border-color); padding-top: 20px;">
-        <em>STRUL Bemanningssystem v3.1 - Optimerad för molnet, hastighet och PostgreSQL.</em>
+        <em>STRUL Bemanningssystem v3.2 - Nu med realtidsuppdatering via Pusher.</em>
     </div>
 </div>
 
