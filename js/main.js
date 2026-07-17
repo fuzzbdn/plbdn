@@ -1,49 +1,44 @@
 import { APP_VERSION } from './config.js';
 import { initLogin, initReset } from './auth.js';
-import { initAdmin } from './admin.js';
-import { initUserView } from './user.js'; // FIX: Ändrat till initUserView
+import { initAdmin } from './admin/core.js';
+import { initUserView } from './user.js';
 import { initDisplay } from './display.js';
-import { initSettings } from './settings.js';
+
+// NYTT: Vi importerar nu från vår nya core-fil istället för den gamla settings.js!
+import { initSettings } from './settings/core.js'; 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- NYTT: Skriv automatiskt ut versionen på alla sidor ---
+    // Skriv ut versionen på alla sidor som har ett .version-tag-element
     document.querySelectorAll('.version-tag').forEach(tag => {
         tag.innerText = APP_VERSION;
     });
 
     const pageId = document.body.id;
-    console.log("Startar modul för sida:", pageId);
 
-    if (pageId === 'page-login') {
-        // Kontrollera om vi är på återställningssidan (som använder samma body-id)
-        if (window.location.pathname.includes('reset.html')) {
-            initReset();
-        } else {
-            initLogin();
-        }
+    const pages = {
+        'page-login':    initLogin,
+        'page-reset':    initReset,
+        'page-admin':    initAdmin,
+        'page-user':     initUserView,
+        'page-display':  initDisplay,
+        'page-settings': initSettings,
+    };
+
+    const initFn = pages[pageId];
+    if (initFn) {
+        initFn();
     }
-    else if (pageId === 'page-reset') initReset(); // Om du har ett unikt id för reset
-    else if (pageId === 'page-admin') initAdmin();
-    else if (pageId === 'page-user') initUserView(); // FIX: Ändrat till initUserView
-    else if (pageId === 'page-display' || document.body.classList.contains('display-view')) initDisplay();
-    else if (pageId === 'page-settings') initSettings(); 
 });
 
-window.openTab = function(tabId) {
-    const allPanes = document.querySelectorAll('.tab-pane');
-    allPanes.forEach(pane => {
-        pane.classList.remove('active');
-        pane.style.display = 'none';
-    });
-    const allBtns = document.querySelectorAll('.tab-btn');
-    allBtns.forEach(btn => btn.classList.remove('active'));
-    
+/**
+ * Globalt tillgänglig flik-växlare för HTML onclick-attribut.
+ */
+window.openTab = function(tabId, event) {
+    document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
     const targetPane = document.getElementById(tabId);
-    if (targetPane) {
-        targetPane.classList.add('active');
-        targetPane.style.display = 'block';
-    }
-    if (event && event.currentTarget) {
-        event.currentTarget.classList.add('active');
-    }
+    if (targetPane) targetPane.classList.add('active');
+
+    if (event?.currentTarget) event.currentTarget.classList.add('active');
 };

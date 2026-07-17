@@ -50,7 +50,11 @@ export function getISOWeek(date) {
 }
 
 export function isLight(color) {
+    // FIX: Härdad mot null/undefined/ogiltiga färgformat (t.ex. '#fff', 'red', '')
+    // Utan denna kraschar hela display-renderingen om station.color är NULL i databasen
+    if (!color || typeof color !== 'string') return true;
     const hex = color.replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(hex)) return true;
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
@@ -58,7 +62,10 @@ export function isLight(color) {
 }
 
 export function escapeHTML(str) {
-    if (!str) return "";
+    // FIX: Härdad mot icke-strängar (tal, boolean) som tidigare kraschade med
+    // "str.replace is not a function". Null/undefined returnerar fortfarande tom sträng.
+    if (str === null || str === undefined) return '';
+    if (typeof str !== 'string') str = String(str);
     return str.replace(/[&<>'"]/g, tag => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
     }[tag]));
@@ -105,7 +112,7 @@ export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersW
                 if(absence.type === 'Sjuk') icon = '🤒';
                 if(absence.type === 'VAB') icon = '🧸';
                 if(absence.type === 'Semester') icon = '🌴';
-                html += `<div class="weekly-badge" style="background:#ffebee; color:#c62828; border: 1px solid #ffcdd2;">${icon} ${absence.type}</div>`;
+                html += `<div class="weekly-badge" style="background:#ffebee; color:#c62828; border: 1px solid #ffcdd2;">${icon} ${escapeHTML(absence.type)}</div>`;
             } 
             else if (!assignments || assignments.length === 0) {
                 html += `<span class="free-text">Ledig</span>`;
@@ -123,4 +130,48 @@ export function buildWeeklyGridHTML(users, dates, getAssignmentsFn, showHeadersW
     });
     html += '</div>';
     return html;
+}
+
+/**
+ * Generisk Drag-and-Drop-hanterare för listor (Event Delegation).
+ * @param {HTMLElement} container - DOM-elementet som håller listan.
+ * @param {string} itemSelector - CSS-selektor för de objekt som får dras (t.ex. '.draggable-item').
+ * @param {Function} onReorder - Callback som körs när ett objekt släpps (får oldIndex och newIndex).
+ */
+export function setupListDragAndDrop(container, itemSelector, onReorder) {
+    if (!container) return;
+    let dragSrcEl = null;
+
+    container.addEventListener('dragstart', (e) => {
+        dragSrcEl = e.target.closest(itemSelector);
+        if (dragSrcEl) {
+            e.dataTransfer.effectAllowed = 'move';
+            dragSrcEl.classList.add('dragging');
+        }
+    });
+
+    container.addEventListener('dragover', (e) => {
+        if (e.target.closest(itemSelector)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+    });
+
+    container.addEventListener('dragend', () => {
+        if (dragSrcEl) dragSrcEl.classList.remove('dragging');
+    });
+
+    container.addEventListener('drop', (e) => {
+        e.stopPropagation();
+        const targetEl = e.target.closest(itemSelector);
+        
+        if (dragSrcEl && targetEl && dragSrcEl !== targetEl) {
+            const oldIndex = parseInt(dragSrcEl.dataset.index);
+            const newIndex = parseInt(targetEl.dataset.index);
+            if (!isNaN(oldIndex) && !isNaN(newIndex)) {
+                onReorder(oldIndex, newIndex);
+            }
+        }
+        if (dragSrcEl) dragSrcEl.classList.remove('dragging');
+    });
 }

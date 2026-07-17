@@ -1,212 +1,263 @@
-import { fetchData } from './service.js';
-import { getISOWeek, isLight, escapeHTML, buildWeeklyGridHTML } from './utils.js'; 
+import { fetchData, apiAction } from './service.js';
+import { getISOWeek, isLight, escapeHTML, buildWeeklyGridHTML, showToast } from './utils.js';
 import { DAYS } from './config.js';
 
-let allScheduleRows = [];
-let globalUserList = [];
-let globalStations = [];
-let globalShifts = [];
-let globalAbsences = []; 
-let showOnlyMe = false;
-let datesToShow = []; 
-let selectedWeek = 0;
-let selectedYear = 0;
-let currentDayIndex = 0;
-let isWeeklyView = false;
-let currentSelectedDateStr = '';
+// ==========================================
+// TILLSTÅND (State)
+// ==========================================
+export const userState = {
+    allScheduleRows: [],
+    globalUserList: [],
+    globalStations: [],
+    globalShifts: [],
+    globalAbsences: [],
+    showOnlyMe: false,
+    datesToShow: [],
+    selectedWeek: 0,
+    selectedYear: 0,
+    currentDayIndex: 0,
+    isWeeklyView: false,
+    currentSelectedDateStr: ''
+};
 
+// ==========================================
+// INITIALISERING
+// ==========================================
 export async function initUserView() {
     const userId = localStorage.getItem('userId');
     const name = localStorage.getItem('adminName');
 
-    if (!localStorage.getItem('jwtToken')) {
-        window.location.href = "index.html"; return;
-    }
-
     if (!userId) {
         localStorage.clear();
-        alert("Systemet har uppdaterats! Vänligen logga in på nytt för att se ditt personliga schema.");
-        window.location.href = "index.html";
+        showToast("Systemet har uppdaterats! Vänligen logga in på nytt.", "info");
+        setTimeout(() => globalThis.location.replace("index.html"), 2000);
         return;
     }
 
-    // --- NYTT: Känn av om det är en mobilskärm vid inloggning ---
-    if (window.innerWidth <= 850) {
-        showOnlyMe = true;
-        isWeeklyView = true;
+    if (globalThis.innerWidth <= 850) {
+        userState.showOnlyMe = true;
+        userState.isWeeklyView = true;
     } else {
-        showOnlyMe = false;
-        isWeeklyView = false;
+        userState.showOnlyMe = false;
+        userState.isWeeklyView = false;
     }
 
     document.getElementById('currentUserDisplay').innerText = "Inloggad: " + (name || 'Användare');
-    document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = "index.html"; };
 
-    const filterBtn = document.getElementById('toggleMyScheduleBtn');
-    const toggleBtn = document.getElementById('toggleViewBtn');
-
-    // Sätt initialt utseende på knapparna och vyerna baserat på enhet
-    if (filterBtn) {
-        filterBtn.innerText = showOnlyMe ? "👥 Visa alla pass" : "👤 Visa endast mitt";
-        filterBtn.style.backgroundColor = showOnlyMe ? "#455a64" : "#4CAF50";
-    }
-
-    if (showOnlyMe) {
-        document.getElementById('scheduleContainer').style.display = 'none';
-        document.getElementById('userWeeklyContainer').style.display = 'block';
-        if (toggleBtn) toggleBtn.style.display = 'none';
-    }
-
-    if (filterBtn) {
-        filterBtn.onclick = () => {
-            showOnlyMe = !showOnlyMe;
-            filterBtn.innerText = showOnlyMe ? "👥 Visa alla pass" : "👤 Visa endast mitt";
-            filterBtn.style.backgroundColor = showOnlyMe ? "#455a64" : "#4CAF50";
-            
-            if (showOnlyMe) {
-                isWeeklyView = true;
-                document.getElementById('scheduleContainer').style.display = 'none';
-                document.getElementById('userWeeklyContainer').style.display = 'block';
-                if (toggleBtn) toggleBtn.style.display = 'none';
-            } else {
-                if (toggleBtn) {
-                    toggleBtn.style.display = 'inline-block';
-                    toggleBtn.innerText = isWeeklyView ? "📆 Byt till Dagsvy" : "📅 Byt till Veckovy";
-                    toggleBtn.style.backgroundColor = isWeeklyView ? "#455a64" : "#0277bd";
-                }
-            }
-            
-            const picker = document.getElementById('userDatePicker');
-            updateGrid(picker.value);
-        };
-    }
-
-    const picker = document.getElementById('userDatePicker');
-    picker.value = new Date().toISOString().split('T')[0];
-    picker.onchange = (e) => updateGrid(e.target.value);
-
-    document.getElementById('prevDayBtn').onclick = () => changeDate(-1);
-    document.getElementById('nextDayBtn').onclick = () => changeDate(1);
-
-    function changeDate(days) {
-        if(!picker.value) return;
-        const d = new Date(picker.value);
-        d.setDate(d.getDate() + days);
-        const tzoffset = d.getTimezoneOffset() * 60000;
-        picker.value = (new Date(d.getTime() - tzoffset)).toISOString().slice(0, 10);
-        updateGrid(picker.value);
-    }
-
-    if (toggleBtn) {
-        toggleBtn.onclick = () => {
-            isWeeklyView = !isWeeklyView;
-            const dayCont = document.getElementById('scheduleContainer');
-            const weekCont = document.getElementById('userWeeklyContainer');
-            if (isWeeklyView) {
-                dayCont.style.display = 'none'; weekCont.style.display = 'block';
-                toggleBtn.innerText = "📆 Byt till Dagsvy"; toggleBtn.style.backgroundColor = "#455a64";
-            } else {
-                dayCont.style.display = 'grid'; weekCont.style.display = 'none';
-                toggleBtn.innerText = "📅 Byt till Veckovy"; toggleBtn.style.backgroundColor = "#0277bd";
-            }
-            renderViews();
-        };
-    }
+    document.getElementById('logoutBtn').onclick = async () => {
+        await apiAction('logout', {});
+        localStorage.clear();
+        globalThis.location.replace("index.html");
+    };
 
     try {
-        const [users, stations, shifts, absences] = await Promise.all([
+        const results = await Promise.allSettled([
             fetchData('users'),
             fetchData('stations'),
             fetchData('shifts'),
             fetchData('absences')
         ]);
-        globalUserList = users || [];
-        globalStations = stations || [];
-        globalShifts = shifts || [];
-        globalAbsences = absences || [];
-        
-        await updateGrid(picker.value);
+
+        if (results.some(r => r.status === 'fulfilled' && r.value?.status === 401)) {
+            return;
+        }
+
+        const getResultData = (index, resourceName) => {
+            const res = results[index];
+            if (!res || res.status === 'rejected' || !res.value?.success) {
+                console.error(`Kunde inte ladda ${resourceName}`);
+                return [];
+            }
+            return res.value.data;
+        };
+
+        userState.globalUserList  = getResultData(0, 'personal');
+        userState.globalStations  = getResultData(1, 'stationer');
+        userState.globalShifts    = getResultData(2, 'arbetspass');
+        userState.globalAbsences  = getResultData(3, 'frånvaro');
+
     } catch (e) {
-        console.error("Fel vid hämtning av data", e);
+        console.error("Kritiskt fel vid hämtning av data", e);
+        showToast("Systemdata kunde inte laddas. Prova att uppdatera sidan.", "error");
+        return;
+    }
+
+    setupEventListeners();
+
+    const picker = document.getElementById('userDatePicker');
+    picker.value = new Date().toISOString().split('T')[0];
+    updateGrid(picker.value);
+}
+
+// ==========================================
+// EVENT LISTENERS & UI-UPPDATERINGAR
+// ==========================================
+function setupEventListeners() {
+    const filterBtn = document.getElementById('toggleMyScheduleBtn');
+    const toggleBtn = document.getElementById('toggleViewBtn');
+    const picker = document.getElementById('userDatePicker');
+
+    updateToggleButtonsUI();
+
+    if (filterBtn) {
+        filterBtn.onclick = () => {
+            userState.showOnlyMe = !userState.showOnlyMe;
+            if (userState.showOnlyMe) userState.isWeeklyView = true;
+            updateToggleButtonsUI();
+            updateGrid(picker.value);
+        };
+    }
+
+    if (toggleBtn) {
+        toggleBtn.onclick = () => {
+            userState.isWeeklyView = !userState.isWeeklyView;
+            updateToggleButtonsUI();
+            renderViews();
+        };
+    }
+
+    picker.onchange = (e) => updateGrid(e.target.value);
+    document.getElementById('prevDayBtn').onclick = () => changeDate(-1);
+    document.getElementById('nextDayBtn').onclick = () => changeDate(1);
+}
+
+function updateFilterButton(btn) {
+    if (!btn) return;
+    btn.innerText = userState.showOnlyMe ? "👥 Visa alla pass" : "👤 Visa endast mitt";
+    btn.style.backgroundColor = userState.showOnlyMe ? "#455a64" : "#4CAF50";
+}
+
+function updateToggleButton(btn) {
+    if (!btn) return;
+    if (userState.showOnlyMe) {
+        btn.style.display = 'none';
+        return;
+    }
+    btn.style.display = 'inline-block';
+    btn.innerText = userState.isWeeklyView ? "📆 Byt till Dagsvy" : "📅 Byt till Veckovy";
+    btn.style.backgroundColor = userState.isWeeklyView ? "#455a64" : "#0277bd";
+}
+
+function updateContainerVisibility(dayCont, weekCont) {
+    if (!dayCont || !weekCont) return;
+    if (userState.isWeeklyView) {
+        dayCont.style.display = 'none';
+        weekCont.style.display = 'block';
+    } else {
+        dayCont.style.display = 'grid';
+        weekCont.style.display = 'none';
     }
 }
 
+function updateToggleButtonsUI() {
+    updateFilterButton(document.getElementById('toggleMyScheduleBtn'));
+    updateToggleButton(document.getElementById('toggleViewBtn'));
+    updateContainerVisibility(
+        document.getElementById('scheduleContainer'),
+        document.getElementById('userWeeklyContainer')
+    );
+}
+
+// ==========================================
+// DATUM OCH DATALADDNING
+// ==========================================
+function changeDate(days) {
+    const picker = document.getElementById('userDatePicker');
+    if (!picker.value) return;
+
+    const d = new Date(picker.value);
+    d.setDate(d.getDate() + days);
+
+    const tzoffset = d.getTimezoneOffset() * 60000;
+    picker.value = (new Date(d.getTime() - tzoffset)).toISOString().slice(0, 10);
+    updateGrid(picker.value);
+}
+
 async function updateGrid(dateStr) {
-    currentSelectedDateStr = dateStr; 
+    userState.currentSelectedDateStr = dateStr;
     const d = new Date(dateStr);
     const iso = getISOWeek(d);
-    selectedWeek = iso.week;
-    selectedYear = iso.year;
-    currentDayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
 
-    datesToShow = [];
+    userState.selectedWeek = iso.week;
+    userState.selectedYear = iso.year;
+    userState.currentDayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
 
-    if (showOnlyMe) {
-        for(let i=0; i<7; i++) {
+    userState.datesToShow = [];
+
+    if (userState.showOnlyMe) {
+        for (let i = 0; i < 7; i++) {
             const temp = new Date(d);
             temp.setDate(d.getDate() + i);
             const tzoffset = temp.getTimezoneOffset() * 60000;
-            datesToShow.push((new Date(temp.getTime() - tzoffset)).toISOString().split('T')[0]);
+            userState.datesToShow.push((new Date(temp.getTime() - tzoffset)).toISOString().split('T')[0]);
         }
         document.getElementById('currentDateDisplay').innerText = `Mitt schema (7 dagar framåt)`;
     } else {
         const start = new Date(d);
-        start.setDate(d.getDate() - currentDayIndex);
-        for(let i=0; i<7; i++) {
+        start.setDate(d.getDate() - userState.currentDayIndex);
+        for (let i = 0; i < 7; i++) {
             const temp = new Date(start);
             temp.setDate(start.getDate() + i);
             const tzoffset = temp.getTimezoneOffset() * 60000;
-            datesToShow.push((new Date(temp.getTime() - tzoffset)).toISOString().split('T')[0]);
+            userState.datesToShow.push((new Date(temp.getTime() - tzoffset)).toISOString().split('T')[0]);
         }
-        document.getElementById('currentDateDisplay').innerText = `${DAYS[currentDayIndex]} v.${selectedWeek}, ${selectedYear}`;
+        document.getElementById('currentDateDisplay').innerText = `${DAYS[userState.currentDayIndex]} v.${userState.selectedWeek}, ${userState.selectedYear}`;
     }
 
-    const scheduleRaw = await fetchData('schedule', `&start_date=${datesToShow[0]}&end_date=${datesToShow[6]}`);
-    allScheduleRows = Array.isArray(scheduleRaw) ? scheduleRaw.filter(r => r.is_published) : [];
+    const scheduleRaw = await fetchData('schedule', {
+        start_date: userState.datesToShow[0],
+        end_date: userState.datesToShow[6]
+    });
+
+    userState.allScheduleRows = (scheduleRaw?.success && Array.isArray(scheduleRaw.data))
+        ? scheduleRaw.data.filter(r => r.is_published)
+        : [];
 
     renderViews();
 }
 
+// ==========================================
+// RENDERING
+// ==========================================
 function renderViews() {
-    if (isWeeklyView) renderWeeklyView();
+    if (userState.isWeeklyView) renderWeeklyView();
     else renderDailyView();
 }
 
 function renderDailyView() {
     const cont = document.getElementById('scheduleContainer');
-    if(!cont) return;
+    if (!cont) return;
 
-    const currentDateStr = currentSelectedDateStr; 
+    const currentDateStr = userState.currentSelectedDateStr;
     const myId = localStorage.getItem('userId');
 
-    // Tvingar kortnamn (Fm, Em)
-    let html = `<div class="header-row"><div></div>${globalShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
+    const shiftHeaders = userState.globalShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('');
+    let html = `<div class="header-row"><div></div>${shiftHeaders}</div>`;
 
-    globalStations.forEach(st => {
-        if(st.is_spacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; return; }
+    userState.globalStations.forEach(st => {
+        if (st.is_spacer) { html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`; return; }
 
         const contrast = isLight(st.color) ? '#000' : '#fff';
         const styles = `background-color:${escapeHTML(st.color)}; color:${contrast}; --station-color:${escapeHTML(st.color)};`;
 
         html += `<div class="station-row"><div class="station-label" style="${styles}">${escapeHTML(st.name)}</div>`;
 
-        globalShifts.forEach(sh => {
-            let assignedRows = allScheduleRows.filter(r =>
+        userState.globalShifts.forEach(sh => {
+            let assignedRows = userState.allScheduleRows.filter(r =>
                 r.work_date.split('T')[0] === currentDateStr &&
                 r.station_id === st.id &&
                 r.shift_id === sh.id
             );
 
-            if (showOnlyMe) {
+            if (userState.showOnlyMe) {
                 assignedRows = assignedRows.filter(r => String(r.user_id) === String(myId));
             }
 
             const hasUsers = assignedRows.length > 0;
-            const textVal = assignedRows.map(a => a.display_name || `${a.first_name} ${a.last_name||''}`.trim()).join(' / ');
-            
-            // Tvingar in kortnamnet (Fm, Em) i data-label för mobilen
+            const textVal = assignedRows.map(a => a.display_name || `${a.first_name} ${a.last_name || ''}`.trim()).join(' / ');
+
             html += `
-            <div class="shift-block ${hasUsers?'':'empty'}" data-label="${escapeHTML(sh.time_range || sh.label)}" style="pointer-events: none;">
+            <div class="shift-block ${hasUsers ? '' : 'empty'}" data-label="${escapeHTML(sh.time_range || sh.label)}" style="pointer-events: none;">
                 <span class="shift-text">${escapeHTML(textVal)}</span>
             </div>`;
         });
@@ -219,25 +270,25 @@ function renderWeeklyView() {
     const cont = document.getElementById('userWeeklyContainer');
     if (!cont) return;
 
-    cont.setAttribute('data-only-me', showOnlyMe);
+    cont.dataset.onlyMe = userState.showOnlyMe;
     const myId = localStorage.getItem('userId');
-    
-    let usersToShow = showOnlyMe 
-        ? globalUserList.filter(u => String(u.id) === String(myId))
-        : globalUserList;
 
-    if (usersToShow.length === 0 && showOnlyMe) {
+    let usersToShow = userState.showOnlyMe
+        ? userState.globalUserList.filter(u => String(u.id) === String(myId))
+        : userState.globalUserList;
+
+    if (usersToShow.length === 0 && userState.showOnlyMe) {
         usersToShow.push({ id: myId, display_name: localStorage.getItem('adminName'), first_name: '', last_name: '' });
     }
 
     const getAssignments = (userId, dateStr) => {
-        const assignments = allScheduleRows.filter(r => String(r.user_id) === String(userId) && r.work_date.split('T')[0] === dateStr);
-        
+        const assignments = userState.allScheduleRows.filter(r =>
+            String(r.user_id) === String(userId) && r.work_date.split('T')[0] === dateStr
+        );
         return assignments.map(a => {
-            const st = globalStations.find(s => s.id === a.station_id);
-            const sh = globalShifts.find(s => s.id === a.shift_id);
+            const st = userState.globalStations.find(s => s.id === a.station_id);
+            const sh = userState.globalShifts.find(s => s.id === a.shift_id);
             if (st && sh) {
-                // Tvingar kortnamn i veckovyn också
                 return { stationName: st.name, stationColor: st.color, shiftLabel: sh.time_range || sh.label };
             }
             return null;
@@ -245,12 +296,12 @@ function renderWeeklyView() {
     };
 
     const getAbsence = (userId, dateStr) => {
-        return globalAbsences.find(a => 
-            String(a.user_id) === String(userId) && 
-            dateStr >= a.start_date.split('T')[0] && 
+        return userState.globalAbsences.find(a =>
+            String(a.user_id) === String(userId) &&
+            dateStr >= a.start_date.split('T')[0] &&
             dateStr <= a.end_date.split('T')[0]
         );
     };
 
-    cont.innerHTML = buildWeeklyGridHTML(usersToShow, datesToShow, getAssignments, showOnlyMe, DAYS, getAbsence);
+    cont.innerHTML = buildWeeklyGridHTML(usersToShow, userState.datesToShow, getAssignments, userState.showOnlyMe, DAYS, getAbsence);
 }
