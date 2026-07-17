@@ -277,19 +277,35 @@ export async function initDisplay() {
     const payload      = decodeJwtPayload(displayToken);
     const workplaceId  = payload?.workplaceId;
 
+    const dot = document.getElementById('connectionDot');
+    const setDotState = (state) => {
+        if (!dot) return;
+        const states = {
+            connecting: { color: '#9e9e9e', title: 'Ansluter...' },
+            connected:  { color: '#4caf50', title: 'Ansluten – uppdateras i realtid' },
+            error:      { color: '#f44336', title: 'Realtidsanslutning misslyckades – polling aktiv' },
+        };
+        const s = states[state] || states.connecting;
+        dot.style.backgroundColor = s.color;
+        dot.title = s.title;
+    };
+
     if (workplaceId && typeof Pusher !== 'undefined') {
         try {
             pusherClient = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
-            pusherChannel = pusherClient.subscribe(`workplace-${workplaceId}`);
+            pusherClient.connection.bind('connected',    () => setDotState('connected'));
+            pusherClient.connection.bind('disconnected', () => setDotState('error'));
+            pusherClient.connection.bind('failed',       () => setDotState('error'));
 
-            pusherChannel.bind('schedule-updated', () => {
-                updateDisplay();
-            });
+            pusherChannel = pusherClient.subscribe(`workplace-${workplaceId}`);
+            pusherChannel.bind('schedule-updated', () => { updateDisplay(); });
         } catch (err) {
             console.error('Kunde inte ansluta till Pusher:', err);
+            setDotState('error');
         }
     } else {
         console.warn('Kunde inte ansluta till Pusher - saknar workplaceId i token, eller Pusher-biblioteket kunde inte laddas.');
+        setDotState('error');
     }
 
     // --- SKYDDSNÄT: mycket gles polling ifall websocket-anslutningen tappas ---
