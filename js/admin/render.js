@@ -29,8 +29,7 @@ export function renderAdminGrid() {
     const currentDateStr = adminState.datesOfWeek[adminState.currentAdminDayIndex];
     const safeDate = escapeHTML(currentDateStr);
 
-    const shiftHeaders = currentShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('');
-    let html = `<div class="header-row"><div></div>${shiftHeaders}</div>`;
+    let html = `<div class="header-row"><div></div>${currentShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
 
     currentStations.forEach(st => {
         if (st.is_spacer) {
@@ -46,7 +45,7 @@ export function renderAdminGrid() {
         html += `<div class="station-row"><div class="station-label" style="${styles}">${escapeHTML(st.name)}</div>`;
 
         currentShifts.forEach(sh => {
-            if (sh?.id == null) return;
+            if (!sh || sh.id == null) return;
 
             const safeShiftId = escapeHTML(String(sh.id));
             const key = `${currentDateStr}_${st.id}_${sh.id}`;
@@ -81,6 +80,9 @@ export function renderAdminGrid() {
             }
 
             html += `</div>
+                <div class="shift-text" contenteditable="true"
+                    data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}"
+                    spellcheck="false" style="display:none;"></div>
                 <div class="shift-controls">
                     <button class="add-user-btn" data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}" title="Lägg till">+</button>
                 </div>
@@ -187,8 +189,8 @@ export function renderRoster() {
 
     list.querySelectorAll('.remove-user-btn').forEach(btn => {
         btn.onclick = async (e) => {
-            const userId = e.target.dataset.userid;
-            const name = e.target.dataset.fullname;
+            const userId = e.target.getAttribute('data-userid');
+            const name = e.target.getAttribute('data-fullname');
 
             if (await showConfirm(`Ta bort ${name} från databasen?`)) {
                 const res = await apiAction('remove_user', { id: userId });
@@ -213,9 +215,9 @@ function showNotePopup(pill) {
     const existing = document.getElementById('note-popup');
     if (existing) existing.remove();
 
-    const assignmentId = pill.dataset.assignmentId;
-    const name = pill.dataset.name;
-    const currentNote = pill.dataset.note || '';
+    const assignmentId = pill.getAttribute('data-assignment-id');
+    const name = pill.getAttribute('data-name');
+    const currentNote = pill.getAttribute('data-note') || '';
 
     const popup = document.createElement('div');
     popup.id = 'note-popup';
@@ -232,7 +234,6 @@ function showNotePopup(pill) {
         left: 0;
     `;
 
-    // Bygg popup med DOM istället för innerHTML för att undvika XSS
     const nameEl = document.createElement('div');
     nameEl.style.cssText = 'font-weight: 800; margin-bottom: 8px; color: #333; font-size: 0.95rem;';
     nameEl.textContent = name;
@@ -242,7 +243,7 @@ function showNotePopup(pill) {
     input.id = 'noteInput';
     input.placeholder = 'Lägg till notering...';
     input.style.cssText = 'width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; margin-bottom: 8px;';
-    input.value = currentNote; // Säkert via DOM-property
+    input.value = currentNote;
 
     const btnRow = document.createElement('div');
     btnRow.style.cssText = 'display: flex; gap: 6px;';

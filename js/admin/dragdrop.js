@@ -6,7 +6,7 @@ import { updateGrid, updatePublishBanner } from './core.js';
 import { renderViews } from './render.js';
 
 export function setupDragAndDrop() {
-    globalThis.handleDrop = async (e) => {
+    window.handleDrop = async (e) => {
         e.preventDefault();
         const date = e.currentTarget.getAttribute('data-date');
         const stationId = e.currentTarget.getAttribute('data-station');
@@ -33,25 +33,74 @@ export function setupDragAndDrop() {
             }
         });
 
-        scheduleContainer.addEventListener('keydown', handleScheduleKeydown);
+        scheduleContainer.addEventListener('keydown', (e) => {
+            if (e.target.classList.contains('shift-text')) {
+                const dropdown = document.getElementById('autocomplete-dropdown');
+                if (!dropdown) return;
+
+                const items = dropdown.querySelectorAll('.dropdown-item');
+                if (items.length === 0) return;
+
+                let currentIndex = Array.from(items).findIndex(item => item.classList.contains('active-item'));
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    currentIndex = (currentIndex < items.length - 1) ? currentIndex + 1 : 0;
+                    updateDropdownHighlight(items, currentIndex);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    currentIndex = (currentIndex > 0) ? currentIndex - 1 : items.length - 1;
+                    updateDropdownHighlight(items, currentIndex);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (currentIndex >= 0 && currentIndex < items.length) {
+                        const event = new MouseEvent('mousedown');
+                        items[currentIndex].dispatchEvent(event);
+                    }
+                } else if (e.key === 'Escape') {
+                    closeAutocomplete();
+                }
+            }
+        });
+
+        function updateDropdownHighlight(items, index) {
+            items.forEach(item => item.classList.remove('active-item'));
+            if (index >= 0 && index < items.length) {
+                items[index].classList.add('active-item');
+                items[index].scrollIntoView({ block: 'nearest' });
+            }
+        }
 
         scheduleContainer.addEventListener('click', async (e) => {
+            // Ta bort en enskild person från passet
             if (e.target.classList.contains('clear-user-btn')) {
                 e.stopPropagation();
-                const date = e.target.dataset.date;
-                const stationId = e.target.dataset.station;
-                const shiftId = e.target.dataset.shift;
-                const userId = e.target.dataset.userid;
+                const date = e.target.getAttribute('data-date');
+                const stationId = e.target.getAttribute('data-station');
+                const shiftId = e.target.getAttribute('data-shift');
+                const userId = e.target.getAttribute('data-userid');
                 await apiAction('remove_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
                 updateGrid(getCurrentPickerDate());
                 return;
             }
 
             if (e.target.classList.contains('add-user-btn')) {
-                const date = e.target.dataset.date;
-                const stationId = e.target.dataset.station;
-                const shiftId = e.target.dataset.shift;
+                const date = e.target.getAttribute('data-date');
+                const stationId = e.target.getAttribute('data-station');
+                const shiftId = e.target.getAttribute('data-shift');
                 manualAdd(e, date, stationId, shiftId);
+                return;
+            }
+
+            // Klick på pass-blockets tomma yta — visa tom textruta för att lägga till namn
+            const block = e.target.closest('.shift-block');
+            if (block && !e.target.closest('.assigned-user-pill') && !e.target.classList.contains('shift-text')) {
+                const shiftText = block.querySelector('.shift-text');
+                if (shiftText && shiftText.style.display === 'none') {
+                    shiftText.innerText = '';
+                    shiftText.style.display = 'block';
+                    shiftText.focus();
+                }
             }
         });
 
@@ -61,14 +110,14 @@ export function setupDragAndDrop() {
 
         scheduleContainer.addEventListener('focusout', (e) => {
             if (e.target.classList.contains('shift-text')) {
-                const date = e.target.dataset.date;
-                const stationId = e.target.dataset.station;
-                const shiftId = e.target.dataset.shift;
+                const date = e.target.getAttribute('data-date');
+                const stationId = e.target.getAttribute('data-station');
+                const shiftId = e.target.getAttribute('data-shift');
                 const text = e.target.innerText;
-                const scheduleData = getScheduleData();
+                e.target.style.display = 'none';
 
                 const key = `${date}_${stationId}_${shiftId}`;
-                const currentText = (scheduleData[key] || []).map(a => getFriendlyName(a)).join(' / ');
+                const currentText = (getScheduleData()[key] || []).map(a => getFriendlyName(a)).join(' / ');
                 if (text.trim() === currentText.trim()) return;
 
                 setTimeout(() => syncShiftTextToDB(date, stationId, shiftId, text), 150);
@@ -81,53 +130,9 @@ export function setupDragAndDrop() {
     });
 }
 
-function handleScheduleKeydown(e) {
-    if (!e.target.classList.contains('shift-text')) return;
-
-    const dropdown = document.getElementById('autocomplete-dropdown');
-    if (!dropdown) return;
-
-    const items = dropdown.querySelectorAll('.dropdown-item');
-    if (items.length === 0) return;
-
-    let currentIndex = Array.from(items).findIndex(item => item.classList.contains('active-item'));
-
-    if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        currentIndex = (currentIndex < items.length - 1) ? currentIndex + 1 : 0;
-        updateDropdownHighlight(items, currentIndex);
-    } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        currentIndex = (currentIndex > 0) ? currentIndex - 1 : items.length - 1;
-        updateDropdownHighlight(items, currentIndex);
-    } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (currentIndex >= 0 && currentIndex < items.length) {
-            items[currentIndex].dispatchEvent(new MouseEvent('mousedown'));
-        }
-    } else if (e.key === 'Escape') {
-        closeAutocomplete();
-    }
-}
-
-function updateDropdownHighlight(items, index) {
-    items.forEach(item => item.classList.remove('active-item'));
-    if (index >= 0 && index < items.length) {
-        items[index].classList.add('active-item');
-        items[index].scrollIntoView({ block: 'nearest' });
-    }
-}
-
 async function syncShiftTextToDB(date, stationId, shiftId, text) {
-    const key = `${date}_${stationId}_${shiftId}`;
-    const scheduleData = getScheduleData();
-    const currentAssignments = scheduleData[key] || [];
-
-    for (let a of currentAssignments) {
-        await apiAction('remove_shift', { date, user_id: a.user_id, station_id: stationId, shift_id: shiftId });
-    }
-
     const names = text.split('/').map(n => n.trim()).filter(n => n.length > 0);
+    if (names.length === 0) return;
 
     for (let name of names) {
         let u = getUsers().find(u => getFriendlyName(u).toLowerCase() === name.toLowerCase());
@@ -141,10 +146,10 @@ async function syncShiftTextToDB(date, stationId, shiftId, text) {
 
         if (u) {
             const abs = getUserAbsence(u.id, date);
-            if (abs) {
-                showToast(`${getFriendlyName(u)} lades inte till eftersom de är frånvarande.`, 'error');
-            } else {
+            if (!abs) {
                 await apiAction('assign_shift', { date, user_id: u.id, station_id: stationId, shift_id: shiftId });
+            } else {
+                showToast(`${getFriendlyName(u)} lades inte till eftersom de är frånvarande.`, 'error');
             }
         }
     }
