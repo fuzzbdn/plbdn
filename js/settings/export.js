@@ -1,372 +1,358 @@
-import { fetchData } from './service.js';
-import { getISOWeek, isLight, escapeHTML } from './utils.js';
-import { DAYS } from './config.js';
+import { fetchData } from '../service.js';
+import { showToast, isLight, escapeHTML, getISOWeek } from '../utils.js';
+import { DAYS } from '../config.js';
+import { getCustomThemes } from '../store.js';
 
 // ==========================================
-// KONSTANTER & GLOBALA TIMERS
+// Hjälpfunktioner (top-level för att undvika djup nästling)
 // ==========================================
-const CONFIG_CACHE_MS  = 5  * 60 * 1000;  // 5 minuter
-const WEATHER_CACHE_MS = 15 * 60 * 1000;  // 15 minuter
-const FALLBACK_POLL_MS = 10 * 60 * 1000;  // Skyddsnät ifall Pusher tappar anslutningen
-
-// NYTT: Pusher-nycklar är publika (inte hemliga) och kan ligga i klientkoden.
-// PUSHER_SECRET ska ALDRIG placeras här - den ligger bara i backend (api/_pusher.js).
-const PUSHER_KEY     = 'bd3dbd5cbb9abb426d43';
-const PUSHER_CLUSTER = 'eu'; // Samma kluster som i Vercels miljövariabler
-
-let fallbackTimer = null;
-let clockTimer    = null;
-let pusherClient  = null;
-let pusherChannel = null;
-
-// ==========================================
-// GLOBALT TILLSTÅND
-// ==========================================
-let globalStations       = [];
-let globalShifts         = [];
-let globalCustomThemes   = [];
-let globalScheduleData   = {};
-
-let lastWeatherFetchTime = 0;
-let cachedWeatherHtml    = '';
-let lastWeatherCoords    = ''; 
-let lastDataSnapshot     = '';
-
-let cachedConfig = {
-    settings:      null,
-    message:       null,
-    weatherConfig: null,
-    lastConfigFetch: 0
-};
-
-// ==========================================
-// HJÄLPFUNKTIONER
-// ==========================================
-
-function getWeatherIcon(code) {
-    if (code === 0)                        return '☀️';
-    if (code === 1 || code === 2)          return '🌤️';
-    if (code === 3)                        return '☁️';
-    if (code === 45 || code === 48)        return '🌫️';
-    if (code >= 51 && code <= 67)          return '🌧️';
-    if (code >= 71 && code <= 86)          return '❄️';
-    if (code >= 95)                        return '⛈️';
-    return '🌡️';
+function buildShiftCellContent(assignedRows) {
+    return assignedRows.map(a => {
+        const name = escapeHTML(a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim());
+        const note = a.note ? `<span style="color:#888; font-size:0.8em; font-weight:400;"> (${escapeHTML(a.note)})</span>` : '';
+        return `<span style="font-weight:700;">${name}</span>${note}`;
+    }).join(' / ');
 }
 
-function parseSafe(data) {
-    if (typeof data === 'string') {
-        try { return JSON.parse(data); } catch { return {}; }
-    }
-    return data || {};
+function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
+    const iso = getISOWeek(dateObj);
+    const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1;
+    const dayName = DAYS[dayIndex];
+    const dateStr = dateObj.toLocaleDateString('sv-SE');
+    const targetDateStr = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+    const shiftHeaders = shifts.map(s => `
+        <div class="print-col-title">
+            ${escapeHTML(s.label)}<br><small>${escapeHTML(s.time_range || s.time || '')}</small>
+        </div>`).join('');
+
+    let html = `
+    <div class="print-page-wrapper">
+        <div class="print-header">
+            <h1>Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
+        </div>
+        <div class="print-grid-container">
+            <div class="print-grid-row" style="grid-template-columns: 200px repeat(${shifts.length}, 1fr);">
+                <div></div>${shiftHeaders}
+            </div>`;
+
+    stations.forEach(st => {
+        if (st.is_spacer) { html += `<div class="print-spacer"></div>`; return; }
+        const bg = escapeHTML(st.color);
+        const fg = isLight(st.color) ? '#000' : '#fff';
+        const shiftCells = shifts.map(sh => {
+            const assignedRows = schedule.filter(r =>
+                r.is_published &&
+                r.work_date.split('T')[0] === targetDateStr &&
+                r.station_id === st.id &&
+                r.shift_id === sh.id
+            );
+            return `<div class="print-shift-cell">${buildShiftCellContent(assignedRows)}</div>`;
+        }).join('');
+        html += `
+        <div class="print-grid-row print-data-row" style="grid-template-columns: 200px repeat(${shifts.length}, 1fr);">
+            <div class="print-station-cell" style="background:${bg}; color:${fg};">${escapeHTML(st.name)}</div>
+            ${shiftCells}
+        </div>`;
+    });
+    html += `</div></div>`;
+    return html;
 }
 
-function parseCoords(lat, lon) {
-    const parsedLat = parseFloat(lat);
-    const parsedLon = parseFloat(lon);
-    if (
-        Number.isNaN(parsedLat) || Number.isNaN(parsedLon) ||
-        parsedLat < -90  || parsedLat > 90   ||
-        parsedLon < -180 || parsedLon > 180
-    ) return null;
-    return { lat: parsedLat, lon: parsedLon };
-}
+// Bygger iframe-innehållet via DOM-manipulation — ingen innerHTML med användardata
+function buildDisplayDomForImage(doc, dateObj, stations, shifts, schedule) {
+    const iso = getISOWeek(dateObj);
+    const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1;
+    const dayName = DAYS[dayIndex];
+    const dateStr = `${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
+    const targetDateStr = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
-/**
- * Läser ut payloaden ur en JWT utan att verifiera signaturen.
- * JWT-payloaden är bara base64-kodad (inte krypterad), så detta avslöjar
- * ingenting som inte redan är läsbart för den som har token. Vi använder
- * den bara för att plocka ut workplaceId till Pusher-kanalens namn.
- */
-function decodeJwtPayload(token) {
-    try {
-        const payload = token.split('.')[1];
-        const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-        return JSON.parse(decoded);
-    } catch {
-        return null;
-    }
-}
+    const wrapper = doc.createElement('div');
+    wrapper.className = 'display-wrapper';
 
-// ==========================================
-// HUVUD-FUNKTION
-// ==========================================
+    const topBar = doc.createElement('div');
+    topBar.className = 'top-bar';
+    const h1 = doc.createElement('h1');
+    h1.id = 'mainTitle';
+    h1.textContent = `Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})`;
+    topBar.appendChild(h1);
+    wrapper.appendChild(topBar);
 
-export async function initDisplay() {
-    const urlParams    = new URLSearchParams(window.location.search);
-    const displayToken = urlParams.get('token');
+    const mainContainer = doc.createElement('div');
+    mainContainer.id = 'mainContainer';
 
-    if (!displayToken) {
-        document.body.innerHTML = "<h1 style='color:red;text-align:center;padding-top:10%;'>Åtkomst nekad. Display-nyckel saknas i URL:en.</h1>";
-        return;
-    }
+    const headerRow = doc.createElement('div');
+    headerRow.className = 'time-header-row';
+    headerRow.appendChild(doc.createElement('div'));
+    shifts.forEach(sh => {
+        const th = doc.createElement('div');
+        th.className = 'time-header';
+        th.textContent = sh.label;
+        headerRow.appendChild(th);
+    });
+    mainContainer.appendChild(headerRow);
 
-    // --- HÄMTA TEMAN SÄKERT OCH STRUKTURERAT ---
-    const themesRes = await fetchData('custom_themes', { token: displayToken });
-    globalCustomThemes = (themesRes?.success && Array.isArray(themesRes.data)) ? themesRes.data : [];
-
-    async function updateDisplay() {
-        try {
-            const now       = new Date();
-            const tzoffset  = now.getTimezoneOffset() * 60000;
-            const todayStr  = (new Date(now.getTime() - tzoffset)).toISOString().slice(0, 10);
-
-            const fetchConfig = (now.getTime() - cachedConfig.lastConfigFetch > CONFIG_CACHE_MS);
-
-            // --- HÄMTA SCHEMADATA ---
-            const bundleRes = await fetchData('display_bundle', {
-                start_date: todayStr,
-                end_date: todayStr,
-                include_config: fetchConfig,
-                token: displayToken
-            });
-
-            if (!bundleRes?.success || !bundleRes.data) {
-                console.error("Kunde inte hämta schemadata:", bundleRes?.error);
-                return;
-            }
-
-            const bundleData = bundleRes.data;
-
-            globalStations = Array.isArray(bundleData.stations) ? bundleData.stations : [];
-            globalShifts   = Array.isArray(bundleData.shifts)   ? bundleData.shifts   : [];
-
-            globalScheduleData = {};
-            if (Array.isArray(bundleData.schedule)) {
-                bundleData.schedule.forEach(row => {
-                    if (!row.is_published) return;
-                    const key = `${row.station_id}_${row.shift_id}`;
-                    if (!globalScheduleData[key]) globalScheduleData[key] = [];
-                    globalScheduleData[key].push(row);
-                });
-            }
-
-            if (fetchConfig) {
-                cachedConfig.settings      = parseSafe(bundleData.settings);
-                cachedConfig.message       = parseSafe(bundleData.message);
-                cachedConfig.weatherConfig = parseSafe(bundleData.weather_config);
-                cachedConfig.lastConfigFetch = now.getTime();
-            }
-
-            // --- SNAPSHOT-LOGIK ---
-            const currentSnapshot = JSON.stringify({
-                sch:     globalScheduleData,
-                st:      globalStations,
-                sh:      globalShifts,
-                msg:     cachedConfig.message?.text,
-                showMsg: cachedConfig.message?.show
-            });
-
-            if (currentSnapshot !== lastDataSnapshot || fetchConfig) {
-                lastDataSnapshot = currentSnapshot;
-
-                const iso      = getISOWeek(now);
-                const dayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
-                const titleEl  = document.getElementById('mainTitle');
-                if (titleEl) {
-                    titleEl.innerText = `Vi som jobbar ${DAYS[dayIndex]} ${now.getDate()}/${now.getMonth() + 1} (v.${iso.week})`;
-                }
-
-                renderGrid();
-
-                // Löpande text (marquee)
-                const mqContainer = document.getElementById('marqueeContainer');
-                if (mqContainer) {
-                    const msg = cachedConfig.message;
-                    if (msg?.show && msg?.text) {
-                        document.getElementById('marqueeText').innerText = msg.text;
-                        mqContainer.style.display = 'block';
-                    } else {
-                        mqContainer.style.display = 'none';
-                    }
-                }
-
-                // --- SÄKER TEMA-INJEKTION ---
-                const themeId = cachedConfig.settings?.theme;
-                let styleEl = document.getElementById('custom-theme-style');
-
-                if (themeId && themeId !== 'light') {
-                    const t = globalCustomThemes.find(x => x.id === themeId);
-                    if (t?.css) {
-                        if (!styleEl) {
-                            styleEl = document.createElement('style');
-                            styleEl.id = 'custom-theme-style';
-                            document.head.appendChild(styleEl);
-                        }
-                        if (styleEl.textContent !== t.css) styleEl.textContent = t.css;
-                    }
-                } else {
-                    if (styleEl) styleEl.remove();
-                }
-            }
-
-            // --- VÄDERHANTERING ---
-            const wc = cachedConfig.weatherConfig;
-            if (wc?.latitude && wc?.longitude) {
-                const coords = parseCoords(wc.latitude, wc.longitude);
-                if (!coords) {
-                    console.warn('Ogiltiga väderkoordinater i inställningarna:', wc.latitude, wc.longitude);
-                } else {
-                    const coordKey = `${coords.lat},${coords.lon}`;
-
-                    if (coordKey !== lastWeatherCoords) {
-                        cachedWeatherHtml    = '';
-                        lastWeatherFetchTime = 0;
-                        lastWeatherCoords    = coordKey;
-                    }
-
-                    const nowMs = Date.now();
-                    if (nowMs - lastWeatherFetchTime > WEATHER_CACHE_MS || cachedWeatherHtml === '') {
-                        try {
-                            const weatherRes = await fetch(
-                                `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current_weather=true`
-                            );
-                            if (weatherRes.ok) {
-                                const weatherData = await weatherRes.json();
-                                if (weatherData?.current_weather) {
-                                    const temp = Math.round(weatherData.current_weather.temperature);
-                                    const icon = getWeatherIcon(weatherData.current_weather.weathercode);
-                                    cachedWeatherHtml = { icon, temp };
-                                    lastWeatherFetchTime = nowMs;
-                                }
-                            }
-                        } catch (err) {
-                            console.error('Kunde inte hämta väder:', err);
-                        }
-                    }
-
-                    const weatherEl = document.getElementById('weatherWidget');
-                    if (weatherEl && cachedWeatherHtml) {
-                        weatherEl.innerHTML = '';
-
-                        const locationSpan = document.createElement('span');
-                        locationSpan.className = 'weather-location-text';
-                        locationSpan.textContent = wc.name || '';
-
-                        const weatherSpan = document.createElement('span');
-                        weatherSpan.textContent = `${cachedWeatherHtml.icon} ${cachedWeatherHtml.temp}°C`;
-
-                        weatherEl.appendChild(locationSpan);
-                        weatherEl.appendChild(weatherSpan);
-                    }
-                }
-            }
-
-        } catch (e) {
-            console.error('Kunde inte uppdatera display:', e);
-        }
-    }
-
-    // Rensa gamla timers/anslutningar vid ominitiering (t.ex. vid hot-reload)
-    if (fallbackTimer) clearInterval(fallbackTimer);
-    if (clockTimer) clearInterval(clockTimer);
-    if (pusherChannel) {
-        pusherChannel.unbind_all();
-        pusherChannel.unsubscribe();
-        pusherChannel = null;
-    }
-    if (pusherClient) {
-        pusherClient.disconnect();
-        pusherClient = null;
-    }
-
-    // Starta med en initial hämtning
-    await updateDisplay();
-
-    // --- REALTIDSLYSSNARE VIA PUSHER ---
-    const payload      = decodeJwtPayload(displayToken);
-    const workplaceId  = payload?.workplaceId;
-
-    const dot = document.getElementById('connectionDot');
-    const setDotState = (state) => {
-        if (!dot) return;
-        const states = {
-            connecting: { color: '#9e9e9e', title: 'Ansluter...' },
-            connected:  { color: '#4caf50', title: 'Ansluten – uppdateras i realtid' },
-            error:      { color: '#f44336', title: 'Realtidsanslutning misslyckades – polling aktiv' },
-        };
-        const s = states[state] || states.connecting;
-        dot.style.backgroundColor = s.color;
-        dot.title = s.title;
-    };
-
-    if (workplaceId && typeof Pusher !== 'undefined') {
-        try {
-            pusherClient = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
-            pusherClient.connection.bind('connected',    () => setDotState('connected'));
-            pusherClient.connection.bind('disconnected', () => setDotState('error'));
-            pusherClient.connection.bind('failed',       () => setDotState('error'));
-
-            pusherChannel = pusherClient.subscribe(`workplace-${workplaceId}`);
-            pusherChannel.bind('schedule-updated', () => { updateDisplay(); });
-        } catch (err) {
-            console.error('Kunde inte ansluta till Pusher:', err);
-            setDotState('error');
-        }
-    } else {
-        console.warn('Kunde inte ansluta till Pusher - saknar workplaceId i token, eller Pusher-biblioteket kunde inte laddas.');
-        setDotState('error');
-    }
-
-    // --- SKYDDSNÄT: mycket gles polling ifall websocket-anslutningen tappas ---
-    fallbackTimer = setInterval(async () => {
-        try { await updateDisplay(); }
-        catch (e) { console.error('Kritiskt fel i fallback-polling:', e); }
-    }, FALLBACK_POLL_MS);
-
-    // Klockan tickar i realtid, oberoende av Pusher/polling
-    clockTimer = setInterval(() => {
-        const now = new Date();
-        const clk = document.getElementById('clock');
-        if (clk) clk.innerText = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-    }, 1000);
-}
-
-// ==========================================
-// RENDERING
-// ==========================================
-function renderGrid() {
-    const cont = document.getElementById('mainContainer');
-    if (!cont) return;
-
-    if (!globalShifts.length || !globalStations.length) {
-        cont.innerHTML = '<p style="padding:2rem; text-align:center; color:#888;">Inget schema att visa.</p>';
-        return;
-    }
-
-    let html = `<div class="time-header-row"><div></div>${globalShifts.map(s => `<div class="time-header">${escapeHTML(s.label)}</div>`).join('')}</div>`;
-
-    globalStations.forEach(st => {
+    stations.forEach(st => {
         if (st.is_spacer) {
-            html += `<div class="display-row spacer-row"></div>`;
+            const spacer = doc.createElement('div');
+            spacer.className = 'display-row spacer-row';
+            mainContainer.appendChild(spacer);
             return;
         }
 
-        const contrast  = isLight(st.color) ? '#000' : '#fff';
-        const safeColor = escapeHTML(st.color);
+        const contrast = isLight(st.color) ? '#000' : '#fff';
+        const row = doc.createElement('div');
+        row.className = 'display-row';
+        row.style.setProperty('--station-color', st.color);
+        row.style.setProperty('--contrast-color', contrast);
 
-        html += `<div class="display-row" style="--station-color:${safeColor}; --contrast-color:${contrast};">`;
-        html += `<div class="station-label">${escapeHTML(st.name)}</div>`;
+        const stationLabel = doc.createElement('div');
+        stationLabel.className = 'station-label';
+        stationLabel.textContent = st.name;
+        row.appendChild(stationLabel);
 
-        globalShifts.forEach(sh => {
-            if (!sh || sh.id == null) return;
+        shifts.forEach(sh => {
+            const assignedRows = schedule.filter(r =>
+                r.is_published &&
+                r.work_date.split('T')[0] === targetDateStr &&
+                r.station_id === st.id &&
+                r.shift_id === sh.id
+            );
+            const card = doc.createElement('div');
+            card.className = `shift-card${assignedRows.length === 0 ? ' empty' : ''}`;
+            card.dataset.label = sh.label;
 
-            const key         = `${st.id}_${sh.id}`;
-            const assignments = globalScheduleData[key] || [];
-            const val = assignments
-                .map(a => {
-                    const name = a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim();
-                    const note = a.note ? ` <span style="color:#888; font-size:0.8em; font-weight:400;">(${escapeHTML(a.note)})</span>` : '';
-                    return `<span>${escapeHTML(name)}${note}</span>`;
-                })
-                .join(' / ');
-            
-            const isEmpty = assignments.length === 0;
-            html += `<div class="shift-card ${isEmpty ? 'empty' : ''}" data-label="${escapeHTML(sh.label)}">${isEmpty ? '' : val}</div>`;
+            assignedRows.forEach((a, i) => {
+                if (i > 0) card.appendChild(doc.createTextNode(' / '));
+                const nameSpan = doc.createElement('span');
+                nameSpan.style.fontWeight = '700';
+                nameSpan.textContent = a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim();
+                card.appendChild(nameSpan);
+                if (a.note) {
+                    const noteSpan = doc.createElement('span');
+                    noteSpan.style.cssText = 'color:#888; font-size:0.8em; font-weight:400;';
+                    noteSpan.textContent = ` (${a.note})`;
+                    card.appendChild(noteSpan);
+                }
+            });
+
+            row.appendChild(card);
         });
-
-        html += `</div>`;
+        mainContainer.appendChild(row);
     });
 
-    cont.innerHTML = html;
+    wrapper.appendChild(mainContainer);
+    return wrapper;
+}
+
+function getCustomCss() {
+    const themeSelect = document.getElementById('themeSelect');
+    if (!themeSelect?.value || themeSelect.value === 'light') return '';
+    const t = getCustomThemes().find(x => x.id === themeSelect.value);
+    return t ? t.css : '';
+}
+
+async function runPrintExport(sDate, eDate, stations, shifts, schedule) {
+    const pc = document.getElementById('print-container') || document.createElement('div');
+    pc.id = 'print-container';
+    if (!document.body.contains(pc)) document.body.appendChild(pc);
+
+    let html = '';
+    let loopDate = new Date(sDate);
+    while (loopDate <= eDate) {
+        html += generateSingleDayPrintHtml(new Date(loopDate), stations, shifts, schedule);
+        loopDate = new Date(loopDate.getTime() + 86400000);
+    }
+    pc.innerHTML = html;
+    window.print();
+    setTimeout(() => { pc.innerHTML = ''; }, 1000);
+}
+
+async function runImageExport(sDate, eDate, stations, shifts, schedule, customCss) {
+    if (typeof html2canvas === 'undefined') return showToast("html2canvas saknas.", "error");
+    if (typeof JSZip === 'undefined') return showToast("JSZip saknas.", "error");
+
+    const btn = document.getElementById('doImageBtn');
+    const txt = btn.innerText;
+    btn.innerText = "Genererar...";
+
+    const [baseCssText, displayCssText] = await Promise.all([
+        fetch('css/base.css').then(r => r.text()).catch(() => ''),
+        fetch('css/display.css').then(r => r.text()).catch(() => '')
+    ]);
+    const inlinedCss = `${baseCssText}\n${displayCssText}\n* { transition: none !important; animation: none !important; } body { margin: 0; overflow: hidden; background-color: var(--bg-color, #f0f2f5); } ::-webkit-scrollbar { display: none; }`;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = "position:absolute; top:-9999px; left:0; width:1920px; height:1080px; border:none;";
+    document.body.appendChild(iframe);
+
+    try {
+        let loopDate = new Date(sDate);
+        let count = 0;
+        const zip = new JSZip();
+        let singleImageBase64 = null;
+        let singleImageName = "";
+
+        while (loopDate <= eDate) {
+            const iframeDoc = iframe.contentDocument;
+            const iframeLoaded = new Promise(resolve => { iframe.onload = resolve; });
+
+            iframeDoc.open();
+            iframeDoc.close();
+            iframeDoc.documentElement.lang = 'sv';
+            iframeDoc.body.className = 'display-view';
+            iframeDoc.body.id = 'page-display';
+
+            const fontLink = iframeDoc.createElement('link');
+            fontLink.rel = 'stylesheet';
+            fontLink.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap';
+            iframeDoc.head.appendChild(fontLink);
+
+            const styleEl = iframeDoc.createElement('style');
+            styleEl.textContent = inlinedCss;
+            iframeDoc.head.appendChild(styleEl);
+
+            iframeDoc.body.appendChild(
+                buildDisplayDomForImage(iframeDoc, new Date(loopDate), stations, shifts, schedule)
+            );
+
+            if (customCss) {
+                const customStyleEl = iframeDoc.createElement('style');
+                customStyleEl.textContent = customCss;
+                iframeDoc.head.appendChild(customStyleEl);
+            }
+
+            await iframeLoaded;
+            await new Promise(r => requestAnimationFrame(r));
+
+            try {
+                const canvas = await html2canvas(iframeDoc.body, {
+                    scale: 2, useCORS: true, backgroundColor: iframeDoc.body.style.backgroundColor || '#f0f2f5'
+                });
+
+                const lDateStr = new Date(loopDate.getTime() - (loopDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                const base64Img = canvas.toDataURL('image/png');
+
+                if (count === 0) {
+                    singleImageBase64 = base64Img;
+                    singleImageName = `Schema-${lDateStr}.png`;
+                }
+
+                zip.file(`Schema-${lDateStr}.png`, base64Img.split('base64,')[1], { base64: true });
+                count++;
+            } catch (e) {
+                console.error("Kunde inte skapa bild:", e);
+            }
+
+            loopDate = new Date(loopDate.getTime() + 86400000);
+        }
+
+        if (count === 1 && singleImageBase64) {
+            const link = document.createElement('a');
+            link.download = singleImageName;
+            link.href = singleImageBase64;
+            link.click();
+            showToast("Bild sparad!", "success");
+        } else if (count > 1) {
+            showToast("Packar ZIP-fil...", "info");
+            try {
+                const startInp = document.getElementById('printStartDate');
+                const endInp = document.getElementById('printEndDate');
+                const content = await zip.generateAsync({ type: "blob" });
+                const link = document.createElement('a');
+                link.download = `Scheman_${startInp.value}_till_${endInp.value}.zip`;
+                const url = URL.createObjectURL(content);
+                link.href = url;
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                showToast(`Klar! ${count} bilder sparade i en ZIP.`, "success");
+            } catch (e) {
+                console.error("Kunde inte skapa ZIP:", e);
+                showToast("Kunde inte skapa ZIP", "error");
+            }
+        }
+    } finally {
+        iframe.remove();
+        btn.innerText = txt;
+    }
+}
+
+export function initExportTab(currentSettings) {
+    const btnToday    = document.getElementById('btnSetToday');
+    const btnWeek     = document.getElementById('btnSetWeek');
+    const btnNextWeek = document.getElementById('btnSetNextWeek');
+    const startInp    = document.getElementById('printStartDate');
+    const endInp      = document.getElementById('printEndDate');
+    const printBtn    = document.getElementById('doPrintBtn');
+    const imgBtn      = document.getElementById('doImageBtn');
+
+    if (!startInp || !endInp) return;
+
+    const setDates = (start, end) => {
+        const tz = start.getTimezoneOffset() * 60000;
+        startInp.value = new Date(start.getTime() - tz).toISOString().split('T')[0];
+        endInp.value   = new Date(end.getTime() - tz).toISOString().split('T')[0];
+    };
+
+    const applyDefaultDates = async () => {
+        const res = await fetchData('settings');
+        const days = Number.parseInt(res?.success ? res.data?.exportDefaultDays : currentSettings?.exportDefaultDays) || 1;
+        const now = new Date();
+        const dStart = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+        const dEnd = new Date(dStart);
+        dEnd.setDate(dStart.getDate() + days - 1);
+        setDates(dStart, dEnd);
+    };
+
+    applyDefaultDates();
+
+    const exportTabBtn = document.querySelector('button[onclick="openTab(\'tab-export\')"]');
+    if (exportTabBtn) exportTabBtn.addEventListener('click', () => applyDefaultDates());
+
+    if (btnToday) btnToday.onclick = () => { const d = new Date(); setDates(d, d); };
+    if (btnWeek) btnWeek.onclick = () => {
+        const d = new Date();
+        const day = d.getDay() === 0 ? 6 : d.getDay() - 1;
+        const start = new Date(d); start.setDate(d.getDate() - day);
+        const end = new Date(start); end.setDate(start.getDate() + 6);
+        setDates(start, end);
+    };
+    if (btnNextWeek) btnNextWeek.onclick = () => {
+        const d = new Date();
+        const day = d.getDay() === 0 ? 6 : d.getDay() - 1;
+        const start = new Date(d); start.setDate(d.getDate() - day + 7);
+        const end = new Date(start); end.setDate(start.getDate() + 6);
+        setDates(start, end);
+    };
+
+    const runExport = async (mode) => {
+        const sDate = new Date(startInp.value);
+        const eDate = new Date(endInp.value);
+        if (sDate > eDate) return showToast("Startdatum måste vara före slutdatum", "error");
+
+        showToast("Hämtar data för export...", "info");
+
+        const results = await Promise.allSettled([
+            fetchData('stations'),
+            fetchData('shifts'),
+            fetchData('schedule', { start_date: startInp.value, end_date: endInp.value })
+        ]);
+
+        if (results.some(r => r.status === 'rejected' || !r.value?.success)) {
+            return showToast("Kunde inte hämta data för export. Kontrollera nätverket.", "error");
+        }
+
+        const stations = results[0].value.data || [];
+        const shifts   = results[1].value.data || [];
+        const schedule = results[2].value.data || [];
+
+        if (mode === 'print') {
+            await runPrintExport(sDate, eDate, stations, shifts, schedule);
+        } else {
+            await runImageExport(sDate, eDate, stations, shifts, schedule, getCustomCss());
+        }
+    };
+
+    if (printBtn) printBtn.onclick = () => runExport('print');
+    if (imgBtn)   imgBtn.onclick   = () => runExport('image');
 }
