@@ -82,7 +82,7 @@ export function renderAdminGrid() {
             html += `</div>
                 <div class="shift-text" contenteditable="true"
                     data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}"
-                    spellcheck="false"></div>
+                    spellcheck="false" style="display:none;"></div>
                 <div class="shift-controls">
                     <button class="add-user-btn" data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}" title="Lägg till">+</button>
                 </div>
@@ -92,12 +92,6 @@ export function renderAdminGrid() {
     });
 
     cont.innerHTML = html;
-
-    // Fyll i shift-text med aktuella namn (säkert via innerText, inte innerHTML)
-    cont.querySelectorAll('.shift-text').forEach(el => {
-        const key = `${currentDateStr}_${el.dataset.station}_${el.dataset.shift}`;
-        el.innerText = (scheduleData[key] || []).map(a => getFriendlyName(a)).join(' / ');
-    });
 
     // Sätt upp klick-lyssnare för pills
     cont.querySelectorAll('.assigned-user-pill').forEach(pill => {
