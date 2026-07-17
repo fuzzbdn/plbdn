@@ -1,6 +1,8 @@
 // Fil: api/schedule.js
 
 import { pool, authenticate, handleDatabaseError, setupCors } from './_shared.js';
+import { notifyScheduleUpdated } from './_pusher.js';
+
 
 export default async function handler(req, res) {
     setupCors(req, res);
@@ -97,7 +99,7 @@ export default async function handler(req, res) {
                     if (!payload?.start_date || !payload?.end_date) {
                         return res.status(400).json({ error: "Saknar datumintervall för publicering." });
                     }
-
+                
                     await pool.query(`
                         UPDATE schedule_assignments sa SET is_published = true
                         FROM stations s
@@ -106,7 +108,10 @@ export default async function handler(req, res) {
                         AND sa.work_date >= $2
                         AND sa.work_date <= $3
                     `, [auth.workplace, payload.start_date, payload.end_date]);
-
+                
+                    // NYTT: Meddela alla anslutna displayskärmar direkt, utan att invänta svaret
+                    notifyScheduleUpdated(auth.workplace);
+                
                     return res.status(200).json({ success: true });
                 }
 
