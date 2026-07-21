@@ -55,9 +55,9 @@ export function isLight(color) {
     if (!color || typeof color !== 'string') return true;
     const hex = color.replace('#', '');
     if (!/^[0-9a-fA-F]{6}$/.test(hex)) return true;
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
+    const r = Number.parseInt(hex.substring(0, 2), 16);
+    const g = Number.parseInt(hex.substring(2, 2), 16);
+    const b = Number.parseInt(hex.substring(4, 2), 16);
     return ((r * 299) + (g * 587) + (b * 114)) / 1000 > 155;
 }
 
@@ -166,9 +166,9 @@ export function setupListDragAndDrop(container, itemSelector, onReorder) {
         const targetEl = e.target.closest(itemSelector);
         
         if (dragSrcEl && targetEl && dragSrcEl !== targetEl) {
-            const oldIndex = parseInt(dragSrcEl.dataset.index);
-            const newIndex = parseInt(targetEl.dataset.index);
-            if (!isNaN(oldIndex) && !isNaN(newIndex)) {
+            const oldIndex = Number.parseInt(dragSrcEl.dataset.index);
+            const newIndex = Number.parseInt(targetEl.dataset.index);
+            if (!Number.isNaN(oldIndex) && !Number.isNaN(newIndex)) {
                 onReorder(oldIndex, newIndex);
             }
         }
