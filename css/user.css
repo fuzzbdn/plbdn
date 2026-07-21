@@ -325,7 +325,7 @@
     #page-user .mobile-date-label           { display: none; }
     #page-user .weekly-cell-content         { flex-direction: column; justify-content: center; align-items: stretch; width: 100%; }
     #page-user .weekly-badge                { font-size: 0.8rem; padding: 4px 8px; width: 100%; border-radius: 4px; }
-    #page-user .free-text                   { background: none; border: none; padding: 0; color: #aaa; font-size: 0.85rem; border-radius: 0; }
+    #page-user .free-text                   { background: none; border: none; padding: 0; color: #767676; font-size: 0.85rem; border-radius: 0; }
 
     /* Återställ data-only-me-styrning */
     #page-user #userWeeklyContainer[data-only-me="true"] .weekly-user-name  { display: none; }
