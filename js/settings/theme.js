@@ -88,39 +88,84 @@ export function initThemeTab(currentSettings) {
 
         const doc = iframe.contentDocument;
         doc.open();
-        doc.write(`<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <base href="${window.location.href}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/display.css">
-    <style>::-webkit-scrollbar { display: none; }</style>
-</head>
-<body class="display-view" id="page-display">
-<div class="display-wrapper">
-    <div class="top-bar">
-        <h1 id="mainTitle">Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})</h1>
-        <div style="display:flex; align-items:center;">
-            <div id="weatherWidget" style="margin-right:20px; font-weight:700;">☀️ 20°C</div>
-            <div id="clock">${now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</div>
-        </div>
-    </div>
-    <div id="marqueeContainer" style="display:none;">
-        <marquee id="marqueeText" scrollamount="10"></marquee>
-    </div>
-    <div id="mainContainer">${gridHtml}</div>
-</div>
-</body>
-</html>`);
         doc.close();
 
-        // Injicera custom CSS säkert via DOM efter doc.close()
+        doc.documentElement.lang = 'sv';
+
+        const base = doc.createElement('base');
+        base.href = window.location.href;
+        doc.head.appendChild(base);
+
+        const metaCharset = doc.createElement('meta');
+        metaCharset.setAttribute('charset', 'UTF-8');
+        doc.head.appendChild(metaCharset);
+
+        for (const href of [
+            'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap',
+            'css/base.css',
+            'css/display.css'
+        ]) {
+            const link = doc.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = href;
+            doc.head.appendChild(link);
+        }
+
+        const scrollStyle = doc.createElement('style');
+        scrollStyle.textContent = '::-webkit-scrollbar { display: none; }';
+        doc.head.appendChild(scrollStyle);
+
+        doc.body.className = 'display-view';
+        doc.body.id = 'page-display';
+
+        const wrapper = doc.createElement('div');
+        wrapper.className = 'display-wrapper';
+
+        const topBar = doc.createElement('div');
+        topBar.className = 'top-bar';
+
+        const h1 = doc.createElement('h1');
+        h1.id = 'mainTitle';
+        h1.textContent = `Vi som jobbar ${dayName} ${dateStr} (v.${iso.week})`;
+        topBar.appendChild(h1);
+
+        const rightDiv = doc.createElement('div');
+        rightDiv.style.cssText = 'display:flex; align-items:center;';
+
+        const weatherDiv = doc.createElement('div');
+        weatherDiv.id = 'weatherWidget';
+        weatherDiv.style.cssText = 'margin-right:20px; font-weight:700;';
+        weatherDiv.textContent = '☀️ 20°C';
+
+        const clockDiv = doc.createElement('div');
+        clockDiv.id = 'clock';
+        clockDiv.textContent = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+
+        rightDiv.appendChild(weatherDiv);
+        rightDiv.appendChild(clockDiv);
+        topBar.appendChild(rightDiv);
+        wrapper.appendChild(topBar);
+
+        const marqueeContainer = doc.createElement('div');
+        marqueeContainer.id = 'marqueeContainer';
+        marqueeContainer.style.display = 'none';
+        const marqueeEl = doc.createElement('marquee');
+        marqueeEl.id = 'marqueeText';
+        marqueeEl.setAttribute('scrollamount', '10');
+        marqueeContainer.appendChild(marqueeEl);
+        wrapper.appendChild(marqueeContainer);
+
+        const mainContainer = doc.createElement('div');
+        mainContainer.id = 'mainContainer';
+        mainContainer.innerHTML = gridHtml;
+        wrapper.appendChild(mainContainer);
+
+        doc.body.appendChild(wrapper);
+
         if (customCss) {
-            const styleEl = iframe.contentDocument.createElement('style');
+            const styleEl = doc.createElement('style');
             styleEl.textContent = customCss;
-            iframe.contentDocument.head.appendChild(styleEl);
+            doc.head.appendChild(styleEl);
         }
     }
 
