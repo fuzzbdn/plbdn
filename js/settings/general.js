@@ -54,8 +54,8 @@ export function initGeneralTab() {
     // ==========================================
     if (saveDaysBtn) {
         saveDaysBtn.onclick = async () => {
-            const newDays = parseInt(daysIn ? daysIn.value : 1);
-            if (isNaN(newDays) || newDays < 1) return showToast("Ange ett giltigt antal dagar", "error");
+            const newDays = Number.parseInt(daysIn ? daysIn.value : 1);
+            if (Number.isNaN(newDays) || newDays < 1) return showToast("Ange ett giltigt antal dagar", "error");
 
             const res = await fetchData('settings');
             const currentSets = res?.success ? (res.data || {}) : {};
