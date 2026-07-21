@@ -56,8 +56,8 @@ export function isLight(color) {
     const hex = color.replace('#', '');
     if (!/^[0-9a-fA-F]{6}$/.test(hex)) return true;
     const r = Number.parseInt(hex.substring(0, 2), 16);
-    const g = Number.parseInt(hex.substring(2, 2), 16);
-    const b = Number.parseInt(hex.substring(4, 2), 16);
+    const g = Number.parseInt(hex.substring(2, 4), 16);
+    const b = Number.parseInt(hex.substring(4, 6), 16);
     return ((r * 299) + (g * 587) + (b * 114)) / 1000 > 155;
 }
 
