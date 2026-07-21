@@ -8,9 +8,9 @@ import { renderViews } from './render.js';
 export function setupDragAndDrop() {
     window.handleDrop = async (e) => {
         e.preventDefault();
-        const date = e.currentTarget.getAttribute('data-date');
-        const stationId = e.currentTarget.getAttribute('data-station');
-        const shiftId = e.currentTarget.getAttribute('data-shift');
+        const date = e.currentTarget.dataset.date;
+        const stationId = e.currentTarget.dataset.station;
+        const shiftId = e.currentTarget.dataset.shift;
         const userId = e.dataTransfer.getData('user_id');
 
         if (!userId) return;
@@ -75,19 +75,19 @@ export function setupDragAndDrop() {
             // Ta bort en enskild person från passet
             if (e.target.classList.contains('clear-user-btn')) {
                 e.stopPropagation();
-                const date = e.target.getAttribute('data-date');
-                const stationId = e.target.getAttribute('data-station');
-                const shiftId = e.target.getAttribute('data-shift');
-                const userId = e.target.getAttribute('data-userid');
+                const date = e.target.dataset.date;
+                const stationId = e.target.dataset.station;
+                const shiftId = e.target.dataset.shift;
+                const userId = e.target.dataset.userid;
                 await apiAction('remove_shift', { date, user_id: userId, station_id: stationId, shift_id: shiftId });
                 updateGrid(getCurrentPickerDate());
                 return;
             }
 
             if (e.target.classList.contains('add-user-btn')) {
-                const date = e.target.getAttribute('data-date');
-                const stationId = e.target.getAttribute('data-station');
-                const shiftId = e.target.getAttribute('data-shift');
+                const date = e.target.dataset.date;
+                const stationId = e.target.dataset.station;
+                const shiftId = e.target.dataset.shift;
                 manualAdd(e, date, stationId, shiftId);
                 return;
             }
@@ -110,9 +110,9 @@ export function setupDragAndDrop() {
 
         scheduleContainer.addEventListener('focusout', (e) => {
             if (e.target.classList.contains('shift-text')) {
-                const date = e.target.getAttribute('data-date');
-                const stationId = e.target.getAttribute('data-station');
-                const shiftId = e.target.getAttribute('data-shift');
+                const date = e.target.dataset.date;
+                const stationId = e.target.dataset.station;
+                const shiftId = e.target.dataset.shift;
                 const text = e.target.innerText;
                 e.target.style.display = 'none';
 
@@ -180,7 +180,7 @@ function manualAdd(e, date, stationId, shiftId) {
 
     menu.addEventListener('click', async (evt) => {
         if (evt.target.classList.contains('user-select-btn')) {
-            const userId = evt.target.getAttribute('data-id');
+            const userId = evt.target.dataset.id;
             const abs = getUserAbsence(userId, date);
 
             if (abs) {
