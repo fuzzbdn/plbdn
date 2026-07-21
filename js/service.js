@@ -1,5 +1,3 @@
-$ cat /home/user/plbdn/js/service.js
-
 const DEFAULT_TIMEOUT_MS = 10000;
 const CACHE_TTL_MS = 30000;
 
