@@ -5,9 +5,9 @@ import { DAYS } from './config.js';
 // ==========================================
 // KONSTANTER & GLOBALA TIMERS
 // ==========================================
-const CONFIG_CACHE_MS  = 5  * 60 * 1000;  // 5 minuter
-const WEATHER_CACHE_MS = 15 * 60 * 1000;  // 15 minuter
-const FALLBACK_POLL_MS = 10 * 60 * 1000;  // Skyddsnät ifall Pusher tappar anslutningen
+const CONFIG_CACHE_MS  = 15 * 60 * 1000;  // 15 minuter (sparar Neon compute — config ändras sällan)
+const WEATHER_CACHE_MS = 30 * 60 * 1000;  // 30 minuter (väder behöver inte uppdateras ofta)
+const FALLBACK_POLL_MS = 30 * 60 * 1000;  // 30 min skyddsnät — Pusher hanterar realtid, detta är bara backup
 
 // Pusher-nycklar är publika och kan ligga i klientkoden.
 // PUSHER_SECRET ska ALDRIG placeras här - den ligger bara i backend (api/_pusher.js).
