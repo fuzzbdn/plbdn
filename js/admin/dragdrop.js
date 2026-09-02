@@ -170,7 +170,15 @@ function manualAdd(e, date, stationId, shiftId) {
     menu.style.top = 'calc(100% + 2px)';
     menu.style.left = '0';
 
-    let html = sortedUsers.map(u =>
+    // Nyhet: Låsknappen högst upp + avskiljare
+    let html = `
+        <div class="dropdown-item lock-shift-btn" style="color:#d32f2f; font-weight:bold; cursor:pointer;">
+            🔒 Lås hela passet
+        </div>
+        <div style="height: 1px; background-color: #ddd; margin: 4px 0;"></div>
+    `;
+
+    html += sortedUsers.map(u =>
         `<div class="dropdown-item user-select-btn" data-id="${escapeHTML(String(u.id))}">${escapeHTML(getFriendlyName(u))}</div>`
     ).join('');
     html += `<div class="dropdown-item manual-btn" style="color:#0277bd; font-weight:bold; background:#e3f2fd;">+ Skriv in eget namn...</div>`;
@@ -179,6 +187,14 @@ function manualAdd(e, date, stationId, shiftId) {
     block.appendChild(menu);
 
     menu.addEventListener('click', async (evt) => {
+        // Om användaren klickar på "Lås hela passet"
+        if (evt.target.classList.contains('lock-shift-btn')) {
+            await apiAction('toggle_lock', { date, station_id: stationId, shift_id: shiftId, is_locked: true });
+            menu.remove();
+            updateGrid(getCurrentPickerDate());
+            return;
+        }
+
         if (evt.target.classList.contains('user-select-btn')) {
             const userId = evt.target.dataset.id;
             const abs = getUserAbsence(userId, date);
