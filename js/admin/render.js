@@ -53,7 +53,6 @@ export function renderAdminGrid() {
             const hasUsers = assignments.length > 0;
             
             const isBlockLocked = hasUsers && assignments.some(a => a.is_locked);
-            const lockIcon = isBlockLocked ? '🔒' : '🔓';
 
             html += `
             <div class="shift-block ${hasUsers ? '' : 'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}">
@@ -86,25 +85,26 @@ export function renderAdminGrid() {
                 });
             }
 
+            // Här styr vi vad som visas: Antingen låset ELLER plus-knappen
             html += `</div>
                 <div class="shift-text" contenteditable="true"
                     data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}"
                     spellcheck="false" style="display:none;"></div>
                 
                 <div class="shift-controls" style="display: flex; gap: 8px; justify-content: center; align-items: center;">
-                    ${hasUsers ? `
+                    ${isBlockLocked ? `
                     <button class="toggle-block-lock-btn" 
                         data-date="${safeDate}" 
                         data-station="${safeStationId}" 
                         data-shift="${safeShiftId}"
-                        data-locked="${isBlockLocked}" 
-                        title="${isBlockLocked ? 'Lås upp passet' : 'Lås hela passet'}" 
+                        data-locked="true" 
+                        title="Lås upp passet" 
                         style="background:none; border:none; cursor:pointer; font-size: 1.1rem; padding: 0;">
-                        ${lockIcon}
+                        🔒
                     </button>
-                    ` : ''}
-
-                    ${!isBlockLocked ? `<button class="add-user-btn" data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}" title="Lägg till">+</button>` : ''}
+                    ` : `
+                    <button class="add-user-btn" data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}" title="Lägg till">+</button>
+                    `}
                 </div>
             </div>`;
         });
@@ -113,19 +113,19 @@ export function renderAdminGrid() {
 
     cont.innerHTML = html;
 
+    // Lyssnare för upplåsning via låsikonen
     cont.querySelectorAll('.toggle-block-lock-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const date = btn.getAttribute('data-date');
             const station = btn.getAttribute('data-station');
             const shift = btn.getAttribute('data-shift');
-            const currentlyLocked = btn.getAttribute('data-locked') === 'true';
             
             const res = await apiAction('toggle_lock', { 
                 date, 
                 station_id: station, 
                 shift_id: shift, 
-                is_locked: !currentlyLocked 
+                is_locked: false // Låser alltid upp eftersom knappen bara syns när det är låst
             });
             
             if (res.success) {
