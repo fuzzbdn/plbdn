@@ -1,5 +1,3 @@
-// Fil: api/schedule.js
-
 import { pool, authenticate, handleDatabaseError, setupCors } from './_shared.js';
 import { notifyScheduleUpdated } from './_pusher.js';
 
@@ -26,7 +24,7 @@ async function handleGet(req, res, auth) {
     if (type === 'schedule') {
         if (!start_date || !end_date) return res.status(400).json({ error: "Saknar datum" });
         const schedRes = await pool.query(`
-            SELECT sa.id, sa.work_date, sa.user_id, sa.station_id, sa.shift_id, sa.is_published, sa.note,
+            SELECT sa.id, sa.work_date, sa.user_id, sa.station_id, sa.shift_id, sa.is_published, sa.note, sa.is_locked,
                    u.first_name, u.last_name, u.display_name
             FROM schedule_assignments sa
             JOIN admin_users u ON sa.user_id = u.id
@@ -59,6 +57,7 @@ async function handlePost(req, res, auth) {
         case 'remove_shift':     return await handleRemoveShift(res, auth, payload);
         case 'publish_schedule': return await handlePublishSchedule(res, auth, payload);
         case 'update_note':      return await handleUpdateNote(res, auth, payload);
+        case 'toggle_lock':      return await handleToggleLock(res, auth, payload);
         case 'save_absence':     return await handleSaveAbsence(res, auth, payload);
         case 'delete_absence':   return await handleDeleteAbsence(res, auth, payload);
         default:                 return res.status(400).json({ error: "Okänd action för schedule" });
@@ -78,8 +77,8 @@ async function handleAssignShift(res, auth, payload) {
         return res.status(403).json({ error: "Ogiltig tilldelning — användare eller station tillhör inte din arbetsplats." });
     }
     await pool.query(`
-        INSERT INTO schedule_assignments (work_date, user_id, station_id, shift_id, is_published)
-        VALUES ($1, $2, $3, $4, false) ON CONFLICT DO NOTHING
+        INSERT INTO schedule_assignments (work_date, user_id, station_id, shift_id, is_published, is_locked)
+        VALUES ($1, $2, $3, $4, false, false) ON CONFLICT DO NOTHING
     `, [payload.date, payload.user_id, payload.station_id, payload.shift_id]);
     return res.status(200).json({ success: true });
 }
@@ -88,6 +87,16 @@ async function handleRemoveShift(res, auth, payload) {
     if (!payload?.date || !payload?.user_id || !payload?.station_id || !payload?.shift_id) {
         return res.status(400).json({ error: "Saknar nödvändig data för borttagning." });
     }
+
+    const check = await pool.query(`
+        SELECT is_locked FROM schedule_assignments
+        WHERE work_date = $1 AND user_id = $2 AND station_id = $3 AND shift_id = $4
+    `, [payload.date, payload.user_id, payload.station_id, payload.shift_id]);
+
+    if (check.rows.length > 0 && check.rows[0].is_locked) {
+        return res.status(403).json({ error: "Arbetspasset är låst och kan inte tas bort." });
+    }
+
     await pool.query(`
         DELETE FROM schedule_assignments sa
         USING stations s
@@ -121,6 +130,12 @@ async function handleUpdateNote(res, auth, payload) {
     if (!payload?.id) {
         return res.status(400).json({ error: "Saknar ID för tilldelning." });
     }
+
+    const check = await pool.query('SELECT is_locked FROM schedule_assignments WHERE id = $1', [payload.id]);
+    if (check.rows.length > 0 && check.rows[0].is_locked) {
+        return res.status(403).json({ error: "Arbetspasset är låst och anteckningen kan inte ändras." });
+    }
+
     await pool.query(`
         UPDATE schedule_assignments sa SET note = $1
         FROM stations s
@@ -129,6 +144,22 @@ async function handleUpdateNote(res, auth, payload) {
         AND sa.id = $3
     `, [payload.note || null, auth.workplace, payload.id]);
     return res.status(200).json({ success: true });
+}
+
+async function handleToggleLock(res, auth, payload) {
+    if (!payload?.id || payload.is_locked === undefined) {
+        return res.status(400).json({ error: "Saknar ID eller låsstatus." });
+    }
+    
+    await pool.query(`
+        UPDATE schedule_assignments sa SET is_locked = $1
+        FROM stations s
+        WHERE sa.station_id = s.id
+        AND s.workplace_id = $2
+        AND sa.id = $3
+    `, [payload.is_locked, auth.workplace, payload.id]);
+    
+    return res.status(200).json({ success: true, is_locked: payload.is_locked });
 }
 
 async function handleSaveAbsence(res, auth, payload) {
@@ -184,6 +215,7 @@ async function clearShifts(client, userId, from, to, workplace) {
     await client.query(`
         DELETE FROM schedule_assignments
         WHERE user_id = $1 AND work_date >= $2 AND work_date <= $3
+        AND is_locked = false
         AND station_id IN (SELECT id FROM stations WHERE workplace_id = $4)
     `, [userId, from, to, workplace]);
 }
