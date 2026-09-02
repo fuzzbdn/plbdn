@@ -5,14 +5,14 @@ import { DAYS } from './config.js';
 // ==========================================
 // KONSTANTER & GLOBALA TIMERS
 // ==========================================
-const CONFIG_CACHE_MS  = 5  * 60 * 1000;  // 5 minuter
-const WEATHER_CACHE_MS = 15 * 60 * 1000;  // 15 minuter
-const FALLBACK_POLL_MS = 10 * 60 * 1000;  // Skyddsnät ifall Pusher tappar anslutningen
+const CONFIG_CACHE_MS  = 15 * 60 * 1000;  // 15 minuter (sparar Neon compute — config ändras sällan)
+const WEATHER_CACHE_MS = 30 * 60 * 1000;  // 30 minuter (väder behöver inte uppdateras ofta)
+const FALLBACK_POLL_MS = 30 * 60 * 1000;  // 30 min skyddsnät — Pusher hanterar realtid, detta är bara backup
 
-// NYTT: Pusher-nycklar är publika (inte hemliga) och kan ligga i klientkoden.
+// Pusher-nycklar är publika och kan ligga i klientkoden.
 // PUSHER_SECRET ska ALDRIG placeras här - den ligger bara i backend (api/_pusher.js).
 const PUSHER_KEY     = 'bd3dbd5cbb9abb426d43';
-const PUSHER_CLUSTER = 'eu'; // Samma kluster som i Vercels miljövariabler
+const PUSHER_CLUSTER = 'eu';
 
 let fallbackTimer = null;
 let clockTimer    = null;
@@ -29,7 +29,7 @@ let globalScheduleData   = {};
 
 let lastWeatherFetchTime = 0;
 let cachedWeatherHtml    = '';
-let lastWeatherCoords    = ''; 
+let lastWeatherCoords    = '';
 let lastDataSnapshot     = '';
 
 let cachedConfig = {
@@ -62,8 +62,8 @@ function parseSafe(data) {
 }
 
 function parseCoords(lat, lon) {
-    const parsedLat = parseFloat(lat);
-    const parsedLon = parseFloat(lon);
+    const parsedLat = Number.parseFloat(lat);
+    const parsedLon = Number.parseFloat(lon);
     if (
         Number.isNaN(parsedLat) || Number.isNaN(parsedLon) ||
         parsedLat < -90  || parsedLat > 90   ||
@@ -72,16 +72,10 @@ function parseCoords(lat, lon) {
     return { lat: parsedLat, lon: parsedLon };
 }
 
-/**
- * Läser ut payloaden ur en JWT utan att verifiera signaturen.
- * JWT-payloaden är bara base64-kodad (inte krypterad), så detta avslöjar
- * ingenting som inte redan är läsbart för den som har token. Vi använder
- * den bara för att plocka ut workplaceId till Pusher-kanalens namn.
- */
 function decodeJwtPayload(token) {
     try {
         const payload = token.split('.')[1];
-        const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+        const decoded = atob(payload.replaceAll('-', '+').replaceAll('_', '/'));
         return JSON.parse(decoded);
     } catch {
         return null;
@@ -101,7 +95,6 @@ export async function initDisplay() {
         return;
     }
 
-    // --- HÄMTA TEMAN SÄKERT OCH STRUKTURERAT ---
     const themesRes = await fetchData('custom_themes', { token: displayToken });
     globalCustomThemes = (themesRes?.success && Array.isArray(themesRes.data)) ? themesRes.data : [];
 
@@ -113,7 +106,6 @@ export async function initDisplay() {
 
             const fetchConfig = (now.getTime() - cachedConfig.lastConfigFetch > CONFIG_CACHE_MS);
 
-            // --- HÄMTA SCHEMADATA ---
             const bundleRes = await fetchData('display_bundle', {
                 start_date: todayStr,
                 end_date: todayStr,
@@ -148,7 +140,6 @@ export async function initDisplay() {
                 cachedConfig.lastConfigFetch = now.getTime();
             }
 
-            // --- SNAPSHOT-LOGIK ---
             const currentSnapshot = JSON.stringify({
                 sch:     globalScheduleData,
                 st:      globalStations,
@@ -169,7 +160,6 @@ export async function initDisplay() {
 
                 renderGrid();
 
-                // Löpande text (marquee)
                 const mqContainer = document.getElementById('marqueeContainer');
                 if (mqContainer) {
                     const msg = cachedConfig.message;
@@ -181,7 +171,6 @@ export async function initDisplay() {
                     }
                 }
 
-                // --- SÄKER TEMA-INJEKTION ---
                 const themeId = cachedConfig.settings?.theme;
                 let styleEl = document.getElementById('custom-theme-style');
 
@@ -195,12 +184,11 @@ export async function initDisplay() {
                         }
                         if (styleEl.textContent !== t.css) styleEl.textContent = t.css;
                     }
-                } else {
-                    if (styleEl) styleEl.remove();
+                } else if (styleEl) {
+                    styleEl.remove();
                 }
             }
 
-            // --- VÄDERHANTERING ---
             const wc = cachedConfig.weatherConfig;
             if (wc?.latitude && wc?.longitude) {
                 const coords = parseCoords(wc.latitude, wc.longitude);
@@ -257,7 +245,6 @@ export async function initDisplay() {
         }
     }
 
-    // Rensa gamla timers/anslutningar vid ominitiering (t.ex. vid hot-reload)
     if (fallbackTimer) clearInterval(fallbackTimer);
     if (clockTimer) clearInterval(clockTimer);
     if (pusherChannel) {
@@ -270,10 +257,8 @@ export async function initDisplay() {
         pusherClient = null;
     }
 
-    // Starta med en initial hämtning
     await updateDisplay();
 
-    // --- REALTIDSLYSSNARE VIA PUSHER ---
     const payload      = decodeJwtPayload(displayToken);
     const workplaceId  = payload?.workplaceId;
 
@@ -308,13 +293,11 @@ export async function initDisplay() {
         setDotState('error');
     }
 
-    // --- SKYDDSNÄT: mycket gles polling ifall websocket-anslutningen tappas ---
     fallbackTimer = setInterval(async () => {
         try { await updateDisplay(); }
         catch (e) { console.error('Kritiskt fel i fallback-polling:', e); }
     }, FALLBACK_POLL_MS);
 
-    // Klockan tickar i realtid, oberoende av Pusher/polling
     clockTimer = setInterval(() => {
         const now = new Date();
         const clk = document.getElementById('clock');
@@ -334,7 +317,8 @@ function renderGrid() {
         return;
     }
 
-    let html = `<div class="time-header-row"><div></div>${globalShifts.map(s => `<div class="time-header">${escapeHTML(s.label)}</div>`).join('')}</div>`;
+    const timeHeaders = globalShifts.map(s => `<div class="time-header">${escapeHTML(s.label)}</div>`).join('');
+    let html = `<div class="time-header-row"><div></div>${timeHeaders}</div>`;
 
     globalStations.forEach(st => {
         if (st.is_spacer) {
@@ -360,7 +344,7 @@ function renderGrid() {
                     return `<span>${escapeHTML(name)}${note}</span>`;
                 })
                 .join(' / ');
-            
+
             const isEmpty = assignments.length === 0;
             html += `<div class="shift-card ${isEmpty ? 'empty' : ''}" data-label="${escapeHTML(sh.label)}">${isEmpty ? '' : val}</div>`;
         });

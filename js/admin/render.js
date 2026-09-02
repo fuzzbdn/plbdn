@@ -51,6 +51,9 @@ export function renderAdminGrid() {
             const key = `${currentDateStr}_${st.id}_${sh.id}`;
             const assignments = scheduleData[key] || [];
             const hasUsers = assignments.length > 0;
+            
+            const isBlockLocked = hasUsers && assignments.some(a => a.is_locked);
+            const lockIcon = isBlockLocked ? '🔒' : '🔓';
 
             html += `
             <div class="shift-block ${hasUsers ? '' : 'empty'}" ondragover="event.preventDefault()" ondrop="handleDrop(event)" data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}">
@@ -61,20 +64,24 @@ export function renderAdminGrid() {
                     const name = escapeHTML(getFriendlyName(a));
                     const note = a.note ? escapeHTML(a.note) : '';
                     const assignmentId = escapeHTML(String(a.id));
+
                     html += `
                     <span class="assigned-user-pill" 
                         data-assignment-id="${assignmentId}" 
                         data-name="${name}" 
                         data-note="${note}"
+                        data-locked="${isBlockLocked}"
                         style="cursor:pointer;">
+                        
                         ${name}
                         ${note ? `<span class="pill-note">(${note})</span>` : ''}
-                        <button class="clear-user-btn" 
+                        
+                        ${!isBlockLocked ? `<button class="clear-user-btn" 
                             data-date="${safeDate}" 
                             data-station="${safeStationId}" 
                             data-shift="${safeShiftId}" 
                             data-userid="${escapeHTML(String(a.user_id))}" 
-                            title="Ta bort">×</button>
+                            title="Ta bort">×</button>` : ''}
                     </span>`;
                 });
             }
@@ -83,8 +90,21 @@ export function renderAdminGrid() {
                 <div class="shift-text" contenteditable="true"
                     data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}"
                     spellcheck="false" style="display:none;"></div>
-                <div class="shift-controls">
-                    <button class="add-user-btn" data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}" title="Lägg till">+</button>
+                
+                <div class="shift-controls" style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                    ${hasUsers ? `
+                    <button class="toggle-block-lock-btn" 
+                        data-date="${safeDate}" 
+                        data-station="${safeStationId}" 
+                        data-shift="${safeShiftId}"
+                        data-locked="${isBlockLocked}" 
+                        title="${isBlockLocked ? 'Lås upp passet' : 'Lås hela passet'}" 
+                        style="background:none; border:none; cursor:pointer; font-size: 1.1rem; padding: 0;">
+                        ${lockIcon}
+                    </button>
+                    ` : ''}
+
+                    ${!isBlockLocked ? `<button class="add-user-btn" data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}" title="Lägg till">+</button>` : ''}
                 </div>
             </div>`;
         });
@@ -93,10 +113,40 @@ export function renderAdminGrid() {
 
     cont.innerHTML = html;
 
-    // Sätt upp klick-lyssnare för pills
+    cont.querySelectorAll('.toggle-block-lock-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const date = btn.getAttribute('data-date');
+            const station = btn.getAttribute('data-station');
+            const shift = btn.getAttribute('data-shift');
+            const currentlyLocked = btn.getAttribute('data-locked') === 'true';
+            
+            const res = await apiAction('toggle_lock', { 
+                date, 
+                station_id: station, 
+                shift_id: shift, 
+                is_locked: !currentlyLocked 
+            });
+            
+            if (res.success) {
+                const { updateGrid } = await import('./core.js');
+                const { getCurrentPickerDate } = await import('./state.js');
+                updateGrid(getCurrentPickerDate());
+            } else {
+                showToast(res.error || "Kunde inte ändra låsstatus", "error");
+            }
+        });
+    });
+
     cont.querySelectorAll('.assigned-user-pill').forEach(pill => {
         pill.addEventListener('click', (e) => {
             if (e.target.classList.contains('clear-user-btn')) return;
+            
+            if (pill.getAttribute('data-locked') === 'true') {
+                showToast("Passet är låst. Lås upp det för att redigera anteckningar.", "info");
+                return;
+            }
+            
             showNotePopup(pill);
         });
     });
