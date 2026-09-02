@@ -68,18 +68,32 @@ async function handleAssignShift(res, auth, payload) {
     if (!payload?.date || !payload?.user_id || !payload?.station_id || !payload?.shift_id) {
         return res.status(400).json({ error: "Saknar nödvändig data för tilldelning." });
     }
+
+    const checkLock = await pool.query(`
+        SELECT 1 FROM schedule_assignments 
+        WHERE work_date = $1 AND station_id = $2 AND shift_id = $3 AND is_locked = true
+        LIMIT 1
+    `, [payload.date, payload.station_id, payload.shift_id]);
+
+    if (checkLock.rows.length > 0) {
+        return res.status(403).json({ error: "Passet är låst. Lås upp det först för att lägga till personal." });
+    }
+
     const valid = await pool.query(`
         SELECT 1 FROM admin_users u, stations s
         WHERE u.id = $1 AND u.workplace_id = $3
         AND s.id = $2 AND s.workplace_id = $3
     `, [payload.user_id, payload.station_id, auth.workplace]);
+    
     if (valid.rows.length === 0) {
         return res.status(403).json({ error: "Ogiltig tilldelning — användare eller station tillhör inte din arbetsplats." });
     }
+    
     await pool.query(`
         INSERT INTO schedule_assignments (work_date, user_id, station_id, shift_id, is_published, is_locked)
         VALUES ($1, $2, $3, $4, false, false) ON CONFLICT DO NOTHING
     `, [payload.date, payload.user_id, payload.station_id, payload.shift_id]);
+    
     return res.status(200).json({ success: true });
 }
 
@@ -147,8 +161,8 @@ async function handleUpdateNote(res, auth, payload) {
 }
 
 async function handleToggleLock(res, auth, payload) {
-    if (!payload?.id || payload.is_locked === undefined) {
-        return res.status(400).json({ error: "Saknar ID eller låsstatus." });
+    if (!payload?.date || !payload?.station_id || !payload?.shift_id || payload.is_locked === undefined) {
+        return res.status(400).json({ error: "Saknar data för låsning av passet." });
     }
     
     await pool.query(`
@@ -156,8 +170,10 @@ async function handleToggleLock(res, auth, payload) {
         FROM stations s
         WHERE sa.station_id = s.id
         AND s.workplace_id = $2
-        AND sa.id = $3
-    `, [payload.is_locked, auth.workplace, payload.id]);
+        AND sa.work_date = $3
+        AND sa.station_id = $4
+        AND sa.shift_id = $5
+    `, [payload.is_locked, auth.workplace, payload.date, payload.station_id, payload.shift_id]);
     
     return res.status(200).json({ success: true, is_locked: payload.is_locked });
 }
