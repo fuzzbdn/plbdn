@@ -61,20 +61,37 @@ export function renderAdminGrid() {
                     const name = escapeHTML(getFriendlyName(a));
                     const note = a.note ? escapeHTML(a.note) : '';
                     const assignmentId = escapeHTML(String(a.id));
+                    
+                    // Låslogik
+                    const isLocked = a.is_locked;
+                    const lockIcon = isLocked ? '🔒' : '🔓';
+                    const lockedStyle = isLocked ? 'border: 1px solid #d32f2f;' : '';
+
                     html += `
                     <span class="assigned-user-pill" 
                         data-assignment-id="${assignmentId}" 
                         data-name="${name}" 
                         data-note="${note}"
-                        style="cursor:pointer;">
+                        data-locked="${isLocked}"
+                        style="cursor:pointer; ${lockedStyle}">
+                        
+                        <button class="toggle-lock-btn" 
+                            data-id="${assignmentId}" 
+                            data-locked="${isLocked}" 
+                            title="${isLocked ? 'Lås upp passet' : 'Lås passet'}" 
+                            style="background:none; border:none; cursor:pointer; padding: 0 4px 0 0; font-size: 0.85rem;">
+                            ${lockIcon}
+                        </button>
+
                         ${name}
                         ${note ? `<span class="pill-note">(${note})</span>` : ''}
-                        <button class="clear-user-btn" 
+                        
+                        ${!isLocked ? `<button class="clear-user-btn" 
                             data-date="${safeDate}" 
                             data-station="${safeStationId}" 
                             data-shift="${safeShiftId}" 
                             data-userid="${escapeHTML(String(a.user_id))}" 
-                            title="Ta bort">×</button>
+                            title="Ta bort">×</button>` : ''}
                     </span>`;
                 });
             }
@@ -93,15 +110,43 @@ export function renderAdminGrid() {
 
     cont.innerHTML = html;
 
-    // Sätt upp klick-lyssnare för pills
+    // Sätt upp klick-lyssnare för låsknapparna
+    cont.querySelectorAll('.toggle-lock-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation(); // Förhindra att anteckningsrutan öppnas samtidigt
+            const assignmentId = btn.getAttribute('data-id');
+            const currentlyLocked = btn.getAttribute('data-locked') === 'true';
+            
+            const res = await apiAction('toggle_lock', { 
+                id: assignmentId, 
+                is_locked: !currentlyLocked 
+            });
+            
+            if (res.success) {
+                const { updateGrid } = await import('./core.js');
+                const { getCurrentPickerDate } = await import('./state.js');
+                updateGrid(getCurrentPickerDate());
+            } else {
+                showToast(res.error || "Kunde inte ändra låsstatus", "error");
+            }
+        });
+    });
+
+    // Sätt upp klick-lyssnare för pills (för anteckningar)
     cont.querySelectorAll('.assigned-user-pill').forEach(pill => {
         pill.addEventListener('click', (e) => {
-            if (e.target.classList.contains('clear-user-btn')) return;
+            if (e.target.classList.contains('clear-user-btn') || e.target.closest('.toggle-lock-btn')) return;
+            
+            // Blockera popupen om passet är låst
+            if (pill.getAttribute('data-locked') === 'true') {
+                showToast("Passet är låst. Lås upp det för att redigera anteckningen.", "info");
+                return;
+            }
+            
             showNotePopup(pill);
         });
     });
 }
-
 export function renderWeeklyView() {
     const cont = document.getElementById('weeklyContainer');
     if (!cont) return;
