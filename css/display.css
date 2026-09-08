@@ -1,30 +1,47 @@
-/* =========================================
-   CSS/DISPLAY.CSS
-   Stilar för display.html (presentationsskärm).
-   ========================================= */
+/* ============================================================================
+   CSS / DISPLAY.CSS
+   Stilmall för TV-skärmarna / Presentationsvyn (display.html).
+   Designad för att ritas upp i helskärm (1080p/4K) utan scrollbars, men 
+   innehåller även en mobil-fallback om personalen öppnar länken i mobilen.
+   ============================================================================ */
 
+/* =========================================
+   1. DESIGN TOKENS (TV-specifika)
+   ========================================= */
 :root {
     --bg-color:      #f0f2f5;
     --text-color:    #1a1a1a;
+    
     --header-bg:     #ffffff;
     --header-text:   #2c3e50;
+    
     --card-bg:       #ffffff;
     --card-text:     #2c3e50;
+    
     --sub-text:      #6c757d;
     --shadow:        0 4px 20px rgba(0,0,0,0.05);
+    
     --clock-bg:      #f8f9fa;
     --empty-border:  #e0e0e0;
     --empty-bg:      rgba(255,255,255,0.4);
+    
     --font-stack:    'Inter', sans-serif;
 }
 
+
+/* =========================================
+   2. HUVUDLAYOUT
+   ========================================= */
 body.display-view {
     background-color: var(--bg-color);
     color: var(--text-color);
-    margin: 0; /* FIX 1: Återställt margin för att förhindra scrollbars */
+    
+    /* FIX: Nollställd margin och overflow hidden förhindrar fula scrollbars på TV:n */
+    margin: 0; 
     padding: 2vh 3vw;
     height: 100vh;
     overflow: hidden;
+    
     font-family: var(--font-stack);
     display: flex;
     flex-direction: column;
@@ -37,7 +54,10 @@ body.display-view {
     flex-direction: column;
 }
 
-/* HEADER */
+
+/* =========================================
+   3. HEADER (Logga, Väder & Klocka)
+   ========================================= */
 .top-bar {
     background: var(--header-bg);
     padding: 1.5vh 2vw;
@@ -58,7 +78,7 @@ body.display-view {
     margin: 0;
 }
 
-/* VÄDER & KLOCKA */
+/* Väder-widget */
 #weatherWidget {
     font-size: 3vh;
     font-weight: 700;
@@ -66,6 +86,14 @@ body.display-view {
     margin-right: 20px;
 }
 
+.weather-location-text {
+    font-size: 0.6em;
+    color: var(--sub-text, #666);
+    margin-right: 8px;
+    text-transform: uppercase;
+}
+
+/* Digital klocka */
 #clock {
     font-size: 4.5vh;
     font-weight: 900;
@@ -75,7 +103,10 @@ body.display-view {
     border-radius: 8px;
 }
 
-/* MARQUEE */
+
+/* =========================================
+   4. RULLANDE MEDDELANDE (Marquee)
+   ========================================= */
 #marqueeContainer {
     display: none;
     background: #ffeb3b;
@@ -89,7 +120,10 @@ body.display-view {
     box-shadow: var(--shadow);
 }
 
-/* GRID */
+
+/* =========================================
+   5. SCHEMA-RUTNÄT (Grid)
+   ========================================= */
 #mainContainer {
     flex-grow: 1;
     display: flex;
@@ -100,17 +134,28 @@ body.display-view {
 .time-header-row,
 .display-row {
     display: grid;
-    grid-auto-flow: column;       /* NYTT: Tvingar rutorna att lägga sig horisontellt på samma rad */
-    grid-template-columns: 220px; /* NYTT: Låser den första kolumnen (Stationen) till 220px */
-    grid-auto-columns: 1fr;       /* NYTT: Alla pass efter stationen delar exakt lika på resten av bredden */
+    
+    /* CSS-TRICK: Bygger automatiskt dynamiska kolumner baserat på 
+       hur många arbetspass som finns i databasen */
+    grid-auto-flow: column;       /* Tvingar rutorna att lägga sig horisontellt */
+    grid-template-columns: 220px; /* Låser första kolumnen (Stationen) till 220px */
+    grid-auto-columns: 1fr;       /* Alla efterföljande pass delar lika på restytan */
+    
     gap: 1.5vw;
     padding: 0 10px;
     align-items: stretch;
 }
 
-.display-row      { margin-bottom: 1.2vh; min-height: 8vh; }
-.time-header-row  { margin-bottom: 1vh; }
+.display-row { 
+    margin-bottom: 1.2vh; 
+    min-height: 8vh; 
+}
 
+.time-header-row { 
+    margin-bottom: 1vh; 
+}
+
+/* Tidsrubriker (Förmiddag, Eftermiddag etc) */
 .time-header {
     font-size: 2.2vh;
     font-weight: 700;
@@ -120,10 +165,17 @@ body.display-view {
     text-align: center;
 }
 
-/* SPACER */
-.spacer-row { height: 30px; }
+/* Mellanrum för "Spacer"-stationer */
+.spacer-row { 
+    height: 30px; 
+}
 
-/* STATION-ETIKETT */
+
+/* =========================================
+   6. STATIONER & PASSKORT
+   ========================================= */
+
+/* Vänsterkolumnen: Stationens namn */
 .station-label {
     background-color: var(--station-color, #fff);
     color: var(--contrast-color, #000);
@@ -136,10 +188,10 @@ body.display-view {
     padding-left: 1.5vw;
     box-shadow: var(--shadow);
     height: 100%;
-    border-left: 8px solid rgba(0,0,0,0.1);
+    border-left: 8px solid rgba(0,0,0,0.1); /* Ger en snygg 3D-effekt */
 }
 
-/* PASSKORT */
+/* Cellen som innehåller personalens namn */
 .shift-card {
     background-color: var(--card-bg);
     color: var(--card-text);
@@ -152,14 +204,18 @@ body.display-view {
     justify-content: center;
     text-align: center;
     height: 100%;
+    
+    /* Färgar bottenlinjen i samma färg som tillhörande station */
     border-bottom: 4px solid var(--station-color, transparent);
+    
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
 
-/* FIX 2: Återställt !important för att tvinga tomma kort att bli transparenta */
+/* Tomma pass markeras med en semitransparent streckad ruta */
 .shift-card.empty {
+    /* FIX: !important tvingar fram transparens för obemannade pass */
     background-color: var(--empty-bg) !important;
     border: 2px dashed var(--empty-border) !important;
     box-shadow: none !important;
@@ -167,22 +223,17 @@ body.display-view {
     border-bottom: none;
 }
 
-/* Dölj ::before-etiketter i desktopläget (syns bara på mobil) */
-.shift-card::before { content: none; }
-/* =========================================
-   VÄDER-WIDGET (Display)
-   ========================================= */
-.weather-location-text {
-    font-size: 0.6em;
-    color: var(--sub-text, #666);
-    margin-right: 8px;
-    text-transform: uppercase;
+/* Dölj mobiletiketter som standard på stora skärmar */
+.shift-card::before { 
+    content: none; 
 }
 
+
 /* =========================================
-   MOBILANPASSNING (≤ 850px)
+   7. MOBILANPASSNING (≤ 850px)
    ========================================= */
 @media (max-width: 850px) {
+    /* Tillåt scrolling om någon tittar på schemat i mobilen */
     body.display-view {
         height: auto !important;
         overflow-y: auto !important;
@@ -196,15 +247,21 @@ body.display-view {
         text-align: center;
     }
 
-    #mainTitle        { font-size: 1.5rem; }
+    #mainTitle { font-size: 1.5rem; }
+    
     #weatherWidget,
-    #clock            { font-size: 1.2rem; margin: 0; }
+    #clock { 
+        font-size: 1.2rem; 
+        margin: 0; 
+    }
 
-    /* Dölj tidsrubriker och mellanrum */
+    /* Dölj horisontella tabellrubriker och mellanrum */
     .time-header-row,
-    .spacer-row       { display: none !important; }
+    .spacer-row { 
+        display: none !important; 
+    }
 
-    /* Varje station blir ett eget kort */
+    /* Varje station blir ett eget "kort" som staplas vertikalt */
     .display-row {
         display: flex !important;
         flex-direction: column;
@@ -239,7 +296,8 @@ body.display-view {
         white-space: normal;
     }
 
-    /* Visa pass-etiketten (Förmiddag/Kväll) på mobilen */
+    /* CSS-TRICK: Skapa en inbyggd rubrik (t.ex. "Förmiddag") inuti pass-kortet
+       genom att hämta 'data-label' attributet direkt från HTML-koden! */
     .shift-card::before {
         content: attr(data-label);
         font-size: 0.85rem;
@@ -257,5 +315,7 @@ body.display-view {
         border-bottom: none;
     }
 
-    .shift-card.empty::before { color: #aaa; }
+    .shift-card.empty::before { 
+        color: #aaa; 
+    }
 }
