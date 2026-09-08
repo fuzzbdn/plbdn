@@ -1,6 +1,18 @@
+/**
+ * ============================================================================
+ * API / SCHEDULE.JS (Backend)
+ * Serverlös (Serverless) funktion som hanterar schemaläggningens kärnlogik.
+ * Inkluderar att hämta scheman, tilldela/ta bort personal, skriva noteringar,
+ * låsa arbetspass, publicera (och trigga Pusher) samt hantera frånvaro.
+ * ============================================================================
+ */
+
 import { pool, authenticate, handleDatabaseError, setupCors } from './_shared.js';
 import { notifyScheduleUpdated } from './_pusher.js';
 
+// ==========================================
+// 1. HUVUDROUTER (Serverless Handler)
+// ==========================================
 export default async function handler(req, res) {
     setupCors(req, res);
     if (req.method === 'OPTIONS') return res.status(200).end();
@@ -17,12 +29,17 @@ export default async function handler(req, res) {
     }
 }
 
+// ==========================================
+// 2. GET-HANTERARE (Hämta data)
+// ==========================================
 async function handleGet(req, res, auth) {
     const { type, start_date, end_date } = req.query;
-    res.setHeader('Cache-Control', 'no-store, max-age=0');
+    res.setHeader('Cache-Control', 'no-store, max-age=0'); // Förhindra aggressiv webbläsarcaching
 
+    // Hämta Schema-data
     if (type === 'schedule') {
         if (!start_date || !end_date) return res.status(400).json({ error: "Saknar datum" });
+        
         const schedRes = await pool.query(`
             SELECT sa.id, sa.work_date, sa.user_id, sa.station_id, sa.shift_id, sa.is_published, sa.note, sa.is_locked,
                    u.first_name, u.last_name, u.display_name
@@ -30,28 +47,40 @@ async function handleGet(req, res, auth) {
             JOIN admin_users u ON sa.user_id = u.id
             JOIN stations s ON sa.station_id = s.id
             WHERE s.workplace_id = $1 AND sa.work_date >= $2 AND sa.work_date <= $3
-            ORDER BY sa.id ASC`, [auth.workplace, start_date, end_date]
-        );
+            ORDER BY sa.id ASC
+        `, [auth.workplace, start_date, end_date]);
+        
         return res.status(200).json(schedRes.rows);
     }
 
+    // Hämta Frånvaro-data
     if (type === 'absences') {
         const absRes = await pool.query(`
-            SELECT a.*, u.first_name, u.last_name, u.display_name FROM absences a
+            SELECT a.*, u.first_name, u.last_name, u.display_name 
+            FROM absences a
             JOIN admin_users u ON a.user_id = u.id
-            WHERE a.workplace_id = $1 ORDER BY a.start_date DESC`, [auth.workplace]
-        );
+            WHERE a.workplace_id = $1 
+            ORDER BY a.start_date DESC
+        `, [auth.workplace]);
+        
         return res.status(200).json(absRes.rows);
     }
 
     return res.status(400).json({ error: "Ogiltig GET-typ för schedule" });
 }
 
+// ==========================================
+// 3. POST-HANTERARE (Ändra data)
+// ==========================================
 async function handlePost(req, res, auth) {
+    // Endast administratörer får skriva data till schemat
     if (auth.role !== 'admin' && auth.role !== 'superadmin') {
         return res.status(403).json({ error: "Behörighet saknas" });
     }
+    
     const { action, payload } = req.body;
+    
+    // Switch-baserad routing för alla schemaläggnings-actions
     switch (action) {
         case 'assign_shift':     return await handleAssignShift(res, auth, payload);
         case 'remove_shift':     return await handleRemoveShift(res, auth, payload);
@@ -64,11 +93,20 @@ async function handlePost(req, res, auth) {
     }
 }
 
+// ==========================================
+// 4. ACTION-FUNKTIONER FÖR SCHEMA
+// ==========================================
+
+/**
+ * Tilldelar en användare till ett arbetspass.
+ * Förhindrar dubbletter via ON CONFLICT DO NOTHING i databasen.
+ */
 async function handleAssignShift(res, auth, payload) {
     if (!payload?.date || !payload?.user_id || !payload?.station_id || !payload?.shift_id) {
         return res.status(400).json({ error: "Saknar nödvändig data för tilldelning." });
     }
 
+    // Säkerhetskontroll: Får vi redigera detta pass?
     const checkLock = await pool.query(`
         SELECT 1 FROM schedule_assignments 
         WHERE work_date = $1 AND station_id = $2 AND shift_id = $3 AND is_locked = true
@@ -79,6 +117,7 @@ async function handleAssignShift(res, auth, payload) {
         return res.status(403).json({ error: "Passet är låst. Lås upp det först för att lägga till personal." });
     }
 
+    // Säkerhetskontroll: Kontrollera att personen och stationen faktiskt tillhör administratörens arbetsplats
     const valid = await pool.query(`
         SELECT 1 FROM admin_users u, stations s
         WHERE u.id = $1 AND u.workplace_id = $3
@@ -97,6 +136,9 @@ async function handleAssignShift(res, auth, payload) {
     return res.status(200).json({ success: true });
 }
 
+/**
+ * Tar bort en person från ett specifikt arbetspass.
+ */
 async function handleRemoveShift(res, auth, payload) {
     if (!payload?.date || !payload?.user_id || !payload?.station_id || !payload?.shift_id) {
         return res.status(400).json({ error: "Saknar nödvändig data för borttagning." });
@@ -121,13 +163,19 @@ async function handleRemoveShift(res, auth, payload) {
         AND sa.station_id = $4
         AND sa.shift_id = $5
     `, [auth.workplace, payload.date, payload.user_id, payload.station_id, payload.shift_id]);
+    
     return res.status(200).json({ success: true });
 }
 
+/**
+ * Publicerar en schemaperiod. Uppdaterar 'is_published'-flaggan för alla pass
+ * och triggar en WebSocket-händelse (Pusher) så TV-skärmarna ritar om sig.
+ */
 async function handlePublishSchedule(res, auth, payload) {
     if (!payload?.start_date || !payload?.end_date) {
         return res.status(400).json({ error: "Saknar datumintervall för publicering." });
     }
+    
     await pool.query(`
         UPDATE schedule_assignments sa SET is_published = true
         FROM stations s
@@ -136,10 +184,15 @@ async function handlePublishSchedule(res, auth, payload) {
         AND sa.work_date >= $2
         AND sa.work_date <= $3
     `, [auth.workplace, payload.start_date, payload.end_date]);
+    
+    // Berätta för backendens pusher-modul att beordra klienterna att ladda om datan
     notifyScheduleUpdated(auth.workplace);
     return res.status(200).json({ success: true });
 }
 
+/**
+ * Lägger till eller tar bort (vid null) en text-notering på en persons arbetspass.
+ */
 async function handleUpdateNote(res, auth, payload) {
     if (!payload?.id) {
         return res.status(400).json({ error: "Saknar ID för tilldelning." });
@@ -157,9 +210,13 @@ async function handleUpdateNote(res, auth, payload) {
         AND s.workplace_id = $2
         AND sa.id = $3
     `, [payload.note || null, auth.workplace, payload.id]);
+    
     return res.status(200).json({ success: true });
 }
 
+/**
+ * Slår på eller av låset för ett helt tidsblock/arbetspass.
+ */
 async function handleToggleLock(res, auth, payload) {
     if (!payload?.date || !payload?.station_id || !payload?.shift_id || payload.is_locked === undefined) {
         return res.status(400).json({ error: "Saknar data för låsning av passet." });
@@ -178,47 +235,66 @@ async function handleToggleLock(res, auth, payload) {
     return res.status(200).json({ success: true, is_locked: payload.is_locked });
 }
 
+// ==========================================
+// 5. FRÅNVARO OCH TRANSAKTIONER
+// ==========================================
+
+/**
+ * Sparar frånvaro och tar automatiskt bort inbokade pass för den drabbade perioden.
+ * Använder en fullständig databastransaktion (BEGIN/COMMIT) för säkerhet.
+ */
 async function handleSaveAbsence(res, auth, payload) {
     if (!payload?.user_id || !payload?.start_date || !payload?.end_date) {
         return res.status(400).json({ error: "Saknar nödvändig data för frånvaro" });
     }
+    
     const client = await pool.connect();
     try {
-        await client.query('BEGIN');
+        await client.query('BEGIN'); // Starta transaktion
+        
         if (payload.id) {
             await updateAbsence(client, auth, payload);
         } else {
             await insertAbsence(client, payload, auth);
         }
-        await client.query('COMMIT');
+        
+        await client.query('COMMIT'); // Allt gick bra, spara ändringarna
         return res.status(200).json({ success: true });
     } catch (err) {
-        await client.query('ROLLBACK');
+        await client.query('ROLLBACK'); // Något gick fel, ångra alla ändringar i blocket
         if (err.statusCode === 404) return res.status(404).json({ error: err.message });
         throw err;
     } finally {
-        client.release();
+        client.release(); // Returnera klienten till poolen
     }
 }
 
+/** Hjälpfunktion för Transaktion: Uppdaterar en befintlig frånvaro */
 async function updateAbsence(client, auth, payload) {
     const oldAbsRes = await client.query(
         'SELECT start_date, end_date FROM absences WHERE id = $1 AND workplace_id = $2 AND user_id = $3',
         [payload.id, auth.workplace, payload.user_id]
     );
+    
     if (oldAbsRes.rows.length === 0) {
         throw Object.assign(new Error("Frånvaron hittades inte."), { statusCode: 404 });
     }
+    
     await client.query(
         'UPDATE absences SET start_date = $1, end_date = $2, type = $3 WHERE id = $4 AND workplace_id = $5 AND user_id = $6',
         [payload.start_date, payload.end_date, payload.type, payload.id, auth.workplace, payload.user_id]
     );
+    
     const old = oldAbsRes.rows[0];
+    // Beräkna det "bredaste" tidsspannet mellan den gamla och nya frånvaron, för att
+    // garantera att vi krock-rensar alla dagar som drabbas.
     const clearFrom = new Date(old.start_date) < new Date(payload.start_date) ? old.start_date : payload.start_date;
     const clearTo   = new Date(old.end_date)   > new Date(payload.end_date)   ? old.end_date   : payload.end_date;
+    
     await clearShifts(client, payload.user_id, clearFrom, clearTo, auth.workplace);
 }
 
+/** Hjälpfunktion för Transaktion: Skapar en ny frånvaro */
 async function insertAbsence(client, payload, auth) {
     await client.query(
         'INSERT INTO absences (user_id, start_date, end_date, type, workplace_id) VALUES ($1, $2, $3, $4, $5)',
@@ -227,6 +303,10 @@ async function insertAbsence(client, payload, auth) {
     await clearShifts(client, payload.user_id, payload.start_date, payload.end_date, auth.workplace);
 }
 
+/** 
+ * Hjälpfunktion för Transaktion: Tar bort (rensar) eventuella inbokade och olåsta
+ * arbetspass för personen under frånvaroperioden. 
+ */
 async function clearShifts(client, userId, from, to, workplace) {
     await client.query(`
         DELETE FROM schedule_assignments
@@ -236,6 +316,9 @@ async function clearShifts(client, userId, from, to, workplace) {
     `, [userId, from, to, workplace]);
 }
 
+/**
+ * Raderar en frånvaro.
+ */
 async function handleDeleteAbsence(res, auth, payload) {
     if (!payload?.id) {
         return res.status(400).json({ error: "Saknar ID för frånvaro." });
