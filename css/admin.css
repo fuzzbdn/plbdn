@@ -1,8 +1,8 @@
-/* =========================================
-   CSS/ADMIN.CSS
-   Stilar för admin.html och settings.html.
-   Kräver: css/base.css
-   ========================================= */
+/* ============================================================================
+   CSS / ADMIN.CSS
+   Huvudstilmall för administratörsgränssnittet (admin.html & settings.html).
+   Kräver: css/base.css (för CSS-variabler som --bg-color, --text-color etc.)
+   ============================================================================ */
 
 
 /* =========================================
@@ -18,6 +18,7 @@
     box-sizing: border-box;
     border-bottom: 1px solid var(--border-color);
 }
+
 .header-content {
     width: 100%;
     max-width: 1600px;
@@ -26,12 +27,14 @@
     justify-content: space-between;
     align-items: center;
 }
+
 .admin-header h1 {
     margin: 0;
     font-size: 1.8rem;
     font-weight: 800;
     color: var(--header-text);
 }
+
 .admin-header input[type="date"] {
     padding: 5px 10px;
     border: 1px solid var(--input-border);
@@ -40,12 +43,14 @@
     color: var(--text-color);
     background: var(--input-bg);
 }
+
 #currentUserDisplay {
     font-weight: 500;
     color: var(--text-color);
     margin-right: 15px;
     opacity: 0.8;
 }
+
 .logout-btn {
     background-color: #ffebee;
     color: #c62828;
@@ -57,7 +62,10 @@
     font-size: 0.9rem;
     transition: background 0.2s;
 }
-.logout-btn:hover { background-color: #ffcdd2; }
+
+.logout-btn:hover { 
+    background-color: #ffcdd2; 
+}
 
 .back-link {
     color: var(--text-color);
@@ -70,12 +78,16 @@
     font-weight: 600;
     margin-left: 15px;
 }
-.back-link:hover { background: var(--border-color); }
+
+.back-link:hover { 
+    background: var(--border-color); 
+}
 
 
 /* =========================================
-   2. LAYOUTS
+   2. LAYOUTS (Övergripande struktur)
    ========================================= */
+/* Planeringsvyn (admin.html) */
 .admin-layout {
     display: flex;
     gap: 20px;
@@ -83,30 +95,72 @@
     margin: 0 auto;
     align-items: flex-start;
 }
-.sidebar-roster { width: 280px; flex-shrink: 0; }
-.schedule-card-wrapper { flex-grow: 1; min-width: 0; }
 
-.settings-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-.settings-layout    { display: flex; gap: 30px; align-items: flex-start; }
-.settings-sidebar   { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 20px; }
-.settings-content   { flex-grow: 1; min-width: 0; }
+.sidebar-roster { 
+    width: 280px; 
+    flex-shrink: 0; 
+}
+
+.schedule-card-wrapper { 
+    flex-grow: 1; 
+    min-width: 0; /* Förhindrar att flex-items spränger sin container */
+}
+
+/* Inställningsvyn (settings.html) */
+.settings-container { 
+    max-width: 1200px; 
+    margin: 0 auto; 
+    padding: 20px; 
+}
+
+.settings-layout { 
+    display: flex; 
+    gap: 30px; 
+    align-items: flex-start; 
+}
+
+.settings-sidebar { 
+    width: 260px; 
+    flex-shrink: 0; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+    position: sticky; /* Låter menyn följa med när man scrollar */
+    top: 20px; 
+}
+
+.settings-content { 
+    flex-grow: 1; 
+    min-width: 0; 
+}
 
 
 /* =========================================
-   3. KORT & FLIKAR
+   3. KORT & FLIKAR (UI-komponenter)
    ========================================= */
-.roster-card, .schedule-card, .setting-card {
+.roster-card, 
+.schedule-card, 
+.setting-card {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     box-shadow: var(--shadow);
     color: var(--card-text);
 }
-.roster-card  { padding: 20px; max-height: 85vh; overflow-y: auto; position: sticky; top: 20px; }
+
+.roster-card { 
+    padding: 20px; 
+    max-height: 85vh; 
+    overflow-y: auto; 
+    position: sticky; 
+    top: 20px; 
+}
+
 .schedule-card { padding: 20px; overflow-x: auto; }
 .setting-card  { padding: 30px; margin-bottom: 20px; }
 
-.roster-card h3, .setting-card h3 {
+.roster-card h3, 
+.setting-card h3 {
     margin-top: 0;
     margin-bottom: 20px;
     border-bottom: 2px solid var(--border-color);
@@ -114,8 +168,12 @@
     color: var(--header-text);
     text-align: center;
 }
-.setting-card h3 { text-align: left; }
 
+.setting-card h3 { 
+    text-align: left; 
+}
+
+/* Flik-knappar i inställningar */
 .tab-btn {
     text-align: left;
     padding: 15px 20px;
@@ -132,12 +190,30 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     transition: all 0.2s;
 }
-.tab-btn:hover  { background: var(--input-bg); transform: translateX(5px); }
-.tab-btn.active { border-left: 5px solid var(--btn-primary); background: #e3f2fd; color: #0277bd; }
-.tab-btn-manual { margin-top: 20px; border: 1px dashed var(--border-color); background: rgba(0,0,0,0.02); }
 
-.tab-pane        { display: none; }
-.tab-pane.active { display: block; animation: fadeIn 0.3s; }
+.tab-btn:hover { 
+    background: var(--input-bg); 
+    transform: translateX(5px); 
+}
+
+.tab-btn.active { 
+    border-left: 5px solid var(--btn-primary); 
+    background: #e3f2fd; 
+    color: #0277bd; 
+}
+
+.tab-btn-manual { 
+    margin-top: 20px; 
+    border: 1px dashed var(--border-color); 
+    background: rgba(0,0,0,0.02); 
+}
+
+/* Flikinnehåll */
+.tab-pane { display: none; }
+.tab-pane.active { 
+    display: block; 
+    animation: fadeIn 0.3s; 
+}
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
@@ -148,8 +224,18 @@
 /* =========================================
    4. FORMULÄR & KNAPPAR
    ========================================= */
-.form-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
-.form-group label { font-weight: 600; font-size: 0.9rem; opacity: 0.9; }
+.form-group { 
+    margin-bottom: 20px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 8px; 
+}
+
+.form-group label { 
+    font-weight: 600; 
+    font-size: 0.9rem; 
+    opacity: 0.9; 
+}
 
 .setting-card input[type="text"],
 .setting-card input[type="password"],
@@ -166,6 +252,7 @@
     box-sizing: border-box;
     width: 100%;
 }
+
 .setting-card .save-btn,
 .setting-card .cancel-edit-btn,
 .setting-card button.save-btn,
@@ -180,6 +267,7 @@
     justify-content: center;
     line-height: normal;
 }
+
 .setting-card input[type="color"] {
     height: 42px;
     padding: 2px;
@@ -187,6 +275,7 @@
     cursor: pointer;
     border: 1px solid var(--input-border);
 }
+
 .setting-card textarea {
     height: auto;
     padding: 10px;
@@ -198,19 +287,65 @@
     box-sizing: border-box;
 }
 
-.save-btn        { background-color: var(--btn-primary); color: white; border: none; cursor: pointer; font-weight: bold; }
-.save-btn:hover  { opacity: 0.9; }
-.cancel-edit-btn { background: #999; color: white; border: none; cursor: pointer; display: none; }
+.save-btn { 
+    background-color: var(--btn-primary); 
+    color: white; 
+    border: none; 
+    cursor: pointer; 
+    font-weight: bold; 
+}
 
-.sidebar-input   { flex: 1; padding: 8px 10px; border: 1px solid var(--input-border); border-radius: 4px; background: var(--input-bg); color: var(--text-color); }
-.sidebar-add-row { display: flex; gap: 8px; margin-bottom: 15px; }
-.sidebar-add-btn { width: 36px; height: 36px; background-color: var(--btn-primary); color: white; border: 1px solid var(--border-color); border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
+.save-btn:hover { opacity: 0.9; }
+
+.cancel-edit-btn { 
+    background: #999; 
+    color: white; 
+    border: none; 
+    cursor: pointer; 
+    display: none; 
+}
+
+.sidebar-input { 
+    flex: 1; 
+    padding: 8px 10px; 
+    border: 1px solid var(--input-border); 
+    border-radius: 4px; 
+    background: var(--input-bg); 
+    color: var(--text-color); 
+}
+
+.sidebar-add-row { 
+    display: flex; 
+    gap: 8px; 
+    margin-bottom: 15px; 
+}
+
+.sidebar-add-btn { 
+    width: 36px; 
+    height: 36px; 
+    background-color: var(--btn-primary); 
+    color: white; 
+    border: 1px solid var(--border-color); 
+    border-radius: 4px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    font-size: 1.4rem; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+}
 
 
 /* =========================================
    5. LISTOR & DRAG-AND-DROP
    ========================================= */
-.list-container { max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); }
+.list-container { 
+    max-height: 350px; 
+    overflow-y: auto; 
+    border: 1px solid var(--border-color); 
+    border-radius: 4px; 
+    background: var(--input-bg); 
+}
 
 .draggable-station,
 .draggable-shift,
@@ -224,12 +359,20 @@
     background-color: var(--bg-color);
     min-height: 45px;
 }
-.draggable-station,
-.draggable-shift  { cursor: grab; }
-.draggable-station.dragging,
-.draggable-shift.dragging { opacity: 0.5; background: #e3f2fd; border: 1px dashed #2196F3; }
 
-/* Tilldelad person — visuell feedback */
+.draggable-station,
+.draggable-shift { 
+    cursor: grab; 
+}
+
+.draggable-station.dragging,
+.draggable-shift.dragging { 
+    opacity: 0.5; 
+    background: #e3f2fd; 
+    border: 1px dashed #2196F3; 
+}
+
+/* Tilldelad person (Jobbar redan det här datumet) */
 .draggable-item.assigned {
     background-color: #f5f5f5;
     color: #aaa;
@@ -240,7 +383,7 @@
 }
 .draggable-item.assigned:hover { transform: none; box-shadow: none; }
 
-/* Frånvaro */
+/* Frånvarande person */
 .draggable-item.absent {
     background-color: #ffebee;
     color: #c62828;
@@ -250,30 +393,70 @@
 }
 .draggable-item.absent:hover { transform: none; box-shadow: none; }
 
-.list-info-left    { display: flex; align-items: center; gap: 12px; flex: 1; overflow: hidden; }
-.list-actions-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.list-btn          { border: none; background: none; cursor: pointer; font-size: 1.2rem; padding: 4px; color: var(--text-color); display: flex; align-items: center; justify-content: center; }
-.list-btn:hover    { background-color: rgba(0,0,0,0.05); border-radius: 4px; }
-.remove-user-btn   { background: none; border: none; color: #ff6b6b; cursor: pointer; font-weight: bold; font-size: 1.2rem; }
+.list-info-left { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    flex: 1; 
+    overflow: hidden; 
+}
+
+.list-actions-right { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    flex-shrink: 0; 
+}
+
+.list-btn { 
+    border: none; 
+    background: none; 
+    cursor: pointer; 
+    font-size: 1.2rem; 
+    padding: 4px; 
+    color: var(--text-color); 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+}
+
+.list-btn:hover { 
+    background-color: rgba(0,0,0,0.05); 
+    border-radius: 4px; 
+}
+
+.remove-user-btn { 
+    background: none; 
+    border: none; 
+    color: #ff6b6b; 
+    cursor: pointer; 
+    font-weight: bold; 
+    font-size: 1.2rem; 
+}
 
 
 /* =========================================
-   6. SCHEMA-GRID (admin.html dagsvyn)
+   6. SCHEMA-GRID (Admin Dagsvy)
    ========================================= */
 .header-row,
 .station-row {
     display: grid;
+    /* Grid-uppställning: Kolumn 1 = Stationer (150px), Kolumn 2+ = Tidsblock (lika breda) */
     grid-template-columns: 150px 1fr 1fr 1fr;
     gap: 10px;
     margin-bottom: 10px;
 }
+
 .header-row {
     font-weight: bold;
     text-align: center;
     border-bottom: 2px solid var(--border-color);
     padding-bottom: 5px;
 }
-.station-row { align-items: center; }
+
+.station-row { 
+    align-items: center; 
+}
 
 .station-label {
     font-weight: bold;
@@ -289,6 +472,7 @@
     min-height: 50px;
 }
 
+/* Själva cellen (Arbetspasset) */
 .shift-block {
     position: relative;
     background-color: var(--input-bg);
@@ -301,11 +485,45 @@
     align-items: center;
     color: var(--text-color);
 }
-.shift-block.empty { background-color: var(--bg-color); border: 1px dashed #ccc; }
-.shift-text   { font-weight: 600; flex-grow: 1; margin-right: 10px; outline: none; min-width: 30px; display: inline-block; }
-.shift-controls { display: flex; gap: 2px; position: relative; }
-.add-user-btn { color: #4CAF50; font-size: 1.4rem; background: none; border: none; cursor: pointer; font-weight: bold; }
-.clear-btn    { color: #e53935; font-size: 1.4rem; background: none; border: none; cursor: pointer; font-weight: bold; }
+
+.shift-block.empty { 
+    background-color: var(--bg-color); 
+    border: 1px dashed #ccc; 
+}
+
+/* Fritext-inmatningsfältet inuti blocket */
+.shift-text { 
+    font-weight: 600; 
+    flex-grow: 1; 
+    margin-right: 10px; 
+    outline: none; 
+    min-width: 30px; 
+    display: inline-block; 
+}
+
+.shift-controls { 
+    display: flex; 
+    gap: 2px; 
+    position: relative; 
+}
+
+.add-user-btn { 
+    color: #4CAF50; 
+    font-size: 1.4rem; 
+    background: none; 
+    border: none; 
+    cursor: pointer; 
+    font-weight: bold; 
+}
+
+.clear-btn { 
+    color: #e53935; 
+    font-size: 1.4rem; 
+    background: none; 
+    border: none; 
+    cursor: pointer; 
+    font-weight: bold; 
+}
 
 
 /* =========================================
@@ -325,6 +543,7 @@
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     animation: slideDown 0.3s ease-out;
 }
+
 .publish-banner.hidden { display: none; }
 
 @keyframes slideDown {
@@ -334,7 +553,7 @@
 
 
 /* =========================================
-   8. TEMA-FÖRHANDSGRANSKNING
+   8. TEMA-FÖRHANDSGRANSKNING (Iframe)
    ========================================= */
 .preview-container {
     border: 1px solid #ccc;
@@ -362,6 +581,7 @@
     padding: 5px 15px;
     border-radius: 20px;
 }
+
 #currentDateDisplay {
     font-size: 1.2rem;
     font-weight: 800;
@@ -369,6 +589,7 @@
     min-width: 200px;
     text-align: center;
 }
+
 .nav-arrow {
     background: none;
     border: none;
@@ -379,14 +600,22 @@
     transition: color 0.2s, transform 0.2s;
     line-height: 1;
 }
+
 .nav-arrow:hover  { color: #000; transform: scale(1.2); }
 .nav-arrow:active { transform: scale(0.9); }
 
 
 /* =========================================
-   10. ASSIGNED USER PILLS (drag-and-drop)
+   10. ASSIGNED USER PILLS
    ========================================= */
-.shift-users-container { display: flex; flex-wrap: wrap; gap: 5px; flex-grow: 1; align-items: center; }
+.shift-users-container { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 5px; 
+    flex-grow: 1; 
+    align-items: center; 
+}
+
 .assigned-user-pill {
     background: #e3f2fd;
     color: #0277bd;
@@ -399,8 +628,28 @@
     align-items: center;
     gap: 5px;
 }
-.clear-user-btn { background: none; border: none; color: #d32f2f; font-weight: bold; cursor: pointer; padding: 0 2px; }
-.clear-user-btn:hover { background: rgba(255,0,0,0.1); border-radius: 50%; }
+
+/* Eventuella noteringar ("Chef", "Upplärning") i pillret */
+.pill-note {
+    color: #888;
+    font-weight: 400;
+    font-size: 0.85em;
+    margin-left: 3px;
+}
+
+.clear-user-btn { 
+    background: none; 
+    border: none; 
+    color: #d32f2f; 
+    font-weight: bold; 
+    cursor: pointer; 
+    padding: 0 2px; 
+}
+
+.clear-user-btn:hover { 
+    background: rgba(255,0,0,0.1); 
+    border-radius: 50%; 
+}
 
 
 /* =========================================
@@ -420,6 +669,7 @@
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     min-width: 130px;
 }
+
 .user-select-dropdown:focus { border-color: #4CAF50; }
 
 .dropdown-menu {
@@ -429,10 +679,11 @@
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     border-radius: 6px;
     border: 1px solid #ccc;
-    z-index: 10000;
+    z-index: 10000; /* Måste ligga över allt i rutnätet */
     max-height: 250px;
     overflow-y: auto;
 }
+
 .dropdown-item {
     padding: 10px 15px;
     cursor: pointer;
@@ -441,27 +692,52 @@
     font-size: 0.95rem;
     background: #fff;
 }
+
 .dropdown-item:last-child { border-bottom: none; }
 .dropdown-item:hover,
-.dropdown-item.active-item { background: #f0f8ff; color: #0277bd; font-weight: 600; }
+.dropdown-item.active-item { 
+    background: #f0f8ff; 
+    color: #0277bd; 
+    font-weight: 600; 
+}
 
-.export-container { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); }
-.export-button    { background: #333; color: white; border: none; padding: 10px 18px; cursor: pointer; border-radius: 4px; font-weight: bold; text-decoration: none; margin-left: 10px; }
+/* Export-knappar (Ligger ofta jämte tabellerna) */
+.export-container { 
+    display: flex; 
+    justify-content: space-between; 
+    margin-top: 20px; 
+    padding-top: 20px; 
+    border-top: 1px solid var(--border-color); 
+}
+
+.export-button { 
+    background: #333; 
+    color: white; 
+    border: none; 
+    padding: 10px 18px; 
+    cursor: pointer; 
+    border-radius: 4px; 
+    font-weight: bold; 
+    text-decoration: none; 
+    margin-left: 10px; 
+}
 
 
 /* =========================================
-   12. VECKOVY (gemensam för admin + user desktop)
+   12. VECKOVY (Gemensam för admin + user desktop)
    ========================================= */
 .mobile-date-label { display: none; }
 .weekly-cell-content { display: flex; flex-direction: column; gap: 4px; }
 
 .weekly-grid { min-width: 900px; }
+
 .weekly-header-row,
 .weekly-user-row {
     display: grid;
     grid-template-columns: 150px repeat(7, 1fr);
     gap: 8px;
 }
+
 .weekly-header-row {
     margin-bottom: 10px;
     font-weight: 800;
@@ -472,9 +748,16 @@
     border-bottom: 2px solid var(--border-color);
     padding-bottom: 10px;
 }
-.weekly-user-row    { border-bottom: 1px solid var(--border-color); padding: 8px 0; align-items: center; }
+
+.weekly-user-row { 
+    border-bottom: 1px solid var(--border-color); 
+    padding: 8px 0; 
+    align-items: center; 
+}
+
 .weekly-user-row:hover { background-color: rgba(0,0,0,0.02); }
-.weekly-user-name   { font-weight: 700; text-align: left; padding-left: 10px; }
+.weekly-user-name { font-weight: 700; text-align: left; padding-left: 10px; }
+
 .weekly-cell {
     min-height: 45px;
     background: var(--input-bg);
@@ -487,6 +770,7 @@
     justify-content: center;
     align-items: center;
 }
+
 .weekly-badge {
     padding: 4px 8px;
     border-radius: 4px;
@@ -500,232 +784,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
 .free-text { color: #aaa; font-size: 0.85rem; font-weight: 600; }
 
 
 /* =========================================
-   13. UTSKRIFT
-   ========================================= */
-@media print {
-    @page { size: A4 landscape; margin: 0.5cm; }
-
-    .admin-header, .settings-sidebar, .sidebar-roster,
-    .export-container, .logout-btn, .settings-container,
-    .toast, #confirmModal, .publish-banner { display: none; }
-
-    body, #print-container {
-        visibility: visible;
-        background: white;
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: auto;
-    }
-    #print-container { position: absolute; left: 0; top: 0; width: 100%; }
-    .print-page {
-        page-break-after: always;
-        break-after: page;
-        width: 100%;
-        height: 100vh;
-        max-height: 100vh;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        box-sizing: border-box;
-    }
-    .print-page:last-child { page-break-after: auto; break-after: auto; }
-    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-}
-.print-page-wrapper {
-    padding: 10px;
-    font-family: 'Inter', sans-serif;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    box-sizing: border-box;
-}
-
-.print-header {
-    text-align: center;
-    margin-bottom: 15px;
-}
-
-.print-header h1 {
-    margin: 0;
-    font-size: 1.8rem;
-}
-
-.print-grid-container {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    justify-content: space-between;
-}
-
-.print-grid-row {
-    display: grid;
-    gap: 10px;
-}
-
-.print-col-title {
-    text-align: center;
-    font-weight: 800;
-    text-transform: uppercase;
-    color: #555;
-    font-size: 0.85rem;
-}
-
-.print-col-title small {
-    font-weight: 400;
-}
-
-.print-spacer {
-    flex-grow: 0.2;
-}
-
-.print-data-row {
-    flex: 1;
-}
-
-.print-station-cell {
-    padding: 10px;
-    border-radius: 6px;
-    font-weight: 800;
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    border: 1px solid #ddd;
-    justify-content: center;
-}
-
-.print-shift-cell {
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    font-weight: 700;
-    font-size: 1.2rem;
-    color: #000;
-}
-
-/* =========================================
-   14. MOBILANPASSNING — ADMIN.HTML (≤ 850px)
-   ========================================= */
-@media (max-width: 850px) {
-    .admin-header .header-content { flex-direction: column; gap: 10px; text-align: center; }
-    .header-datepicker { flex-wrap: wrap; justify-content: center; width: 100%; }
-    .date-navigation   { width: 100%; justify-content: space-between; margin: 10px 0; }
-    .admin-layout      { flex-direction: column; }
-    .sidebar-roster    { width: 100%; max-height: 250px; position: static; margin-bottom: 20px; }
-
-    /* Dagsvyn: dölj rubriker och visa som kolumner */
-    .header-row { display: none; }
-    .station-row {
-        display: flex;
-        flex-direction: column;
-        background: #fff;
-        padding: 12px;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-        margin-bottom: 20px;
-        gap: 8px;
-        border: 1px solid var(--border-color);
-    }
-    .station-label {
-        width: 100%;
-        height: auto;
-        min-height: 45px;
-        justify-content: center;
-        border-left: none;
-        margin-bottom: 5px;
-        box-sizing: border-box;
-        border-radius: 6px;
-    }
-    .shift-block {
-        width: 100%;
-        min-height: 50px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        border: 1px solid var(--border-color);
-        background: #f8f9fa;
-        box-sizing: border-box;
-        padding: 8px 12px;
-    }
-    .shift-block::before {
-        content: attr(data-label);
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: #455a64;
-        text-transform: capitalize;
-        width: 70px;
-        flex-shrink: 0;
-    }
-    .shift-text {
-        flex-grow: 1;
-        text-align: right;
-        font-size: 1.1rem;
-        color: #333;
-    }
-    .shift-controls { background: #fff; border-radius: 4px; padding: 2px; margin-left: 10px; }
-    .shift-block.empty::after {
-        content: "Obemannat";
-        color: #aaa;
-        font-style: italic;
-        font-size: 1.1rem;
-        flex-grow: 1;
-        text-align: right;
-    }
-    .shift-block.empty .shift-text { display: none; }
-
-    /* Veckovyn på tablet */
-    .weekly-grid       { min-width: 100%; }
-    .weekly-header-row { display: none; }
-    .weekly-user-row {
-        display: flex;
-        flex-direction: column;
-        background: #fff;
-        margin-bottom: 20px;
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-    .weekly-user-name {
-        background: #e3f2fd;
-        color: #0277bd;
-        text-align: center;
-        padding: 12px;
-        font-size: 1.2rem;
-        border-bottom: 2px solid var(--border-color);
-    }
-    .weekly-cell {
-        border: none;
-        border-bottom: 1px dashed #eee;
-        flex-direction: row;
-        justify-content: flex-start;
-        align-items: center;
-        min-height: 45px;
-        padding: 10px 15px;
-        background: #fafafa;
-        gap: 15px;
-    }
-    .weekly-cell:last-child { border-bottom: none; }
-    .weekly-cell:nth-child(2)::before { content: "Måndag";  font-weight: 800; width: 70px; color: #555; }
-    .weekly-cell:nth-child(3)::before { content: "Tisdag";  font-weight: 800; width: 70px; color: #555; }
-    .weekly-cell:nth-child(4)::before { content: "Onsdag";  font-weight: 800; width: 70px; color: #555; }
-    .weekly-cell:nth-child(5)::before { content: "Torsdag"; font-weight: 800; width: 70px; color: #555; }
-    .weekly-cell:nth-child(6)::before { content: "Fredag";  font-weight: 800; width: 70px; color: #555; }
-    .weekly-cell:nth-child(7)::before { content: "Lördag";  font-weight: 800; width: 70px; color: #555; }
-    .weekly-cell:nth-child(8)::before { content: "Söndag";  font-weight: 800; width: 70px; color: #555; }
-    .weekly-badge { width: auto; flex: 1; text-align: left; }
-}
-/* =========================================
-   STATISTIK-FLIKEN
+   13. STATISTIK-FLIKEN
    ========================================= */
 .stats-loading {
     padding: 30px;
@@ -804,9 +868,290 @@
     color: #2e7d32;
     border-top: 2px solid #c8e6c9;
 }
-.pill-note {
-    color: #888;
-    font-weight: 400;
-    font-size: 0.85em;
-    margin-left: 3px;
+
+
+/* =========================================
+   14. UTSKRIFT (@media print)
+   ========================================= */
+@media print {
+    /* Tvinga liggande A4 för utskrifter */
+    @page { size: A4 landscape; margin: 0.5cm; }
+
+    /* Dölj allt GUI som inte ska vara med på pappret */
+    .admin-header, 
+    .settings-sidebar, 
+    .sidebar-roster,
+    .export-container, 
+    .logout-btn, 
+    .settings-container,
+    .toast, 
+    #confirmModal, 
+    .publish-banner { 
+        display: none !important; 
+    }
+
+    body, #print-container {
+        visibility: visible;
+        background: white;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: auto;
+    }
+
+    #print-container { 
+        position: absolute; 
+        left: 0; 
+        top: 0; 
+        width: 100%; 
+    }
+
+    .print-page {
+        page-break-after: always;
+        break-after: page;
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+    }
+
+    .print-page:last-child { 
+        page-break-after: auto; 
+        break-after: auto; 
+    }
+
+    /* Tvinga skrivaren att ta med bakgrundsfärger */
+    * { 
+        -webkit-print-color-adjust: exact; 
+        print-color-adjust: exact; 
+    }
+}
+
+/* Stilar specifika för innehållet i utskriften */
+.print-page-wrapper {
+    padding: 10px;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    box-sizing: border-box;
+}
+
+.print-header { text-align: center; margin-bottom: 15px; }
+.print-header h1 { margin: 0; font-size: 1.8rem; }
+
+.print-grid-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    justify-content: space-between;
+}
+
+.print-grid-row { display: grid; gap: 10px; }
+
+.print-col-title {
+    text-align: center;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #555;
+    font-size: 0.85rem;
+}
+
+.print-col-title small { font-weight: 400; }
+.print-spacer { flex-grow: 0.2; }
+.print-data-row { flex: 1; }
+
+.print-station-cell {
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    border: 1px solid #ddd;
+    justify-content: center;
+}
+
+.print-shift-cell {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #000;
+}
+
+
+/* =========================================
+   15. MOBILANPASSNING — ADMIN.HTML (≤ 850px)
+   ========================================= */
+@media (max-width: 850px) {
+    .admin-header .header-content { 
+        flex-direction: column; 
+        gap: 10px; 
+        text-align: center; 
+    }
+    
+    .header-datepicker { 
+        flex-wrap: wrap; 
+        justify-content: center; 
+        width: 100%; 
+    }
+    
+    .date-navigation { 
+        width: 100%; 
+        justify-content: space-between; 
+        margin: 10px 0; 
+    }
+    
+    .admin-layout { flex-direction: column; }
+    
+    .sidebar-roster { 
+        width: 100%; 
+        max-height: 250px; 
+        position: static; 
+        margin-bottom: 20px; 
+    }
+
+    /* --------------------------------------
+       Dagsvyn: Transformation från Grid till Kort
+       -------------------------------------- */
+    .header-row { display: none; } /* Dölj klassiska tabellrubriker */
+    
+    .station-row {
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        padding: 12px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        margin-bottom: 20px;
+        gap: 8px;
+        border: 1px solid var(--border-color);
+    }
+    
+    .station-label {
+        width: 100%;
+        height: auto;
+        min-height: 45px;
+        justify-content: center;
+        border-left: none;
+        margin-bottom: 5px;
+        box-sizing: border-box;
+        border-radius: 6px;
+    }
+    
+    .shift-block {
+        width: 100%;
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px solid var(--border-color);
+        background: #f8f9fa;
+        box-sizing: border-box;
+        padding: 8px 12px;
+    }
+    
+    /* CSS-TRICK: Vi använder data-label attributet från HTML:en 
+       för att skriva ut t.ex. "Förmiddag" inuti cellen, eftersom
+       tabellrubrikerna ovan är dolda på mobilen! */
+    .shift-block::before {
+        content: attr(data-label);
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #455a64;
+        text-transform: capitalize;
+        width: 70px;
+        flex-shrink: 0;
+    }
+    
+    .shift-text {
+        flex-grow: 1;
+        text-align: right;
+        font-size: 1.1rem;
+        color: #333;
+    }
+    
+    .shift-controls { 
+        background: #fff; 
+        border-radius: 4px; 
+        padding: 2px; 
+        margin-left: 10px; 
+    }
+    
+    /* Fallback-text om ingen är inbokad på mobilen */
+    .shift-block.empty::after {
+        content: "Obemannat";
+        color: #aaa;
+        font-style: italic;
+        font-size: 1.1rem;
+        flex-grow: 1;
+        text-align: right;
+    }
+    .shift-block.empty .shift-text { display: none; }
+
+    /* --------------------------------------
+       Veckovyn: Transformation från Grid till Lista
+       -------------------------------------- */
+    .weekly-grid { min-width: 100%; }
+    .weekly-header-row { display: none; }
+    
+    .weekly-user-row {
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        margin-bottom: 20px;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    
+    .weekly-user-name {
+        background: #e3f2fd;
+        color: #0277bd;
+        text-align: center;
+        padding: 12px;
+        font-size: 1.2rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+    
+    .weekly-cell {
+        border: none;
+        border-bottom: 1px dashed #eee;
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: center;
+        min-height: 45px;
+        padding: 10px 15px;
+        background: #fafafa;
+        gap: 15px;
+    }
+    
+    .weekly-cell:last-child { border-bottom: none; }
+    
+    /* CSS-TRICK: Eftersom vi dölt rubrikerna, injicerar vi
+       rätt veckodag baserat på child-positionen i strukturen! */
+    .weekly-cell:nth-child(2)::before { content: "Måndag";  font-weight: 800; width: 70px; color: #555; }
+    .weekly-cell:nth-child(3)::before { content: "Tisdag";  font-weight: 800; width: 70px; color: #555; }
+    .weekly-cell:nth-child(4)::before { content: "Onsdag";  font-weight: 800; width: 70px; color: #555; }
+    .weekly-cell:nth-child(5)::before { content: "Torsdag"; font-weight: 800; width: 70px; color: #555; }
+    .weekly-cell:nth-child(6)::before { content: "Fredag";  font-weight: 800; width: 70px; color: #555; }
+    .weekly-cell:nth-child(7)::before { content: "Lördag";  font-weight: 800; width: 70px; color: #555; }
+    .weekly-cell:nth-child(8)::before { content: "Söndag";  font-weight: 800; width: 70px; color: #555; }
+    
+    .weekly-badge { 
+        width: auto; 
+        flex: 1; 
+        text-align: left; 
+    }
 }
