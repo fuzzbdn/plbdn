@@ -26,16 +26,19 @@ export function initStatisticsTab() {
         resultsContainer.innerHTML = '<div class="stats-loading">Hämtar och beräknar data... ⏳</div>';
 
         try {
-            const response = await fetchData('schedule', { start_date: sDate, end_date: eDate });
+            // Hämta BÅDE schema och frånvaro parallellt
+            const [scheduleRes, absencesRes] = await Promise.all([
+                fetchData('schedule', { start_date: sDate, end_date: eDate }),
+                fetchData('absences')
+            ]);
             
-            // --- FELHANTERING: Kontrollera API-svaret direkt ---
-            if (!response?.success) {
-                resultsContainer.innerHTML = `<div class="stats-error">${escapeHTML(response?.error || 'Kunde inte hämta statistik.')}</div>`;
+            if (!scheduleRes?.success) {
+                resultsContainer.innerHTML = `<div class="stats-error">${escapeHTML(scheduleRes?.error || 'Kunde inte hämta schema.')}</div>`;
                 return;
             }
 
-            // --- DATA-EXTRAHERING ---
-            const scheduleData = response.data;
+            const scheduleData = scheduleRes.data;
+            const absencesData = absencesRes?.success ? absencesRes.data : [];
             
             if (!scheduleData || scheduleData.length === 0) {
                 resultsContainer.innerHTML = '<div class="stats-empty">Inga schemalagda pass hittades under denna period.</div>';
@@ -49,9 +52,14 @@ export function initStatisticsTab() {
                 return;
             }
 
+            // Räkna ut hur många dagar perioden är (för att bedöma hög arbetsbelastning)
+            const daysInPeriod = Math.round((new Date(eDate) - new Date(sDate)) / (1000 * 60 * 60 * 24)) + 1;
+            const maxHealthyShifts = Math.ceil((daysInPeriod / 7) * 5); // Snitt på 5 dgr/vecka
+
             const userStats = {};
             const stations = getStations(); 
             
+            // 1. Processa schemalagda pass
             publishedShifts.forEach(shift => {
                 const uid = shift.user_id;
                 
@@ -59,38 +67,77 @@ export function initStatisticsTab() {
                     userStats[uid] = {
                         name: shift.display_name || `${shift.first_name || ''} ${shift.last_name || ''}`.trim() || 'Okänd Användare',
                         totalShifts: 0,
-                        stations: {}
+                        weekendShifts: 0,
+                        stations: {},
+                        absences: {}
                     };
                 }
                 
                 userStats[uid].totalShifts++; 
+                
+                // Kontrollera om passet är på en helg (Lördag = 6, Söndag = 0)
+                const workDate = new Date(shift.work_date);
+                if (workDate.getDay() === 0 || workDate.getDay() === 6) {
+                    userStats[uid].weekendShifts++;
+                }
+
                 const stationName = stations.find(s => s.id === shift.station_id)?.name || 'Borttagen plats';
                 userStats[uid].stations[stationName] = (userStats[uid].stations[stationName] || 0) + 1;
             });
 
+            // 2. Processa frånvaro (matcha mot perioden och de användare som jobbat)
+            absencesData.forEach(abs => {
+                // Kolla om frånvaron överlappar med sökperioden
+                if (abs.start_date <= eDate && abs.end_date >= sDate) {
+                    const uid = abs.user_id;
+                    if (userStats[uid]) {
+                        userStats[uid].absences[abs.type] = (userStats[uid].absences[abs.type] || 0) + 1;
+                    }
+                }
+            });
+
             const sortedUsers = Object.values(userStats).sort((a, b) => b.totalShifts - a.totalShifts);
 
-            // --- RENDERING (Nu med rena CSS-klasser) ---
+            // 3. Rendering
             let html = `
-            <div class="stats-header-row">
-                <div class="stats-col-name">Personal</div>
-                <div class="stats-col-total">Totalt Antal Pass</div>
-                <div class="stats-col-dist">Fördelning av platser</div>
+            <div class="stats-header-row" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 3fr; gap: 10px; font-weight: bold; border-bottom: 2px solid #ccc; padding-bottom: 8px; margin-bottom: 10px;">
+                <div>Personal</div>
+                <div title="Totalt antal pass i perioden">Totalt Pass</div>
+                <div title="Pass som infaller på lördag eller söndag">Helgpass</div>
+                <div title="Registrerad frånvaro i perioden">Frånvaro</div>
+                <div>Fördelning (Platser)</div>
             </div>
             `;
 
             sortedUsers.forEach(user => {
+                // Bygg badges för stationer
                 const topStations = Object.entries(user.stations)
-                    .map(([name, count]) => `<span class="stats-badge">${escapeHTML(name)}: <b>${count}</b></span>`)
-                    .join(' ');
+                    .map(([name, count]) => `<span class="stats-badge" style="background:#e3f2fd; color:#0277bd; padding:2px 6px; border-radius:4px; font-size:0.85rem; margin-right:4px; display:inline-block;">${escapeHTML(name)}: <b>${count}</b></span>`)
+                    .join('');
+
+                // Bygg badges för frånvaro
+                const absencesHtml = Object.entries(user.absences)
+                    .map(([type, count]) => `<span style="background:#ffebee; color:#c62828; padding:2px 4px; border-radius:4px; font-size:0.8rem; margin-right:4px;">${escapeHTML(type)} (${count})</span>`)
+                    .join('');
+                
+                // MTO-varning: Överarbetad? (fler pass än 5/vecka i snitt)
+                const isOverworked = user.totalShifts > maxHealthyShifts;
+                const shiftColor = isOverworked ? 'color: #d32f2f; font-weight: bold;' : '';
+                const warningIcon = isOverworked ? ' <span title="Varning: Hög arbetsbelastning i perioden">⚠️</span>' : '';
                     
                 html += `
-                <div class="admin-list-item stats-row">
-                    <div class="stats-col-name stats-name-text">
-                        ${escapeHTML(user.name)}
+                <div class="admin-list-item stats-row" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 3fr; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee;">
+                    <div class="stats-name-text">
+                        <strong>${escapeHTML(user.name)}</strong>
                     </div>
-                    <div class="stats-col-total stats-count-text">
-                        ${user.totalShifts}
+                    <div class="stats-count-text" style="${shiftColor}">
+                        ${user.totalShifts} ${warningIcon}
+                    </div>
+                    <div class="stats-weekend-text" style="color: #ef6c00;">
+                        ${user.weekendShifts > 0 ? user.weekendShifts : '-'}
+                    </div>
+                    <div class="stats-absence-text">
+                        ${absencesHtml || '<span style="color:#aaa;">-</span>'}
                     </div>
                     <div class="stats-col-dist">
                         ${topStations}
@@ -99,14 +146,13 @@ export function initStatisticsTab() {
             });
 
             html += `
-            <div class="stats-summary-footer">
-                Totalt publicerade pass i perioden: ${publishedShifts.length} st
+            <div class="stats-summary-footer" style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: right; color: #555;">
+                <strong>Summering:</strong> ${publishedShifts.length} schemalagda pass fördelat på ${sortedUsers.length} anställda under ${daysInPeriod} dagar.
             </div>`;
 
             resultsContainer.innerHTML = html;
 
         } catch (err) {
-            // Detta fångar nu endast oväntade javascript-krascher, inte nätverksfel
             console.error("Internt fel vid statistik:", err);
             resultsContainer.innerHTML = '<div class="stats-error">Ett internt fel uppstod vid beräkning av statistiken.</div>';
         }
