@@ -1,9 +1,27 @@
+/**
+ * ============================================================================
+ * RENDER.JS (Admin/Planering)
+ * Hanterar all visuell uppritning (rendering) av själva planeringsvyn.
+ * Detta inkluderar Dagsvyn (rutnätet), Veckovyn, Personallistan (Rostern) 
+ * till höger, samt popup-fönster för schemanoteringar.
+ * ============================================================================
+ */
+
 import { fetchData, apiAction } from '../service.js';
 import { escapeHTML, isLight, buildWeeklyGridHTML, showToast, showConfirm } from '../utils.js';
 import { DAYS } from '../config.js';
 import { getStations, getShifts, getScheduleData, getUsers, setUsers } from '../store.js';
 import { adminState, getFriendlyName, getUserAbsence } from './state.js';
 
+// ==========================================
+// HUVUDRENDERING
+// ==========================================
+
+/**
+ * Dirigent-funktion som avgör vilken av huvudvyerna som ska ritas upp
+ * baserat på administratörens aktuella val (Dag eller Vecka), 
+ * och uppdaterar alltid personallistan.
+ */
 export function renderViews() {
     if (adminState.isWeeklyView) {
         renderWeeklyView();
@@ -13,6 +31,11 @@ export function renderViews() {
     renderRoster();
 }
 
+/**
+ * Ritar upp Dagsvyn (Grid).
+ * Det är här administratören drar och släpper personal, låser pass 
+ * och interagerar med schemat detaljerat.
+ */
 export function renderAdminGrid() {
     const cont = document.getElementById('scheduleContainer');
     if (!cont) return;
@@ -29,8 +52,10 @@ export function renderAdminGrid() {
     const currentDateStr = adminState.datesOfWeek[adminState.currentAdminDayIndex];
     const safeDate = escapeHTML(currentDateStr);
 
+    // 1. Bygg kolumn-rubrikerna (Tidsblocken)
     let html = `<div class="header-row"><div></div>${currentShifts.map(s => `<div>${escapeHTML(s.time_range || s.label)}</div>`).join('')}</div>`;
 
+    // 2. Bygg raderna (Stationer/Platser)
     currentStations.forEach(st => {
         if (st.is_spacer) {
             html += `<div class="station-row" style="grid-column:1/-1; height:30px;"></div>`;
@@ -44,6 +69,7 @@ export function renderAdminGrid() {
 
         html += `<div class="station-row"><div class="station-label" style="${styles}">${escapeHTML(st.name)}</div>`;
 
+        // 3. Fyll cellerna med inbokad personal
         currentShifts.forEach(sh => {
             if (!sh || sh.id == null) return;
 
@@ -85,7 +111,7 @@ export function renderAdminGrid() {
                 });
             }
 
-            // Här styr vi vad som visas: Antingen låset ELLER plus-knappen
+            // Här styr vi vad som visas i botten av cellen: Antingen ett Lås ELLER en Plus-knapp
             html += `</div>
                 <div class="shift-text" contenteditable="true"
                     data-date="${safeDate}" data-station="${safeStationId}" data-shift="${safeShiftId}"
@@ -113,6 +139,10 @@ export function renderAdminGrid() {
 
     cont.innerHTML = html;
 
+    // ==========================================
+    // BIND HÄNDELSER (Events) FÖR DAGSVYN
+    // ==========================================
+
     // Lyssnare för upplåsning via låsikonen
     cont.querySelectorAll('.toggle-block-lock-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -129,6 +159,7 @@ export function renderAdminGrid() {
             });
             
             if (res.success) {
+                // Dynamisk import förhindrar cirkulära beroenden
                 const { updateGrid } = await import('./core.js');
                 const { getCurrentPickerDate } = await import('./state.js');
                 updateGrid(getCurrentPickerDate());
@@ -138,8 +169,10 @@ export function renderAdminGrid() {
         });
     });
 
+    // Lyssnare för noteringar (Klick på en användares "piller")
     cont.querySelectorAll('.assigned-user-pill').forEach(pill => {
         pill.addEventListener('click', (e) => {
+            // Ignorera om man klickar på "Ta bort"-krysset
             if (e.target.classList.contains('clear-user-btn')) return;
             
             if (pill.getAttribute('data-locked') === 'true') {
@@ -152,6 +185,10 @@ export function renderAdminGrid() {
     });
 }
 
+/**
+ * Ritar upp Veckovyn.
+ * Bygger på samma HTML-generator som personalens gränssnitt för konsekvens.
+ */
 export function renderWeeklyView() {
     const cont = document.getElementById('weeklyContainer');
     if (!cont) return;
@@ -161,6 +198,7 @@ export function renderWeeklyView() {
     const currentShifts = getShifts();
     const users = getUsers();
 
+    // Indexera schemat på datum för extremt snabb uppslagning
     const scheduleIndex = {};
     Object.entries(scheduleData).forEach(([key, assignments]) => {
         const dateStr = key.split('_')[0];
@@ -186,6 +224,10 @@ export function renderWeeklyView() {
     cont.innerHTML = buildWeeklyGridHTML(users, adminState.datesOfWeek, getAssignments, false, DAYS, getAbsence);
 }
 
+/**
+ * Ritar upp Personallistan (Rostern) i högerkanten.
+ * Markerar vilka som är lediga, frånvarande eller redan inbokade på ett pass idag.
+ */
 export function renderRoster() {
     const list = document.getElementById('draggableUserList');
     if (!list) return;
@@ -194,6 +236,7 @@ export function renderRoster() {
     const workingTodayUserIds = new Set();
     const scheduleData = getScheduleData();
 
+    // Kolla vilka som jobbar idag
     Object.keys(scheduleData).forEach(k => {
         if (k.startsWith(currentDateStr)) {
             scheduleData[k].forEach(a => workingTodayUserIds.add(a.user_id));
@@ -201,6 +244,8 @@ export function renderRoster() {
     });
 
     const users = getUsers();
+    
+    // Sortera: Lediga högst upp (i bokstavsordning), redan inbokade längst ner
     const sortedUsers = [...users].sort((a, b) => {
         const aBusy = workingTodayUserIds.has(a.id);
         const bBusy = workingTodayUserIds.has(b.id);
@@ -225,8 +270,9 @@ export function renderRoster() {
         const assignedClass = isAssigned ? 'assigned' : '';
         const safeName = escapeHTML(getFriendlyName(u));
         const safeId = escapeHTML(String(u.id));
-        const canDrag = abs ? 'false' : 'true';
+        const canDrag = abs ? 'false' : 'true'; // Frånvarande personer kan inte dras in i schemat
 
+        // Endast snabb-användare (utan lösenord) kan raderas direkt från rostern
         const removeBtnHtml = u.has_password
             ? ''
             : `<button class="remove-user-btn" data-userid="${safeId}" data-fullname="${safeName}">×</button>`;
@@ -237,6 +283,7 @@ export function renderRoster() {
         </div>`;
     }).join('');
 
+    // Knapp för att snabbt radera vikarier/temporära användare
     list.querySelectorAll('.remove-user-btn').forEach(btn => {
         btn.onclick = async (e) => {
             const userId = e.target.getAttribute('data-userid');
@@ -261,6 +308,16 @@ export function renderRoster() {
     });
 }
 
+// ==========================================
+// POPUP-HANTERING (Noteringar)
+// ==========================================
+
+/**
+ * Ritar en dynamisk informationsbubbla för att skriva noteringar (t.ex. "Chef") 
+ * på ett specifikt, inbokat pass.
+ * 
+ * @param {HTMLElement} pill - DOM-elementet för användarens "piller" i schemat.
+ */
 function showNotePopup(pill) {
     const existing = document.getElementById('note-popup');
     if (existing) existing.remove();
@@ -322,6 +379,7 @@ function showNotePopup(pill) {
     popup.appendChild(input);
     popup.appendChild(btnRow);
 
+    // Anchor:a popupen till pillret
     pill.style.position = 'relative';
     pill.appendChild(popup);
 
@@ -366,6 +424,7 @@ function showNotePopup(pill) {
         if (e.key === 'Escape') closePopup();
     });
 
+    // Stäng popupen om man klickar någon annanstans på skärmen
     setTimeout(() => {
         document.addEventListener('click', function closeOnOutside(e) {
             if (!popup.contains(e.target) && !pill.contains(e.target)) {
