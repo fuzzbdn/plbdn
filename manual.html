@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manual - STRUL Bemanningssystem</title>
+    
     <link rel="stylesheet" href="css/base.css">
+    
     <style>
         /* Mjuk scrollning är extra viktigt inuti en iframe */
         html {
@@ -22,8 +24,15 @@
         
         /* Typografi och rubriker */
         h1 { color: #0277bd; font-size: 2.5rem; margin-top: 0; margin-bottom: 10px; }
+        
         /* scroll-margin-top ser till att rubriken inte hamnar under kanten när man klickar i menyn */
-        h2 { border-bottom: 2px solid #0277bd; padding-bottom: 5px; margin-top: 50px; color: var(--header-text); scroll-margin-top: 20px; }
+        h2 { 
+            border-bottom: 2px solid #0277bd; 
+            padding-bottom: 5px; 
+            margin-top: 50px; 
+            color: var(--header-text); 
+            scroll-margin-top: 20px; 
+        }
         h3 { color: var(--header-text); margin-top: 25px; scroll-margin-top: 20px; }
         p, li { font-size: 1.05rem; }
         ul { padding-left: 20px; }
@@ -64,8 +73,14 @@
 <body>
 
 <div class="manual-container">
+    
+    <!-- ========================================== -->
+    <!-- 0. INTRODUKTION & INNEHÅLLSFÖRTECKNING     -->
+    <!-- ========================================== -->
     <h1>📖 Manual för STRUL</h1>
-    <p style="font-size: 1.2rem; color: var(--text-color); opacity: 0.7; margin-bottom: 30px;">Välkommen till den officiella guiden för STRUL Bemanningssystem v3.12.</p>
+    <p style="font-size: 1.2rem; color: var(--text-color); opacity: 0.7; margin-bottom: 30px;">
+        Välkommen till den officiella guiden för STRUL Bemanningssystem <span class="appVersionDisplay">vLaddar...</span>.
+    </p>
 
     <nav class="toc">
         <strong>Innehållsförteckning:</strong>
@@ -78,6 +93,10 @@
         <a href="#superadmin">7. Super-Admin (Flera arbetsplatser)</a>
     </nav>
 
+
+    <!-- ========================================== -->
+    <!-- 1. ROLLER                                  -->
+    <!-- ========================================== -->
     <h2 id="roller">1. Användarroller & Rättigheter</h2>
     <p>Systemet har tre olika nivåer av behörighet:</p>
     <ul>
@@ -86,6 +105,10 @@
         <li><span class="badge superadmin">Super-Admin</span> - Systemägare. Kan göra allt en Admin kan, men kan dessutom skapa helt nya isolerade <em>Arbetsplatser</em> (t.ex. olika städer eller avdelningar). Super-Admins syns normalt inte i personal-listan.</li>
     </ul>
 
+
+    <!-- ========================================== -->
+    <!-- 2. FÖR ANSTÄLLDA                           -->
+    <!-- ========================================== -->
     <h2 id="anvandare">2. För Anställda (Mitt Schema)</h2>
     <p>När du loggar in med ett Användar-konto landar du direkt i <strong>Mitt Schema</strong>. Denna vy är optimerad för mobilen.</p>
     <ul>
@@ -94,6 +117,10 @@
         <li><strong>Frånvaro:</strong> Om du är schemalagd under en period men blir sjuk, kommer administratören att lägga in det, och en röd/gul ikon (t.ex. 🤒 Sjuk eller 🌴 Semester) syns istället för dina pass.</li>
     </ul>
 
+
+    <!-- ========================================== -->
+    <!-- 3. PLANERING OCH SCHEMA-BYGGE              -->
+    <!-- ========================================== -->
     <h2 id="admin-planering">3. För Administratörer (Planering)</h2>
     <p>Planeringsvyn är hjärtat i systemet där schemat byggs. Det finns tre sätt att bemanna ett pass på:</p>
     
@@ -131,6 +158,10 @@
     <h3>📡 Publicera schemat</h3>
     <p>Ändringar du gör i schemat är <strong>Dolda (Utkast)</strong> fram till att du publicerar dem. Det visas en gul varningsbanner om det finns opublicerade ändringar. När du är nöjd, klicka på den gröna knappen <span class="highlight">📡 Publicera</span> i botten av skärmen. TV-skärmar som är anslutna uppdateras då <strong>omedelbart i realtid</strong> — utan att någon behöver ladda om sidan.</p>
 
+
+    <!-- ========================================== -->
+    <!-- 4. FRÅNVARO                                -->
+    <!-- ========================================== -->
     <h2 id="franvaro">4. Sjukdom & Frånvaro</h2>
     <p>Om någon blir sjuk eller ska ha semester ska du <strong>inte</strong> bara radera deras pass manuellt. Använd Frånvarohanteraren för att undvika schemakrockar!</p>
     <ol>
@@ -140,6 +171,10 @@
         <li>I Planeringsvyn blir personens "piller" i sidopanelen nu rödmarkerat, och det är omöjligt att schemalägga personen av misstag under denna period.</li>
     </ol>
 
+
+    <!-- ========================================== -->
+    <!-- 5. INSTÄLLNINGAR                           -->
+    <!-- ========================================== -->
     <h2 id="installningar">5. Inställningar & Systemhantering</h2>
     <p>Under Inställningar styr du hur systemet fungerar och ser ut.</p>
     
@@ -161,6 +196,10 @@
         <li><strong>E-poståterställning:</strong> Om användaren har sin E-post inlagd på kontot kan de själva klicka på "Glömt lösenord" på inloggningssidan för att få en återställningslänk skickad till sig.</li>
     </ul>
 
+
+    <!-- ========================================== -->
+    <!-- 6. DISPLAY & TV-SKÄRMAR                    -->
+    <!-- ========================================== -->
     <h2 id="skarm">6. TV-skärm & Displaylänk</h2>
     <p>Display-vyn är gjord för att rulla dygnet runt på en TV i lunchrummet. Schemat uppdateras nu <strong>i realtid</strong> via en direktanslutning — när du klickar Publicera syns ändringarna på skärmen inom sekunder, utan att sidan laddas om. Som backup hämtas schemat automatiskt var 10:e minut ifall anslutningen skulle tappas.</p>
     <ul>
@@ -170,15 +209,34 @@
         <li><strong>Anslutningsindikator:</strong> En liten punkt uppe till höger på skärmen visar statusen — <span style="color:#4caf50; font-weight:bold;">grön</span> = realtidsanslutning aktiv, <span style="color:#f44336; font-weight:bold;">röd</span> = anslutning bruten (backup-polling aktiv).</li>
     </ul>
 
+
+    <!-- ========================================== -->
+    <!-- 7. SUPER-ADMIN                             -->
+    <!-- ========================================== -->
     <h2 id="superadmin">7. Super-Admin (Flera arbetsplatser)</h2>
     <p>Ett Super-Admin konto hanterar hela organisationen. Om ni t.ex. har en anläggning i Boden och en i Stockholm, vill de inte dela schema, inställningar och personal.</p>
     <p>I inställningarna har en Super-Admin en orange flik som heter <strong>🏢 Arbetsplatser</strong>. Här kan du skapa hur många oberoende arbetsplatser som helst. Varje arbetsplats får en helt egen, isolerad miljö i databasen.</p>
     <p>I Planeringsvyn får Super-Admins fram en rullgardin i toppmenyn där de snabbt kan hoppa mellan de olika anläggningarna för att administrera dem.</p>
 
+    <!-- ========================================== -->
+    <!-- FOOTER & VERSION                             -->
+    <!-- ========================================== -->
     <div style="text-align: center; margin-top: 50px; color: var(--text-color); opacity: 0.6; border-top: 1px solid var(--border-color); padding-top: 20px;">
-        <em>STRUL Bemanningssystem v3.12 - Nu med realtidsuppdatering och smidigare låsfunktion för arbetspass.</em>
+        <em>STRUL Bemanningssystem <span class="appVersionDisplay">vLaddar...</span> - Nu med realtidsuppdatering och smidigare låsfunktion för arbetspass.</em>
     </div>
 </div>
+
+<!-- Skript för att dynamiskt fylla i versionsnumret från config.js -->
+<script type="module">
+    import { APP_VERSION } from './js/config.js';
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        const versionElements = document.querySelectorAll('.appVersionDisplay');
+        versionElements.forEach(el => {
+            el.textContent = 'v' + APP_VERSION;
+        });
+    });
+</script>
 
 </body>
 </html>
