@@ -12,7 +12,7 @@
  * på alla sidor i gränssnittet (oftast i sidfoten) via main.js.
  * @constant {string}
  */
-export const APP_VERSION = "v3.12";
+export const APP_VERSION = "v3.13";
 
 /**
  * Svenska namn för veckans dagar.
