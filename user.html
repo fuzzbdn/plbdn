@@ -2,27 +2,39 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <!-- PWA & Mobil-viewport (Förhindrar inzoomning på mobil) -->
+    
+    <!-- PWA & Mobil-viewport (Förhindrar inzoomning på mobila enheter) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mitt Schema - STRUL</title>
     
-    <!-- PWA / App Manifest -->
-    <link rel="manifest" href="manifest.json">
+    <!-- ========================================== -->
+    <!-- PWA (Progressive Web App) KONFIGURATION    -->
+    <!-- ========================================== -->
+    <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
     <meta name="theme-color" content="#0277bd">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
+    <!-- Typsnitt & Stilar -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">    
     <script type="module" src="js/main.js"></script>
     <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/admin.css">
-    <link rel="stylesheet" href="css/user.css">
+    <link rel="stylesheet" href="css/admin.css"> <!-- Laddar admin.css för komponenternas grundutseende... -->
+    <link rel="stylesheet" href="css/user.css">  <!-- ...och user.css för att möblera om dem (Mobile First) -->
 </head>
 <body class="user-view admin-view" id="page-user">
 
 <div class="admin-wrapper">
+    
+    <!-- ========================================== -->
+    <!-- 1. HEADER & NAVIGATION                     -->
+    <!-- ========================================== -->
+    <!-- CSS Grid i user.css möblerar automatiskt om dessa element 
+         till 3 separata rader när sidan visas på en mobilskärm -->
     <header class="admin-header">
         <div class="header-content">
+            
+            <!-- Vänster: Rubrik och Datumväljare -->
             <div style="display:flex; align-items:center; gap:20px;">
                 <h1>Schema</h1>
                 
@@ -33,30 +45,50 @@
                 </div>
             </div>
 
+            <!-- Mitten: Bläddra fram/bakåt -->
             <div class="date-navigation">
                 <button id="prevDayBtn" class="nav-arrow" title="Bakåt">◀</button>
+                <!-- Visar aktuellt datum. Fylls av core.js -->
                 <div id="currentDateDisplay"></div>
                 <button id="nextDayBtn" class="nav-arrow" title="Framåt">▶</button>
             </div>
             
+            <!-- Höger: Filter & Inloggningsinfo -->
             <div style="display:flex; align-items:center; gap:15px;">
+                <!-- Denna knapp växlar "data-only-me"-attributet i JS, vilket döljer andras pass -->
                 <button id="toggleMyScheduleBtn" class="export-button" style="background-color: #4CAF50;">👤 Visa endast mitt</button>
+                
                 <span id="currentUserDisplay" style="font-weight:500; opacity:0.8;"></span>
                 <button id="logoutBtn" class="logout-btn">Logga ut</button>
             </div>
         </div>
     </header>
 
+    <!-- ========================================== -->
+    <!-- 2. HUVUDYTA: SCHEMARUTNÄT                  -->
+    <!-- ========================================== -->
+    <!-- Ingen personalmeny (roster) visas på denna vy -->
     <div class="admin-layout" style="margin-top: 20px; justify-content: center;">
         <main class="schedule-card-wrapper" style="max-width: 1400px; width: 100%;">
             <div class="schedule-card">
+                
+                <!-- DAGSVY: Fylls av renderUserGrid() -->
                 <div class="grid-container" id="scheduleContainer"></div>
+                
+                <!-- VECKOVY: Fylls av renderUserWeeklyView() -->
+                <!-- Endast EN av dessa containrar visas åt gången (styrs av JS) -->
                 <div id="userWeeklyContainer" style="display:none; overflow-x: auto;"></div>
+                
             </div>
         </main>
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- 3. DOLDA KOMPONENTER (Notiser)             -->
+<!-- ========================================== -->
+<!-- Behållare för systemmeddelanden (Toast) -->
 <div id="toast-container"></div> 
+
 </body>
 </html>
