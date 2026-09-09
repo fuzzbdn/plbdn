@@ -3,7 +3,7 @@
 // ==========================================
 
 // Byt version när du uppdaterar CSS/JS så att telefonerna hämtar de nya filerna!
-const CACHE_NAME = 'strul-cache-v3.12';
+const CACHE_NAME = 'strul-cache-v3.13';
 
 // Filer som ska sparas lokalt på telefonen direkt när appen installeras
 const STATIC_ASSETS = [
