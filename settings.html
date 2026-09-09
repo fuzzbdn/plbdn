@@ -5,16 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inställningar - STRUL</title>
     
+    <!-- Typsnitt -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">    
+    
+    <!-- Externa bibliotek för PDF/Bild-export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous"></script>
     
+    <!-- Systemets kärnfiler -->
     <script type="module" src="js/main.js"></script>
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/admin.css">
 </head>
 <body id="page-settings">
 
+    <!-- ========================================== -->
+    <!-- 1. HEADER                                  -->
+    <!-- ========================================== -->
     <header class="admin-header">
         <div class="header-content">
             <div style="display:flex; align-items:center; gap:20px;">
@@ -22,6 +29,7 @@
                 <a href="admin.html" class="back-link">⬅ Tillbaka till Planering</a>
             </div>
             <div style="display:flex; align-items:center;">
+                <!-- Visar inloggad användare -->
                 <span id="currentUserDisplay"></span>
                 <button id="logoutBtn" class="logout-btn">Logga ut</button>
             </div>
@@ -31,7 +39,11 @@
     <div class="settings-container">
         <div class="settings-layout">
             
+            <!-- ========================================== -->
+            <!-- 2. SIDOMENY (Flikar)                       -->
+            <!-- ========================================== -->
             <aside class="settings-sidebar">
+                <!-- Javascript (openTab) växlar synligheten på #tab-[namn] div:arna -->
                 <button class="tab-btn active" onclick="openTab('tab-general')">📢 Allmänt & Meddelanden</button>
                 <button class="tab-btn" onclick="openTab('tab-weather')">🌤️ Väder & Plats</button>
                 <button class="tab-btn" onclick="openTab('tab-export')">🖨️ Utskrift & Export</button>
@@ -42,34 +54,38 @@
                 <button class="tab-btn" onclick="openTab('tab-absences')">🏖️ Hantera Frånvaro</button>
                 <button class="tab-btn" onclick="openTab('tab-statistics')">📊 Statistik</button>
                 
+                <!-- Visas endast för inloggade Super-Admins -->
                 <button class="tab-btn" id="tabBtnWorkplaces" onclick="openTab('tab-workplaces')" style="display:none; border-left: 4px solid #ff9800;">🏢 Arbetsplatser</button>
+                
                 <button class="tab-btn tab-btn-manual" onclick="openTab('tab-manual')">📖 Manual</button>
             </aside>
 
+            <!-- ========================================== -->
+            <!-- 3. HUVUDYTA: FLIKINNEHÅLL                  -->
+            <!-- ========================================== -->
             <main class="settings-content">
                 
+                <!-- ===================================== -->
+                <!-- FLIK: ALLMÄNT & MEDDELANDEN           -->
+                <!-- ===================================== -->
                 <div id="tab-general" class="tab-pane active">
                     
                     <div class="setting-card">
                         <h3>📢 Meddelande (Display)</h3>
-                        
                         <div class="form-group" style="margin-bottom: 15px;">
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; color: #333;">
                                 <input type="checkbox" id="showMessageCheckbox"> 
                                 <span>Visa meddelande på skärmen</span>
                             </label>
                         </div>
-                        
                         <div class="form-group" style="margin-bottom: 15px;">
                             <textarea id="messageInput" aria-label="Meddelande att visa på skärmen" rows="3" placeholder="Skriv ditt meddelande här..." style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
                         </div>
-                        
                         <button id="saveMessageBtn" class="save-btn">Uppdatera Meddelande</button>
                     </div>
 
                     <div class="setting-card">
                         <h3 style="color:#0277bd;">⚙️ Övriga Inställningar</h3>
-                        
                         <div class="form-group">
                             <label style="font-weight: 600; color: #333; display:block;">Standard antal dagar vid utskrift/export:</label>
                             <input type="number" id="exportDefaultDaysInput" min="1" max="365" placeholder="T.ex. 1 eller 7" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; margin-top: 5px;">
@@ -83,10 +99,10 @@
                         <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">Skapa en unik länk för att visa schemat på en TV-skärm. För att obehöriga inte ska komma åt skärmen krävs systemets hemliga display-nyckel (samma som <code>DISPLAY_SECRET</code> i serverns miljövariabler).</p>
                         
                         <div class="form-group">
-                            <input type="text" id="displaySecretInput" placeholder="Ange hemlig display-nyckel" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; margin-bottom: 10px;">
-                            <button id="generateDisplayLinkBtn" class="save-btn" style="margin-top: 10px; width: fit-content;">Skapa displaylänk</button>
+                            <button id="generateDisplayLinkBtn" class="save-btn" style="width: fit-content;">Skapa displaylänk</button>
                         </div>
                         
+                        <!-- Dold från början, visas när man klickat på skapa-knappen ovan -->
                         <div id="displayLinkContainer" style="display:none; margin-top:20px; padding:15px; background:#e3f2fd; border:1px solid #90caf9; border-radius:8px;">
                             <p style="margin-top:0; font-weight:bold; color:#0277bd; font-size:0.95rem; margin-bottom: 10px;">✅ Länk genererad för aktuell arbetsplats!</p>
                             <input type="text" id="generatedDisplayLink" readonly style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; margin-bottom:10px; background:#fff; color:#333; box-sizing: border-box;">
@@ -95,6 +111,9 @@
                     </div>
                 </div>
 
+                <!-- ===================================== -->
+                <!-- FLIK: VÄDER & PLATS                   -->
+                <!-- ===================================== -->
                 <div id="tab-weather" class="tab-pane">
                     <div class="setting-card">
                         <h3>🌤️ Väderinställningar</h3>
@@ -105,33 +124,44 @@
                                 <button id="searchLocationBtn" class="save-btn" style="width:auto; margin-top:0; background-color:#2196F3;">🔍 Sök</button>
                             </div>
                         </div>
+                        
+                        <!-- Lista med sökresultat från väder-API:et -->
                         <div id="searchResultsContainer" style="display:none; margin-bottom:20px;">
                             <select id="locationResultsSelect" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ccc; font-size:1rem;"></select>
                         </div>
+                        
                         <div style="background:#f5f5f5; padding:15px; border-radius:6px; border:1px solid #ddd; margin-bottom:20px;">
                             <strong style="display:block; margin-bottom:5px;">Nuvarande plats:</strong>
                             <div id="currentWeatherDisplay" style="font-size:1.1rem; color:#333;">Laddar...</div>
-                            <input type="hidden" id="weatherLat"><input type="hidden" id="weatherLong"><input type="hidden" id="weatherCityName">
+                            <input type="hidden" id="weatherLat">
+                            <input type="hidden" id="weatherLong">
+                            <input type="hidden" id="weatherCityName">
                         </div>
                         <button id="saveWeatherBtn" class="save-btn">Spara Inställningar</button>
                     </div>
                 </div>
 
+                <!-- ===================================== -->
+                <!-- FLIK: UTSKRIFT & EXPORT               -->
+                <!-- ===================================== -->
                 <div id="tab-export" class="tab-pane">
                     <div class="setting-card">
                         <h3>🖨️ Skriv ut eller Spara Bild</h3>
-
                         <div class="form-group">
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                                 <div><span style="font-size:0.85em; color:#666;">Från:</span><input type="date" id="printStartDate"></div>
                                 <div><span style="font-size:0.85em; color:#666;">Till:</span><input type="date" id="printEndDate"></div>
                             </div>
                         </div>
+                        
+                        <!-- Snabbvalsknappar -->
                         <div style="display:flex; gap:10px; margin-bottom:20px;">
                             <button id="btnSetToday" class="list-btn" style="border:1px solid #ccc;">Idag</button>
                             <button id="btnSetWeek" class="list-btn" style="border:1px solid #ccc;">Denna vecka</button>
                             <button id="btnSetNextWeek" class="list-btn" style="border:1px solid #ccc;">Nästa vecka</button>
                         </div>
+                        
+                        <!-- Export-actions -->
                         <div style="display:flex; gap:15px;">
                             <button id="doPrintBtn" class="save-btn" style="background-color:#455a64; flex:1;">🖨️ Skriv ut (PDF)</button>
                             <button id="doImageBtn" class="save-btn" style="background-color:#0277bd; flex:1;">📷 Spara som bild / ZIP</button>
@@ -139,6 +169,9 @@
                     </div>
                 </div>
 
+                <!-- ===================================== -->
+                <!-- FLIK: PLATSER & STATIONER             -->
+                <!-- ===================================== -->
                 <div id="tab-stations" class="tab-pane">
                     <div class="setting-card">
                         <h3>📍 Hantera Platser</h3>
@@ -149,15 +182,20 @@
                                 <button id="addStationBtn" class="save-btn" style="width:auto; padding:0 20px;">Lägg till</button>
                                 <button id="cancelStationEditBtn" class="cancel-edit-btn" style="display:none;">Avbryt</button>
                             </div>
+                            <!-- Skapar ett visuellt mellanrum i schemat -->
                             <button id="addSpacerBtn" class="save-btn" style="background-color: #7f8c8d; margin-top:10px;">➕ Lägg till "Mellanrum"</button>
                         </div>
                         <div style="margin-top:20px;">
                             <h4 style="font-size:0.9rem; margin-bottom:10px; opacity:0.7;">Nuvarande ordning:</h4>
+                            <!-- Fylls dynamiskt från databasen -->
                             <div id="stationListContainer" class="list-container">Laddar...</div>
                         </div>
                     </div>
                 </div>
 
+                <!-- ===================================== -->
+                <!-- FLIK: ARBETSPASS (TIDER)              -->
+                <!-- ===================================== -->
                 <div id="tab-shifts" class="tab-pane">
                     <div class="setting-card">
                         <h3>⏰ Hantera Arbetspass</h3>
@@ -173,15 +211,21 @@
                         </div>
                         <div style="margin-top:20px;">
                             <h4 style="font-size:0.9rem; margin-bottom:10px; opacity:0.7;">Aktiva pass:</h4>
+                            <!-- Fylls dynamiskt från databasen -->
                             <div id="shiftListContainer" class="list-container">Laddar...</div>
                         </div>
                     </div>
                 </div>
 
+                <!-- ===================================== -->
+                <!-- FLIK: UTSEENDE & TEMA                 -->
+                <!-- ===================================== -->
                 <div id="tab-theme" class="tab-pane">
                     <div class="setting-card">
                         <h3>🎨 Utseende & Tema</h3>
                         <div style="display:flex; gap:40px; align-items: flex-start; flex-wrap: wrap;">
+                            
+                            <!-- Vänster: Kontroller för tema -->
                             <div style="width: 280px; flex-shrink: 0;">
                                 <div class="form-group">
                                     <label>Aktivt tema på skärmen:</label>
@@ -207,6 +251,7 @@
                                 <button id="deleteThemeBtn" class="list-btn" style="width:100%; justify-content: center; background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;">🗑️ Ta bort valt tema</button>
                             </div>
 
+                            <!-- Höger: Live preview i en Iframe -->
                             <div style="flex-grow: 1; min-width: 300px;">
                                 <label style="font-weight:600; display:block; margin-bottom:10px;">Live Förhandsgranskning:</label>
                                 <div class="preview-container" style="padding:0; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; position:relative; width:100%; height:420px; background:#000;">
@@ -217,13 +262,18 @@
                     </div>
                 </div>
 
+                <!-- ===================================== -->
+                <!-- FLIK: ANVÄNDARE & KONTON              -->
+                <!-- ===================================== -->
                 <div id="tab-admins" class="tab-pane">
                     <div class="setting-card">
                         <h3>👥 Användare & Konton</h3>
                         <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">Här hanterar du all personal och alla som har tillgång till systemet.</p>
                         
+                        <!-- Lägg till / Redigera användare formulär -->
                         <div class="form-group" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e0e0e0;">
                             <label style="margin-bottom:10px; display:block; font-weight:800; color:#333;">Skapa eller redigera konto:</label>
+                            
                             <input type="text" id="newAdminDisplayName" placeholder="Visningsnamn (t.ex. Kalle - Hur personen ska visas på schemat)" style="width:100%; margin-bottom:10px; border: 2px solid #90caf9;">
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
                                 <input type="text" id="newAdminFirstName" placeholder="Riktigt Förnamn">
@@ -239,15 +289,18 @@
                                 <option value="admin">🔧 Administratör (Kan schemalägga och redigera alla)</option>
                                 <option value="superadmin">👑 Super-Admin (Dold på schemat, tillgång till allt)</option>
                             </select>
+                            
                             <div style="display:flex; gap:10px;">
                                 <button id="addAdminBtn" class="save-btn" style="flex:1;">💾 Spara / Skapa konto</button>
                                 <button id="cancelAdminEditBtn" class="cancel-edit-btn" style="display:none; flex:1;">Avbryt</button>
                             </div>
                         </div>
                         
+                        <!-- Lista över nuvarande användare -->
                         <div style="margin-top:30px;">
                             <h4 style="font-size:0.95rem; margin-bottom:10px; color:#333; font-weight:800;">Kontoöversikt:</h4>
                             
+                            <!-- Sökfunktion -->
                             <div class="form-group" style="margin-bottom: 15px;">
                                 <input type="text" id="adminSearchInput" placeholder="🔍 Sök på namn, användarnamn eller roll..." style="width:100%; padding:10px; border-radius:6px; border:1px solid #ccc; font-size:0.95rem; box-sizing: border-box;">
                             </div>
@@ -257,11 +310,15 @@
                     </div>
                 </div>
 
+                <!-- ===================================== -->
+                <!-- FLIK: HANTERA FRÅNVARO                -->
+                <!-- ===================================== -->
                 <div id="tab-absences" class="tab-pane">
                     <div class="setting-card">
                         <h3 style="color:#0277bd;">🏖️ Hantera Frånvaro</h3>
                         <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">Lägg in sjukdom, semester, VAB etc. Personen plockas automatiskt bort från krockande pass och kan inte schemaläggas under perioden.</p>
                         
+                        <!-- Formulär för att registrera frånvaro -->
                         <div class="form-group" style="background:#e3f2fd; padding:20px; border-radius:8px; border:1px solid #90caf9;">
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom: 15px;">
                                 <div class="form-group" style="margin:0;">
@@ -289,6 +346,7 @@
                             <button id="saveAbsenceBtn" class="save-btn" style="width:100%; background-color:#0277bd;">Spara Frånvaro</button>
                         </div>
                         
+                        <!-- Lista över registrerad frånvaro -->
                         <div style="margin-top:30px;">
                             <h4 style="font-size:0.95rem; margin-bottom:10px; color:#333; font-weight:800;">Aktuell frånvaro:</h4>
                             <div id="absenceListContainer" class="list-container" style="max-height: 400px; overflow-y: auto; background:#fff; padding:10px;">Laddar...</div>
@@ -296,11 +354,15 @@
                     </div>
                 </div>
 
+                <!-- ===================================== -->
+                <!-- FLIK: STATISTIK                       -->
+                <!-- ===================================== -->
                 <div id="tab-statistics" class="tab-pane">
                     <div class="setting-card">
                         <h3 style="color:#0277bd;">📊 Statistik & Arbetade Pass</h3>
                         <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">Välj en tidsperiod för att se hur många pass varje person har varit schemalagd på (endast publicerade pass räknas).</p>
                         
+                        <!-- Datumväljare för statistik -->
                         <div class="form-group" style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e0e0e0; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 150px;">
                                 <label style="font-weight: bold; font-size: 0.85rem; color: #555;">Från datum:</label>
@@ -314,6 +376,7 @@
                         </div>
                         
                         <div style="margin-top:20px;">
+                            <!-- Containern där statistiken renderas via stats.js -->
                             <div id="statsResultsContainer" class="list-container" style="background:#fff; min-height: 200px; border: 1px solid #ddd;">
                                 <div style="padding: 30px; text-align: center; color: #888;">Välj datum och klicka på "Hämta statistik".</div>
                             </div>
@@ -321,6 +384,9 @@
                     </div>
                 </div>
 
+                <!-- ===================================== -->
+                <!-- FLIK: ARBETSPLATSER (Super-Admin)     -->
+                <!-- ===================================== -->
                 <div id="tab-workplaces" class="tab-pane">
                     <div class="setting-card" style="border: 2px solid #90caf9;">
                         <h3 style="color:#0277bd;">🏢 Hantera Arbetsplatser</h3>
@@ -335,13 +401,18 @@
                         
                         <div style="margin-top:20px;">
                             <h4 style="font-size:0.9rem; margin-bottom:10px; opacity:0.7;">Systemets arbetsplatser:</h4>
+                            <!-- Lista över alla tenanter. Fylls i av settings.js -->
                             <div id="workplaceListContainer" class="list-container">Laddar...</div>
                         </div>
                     </div>
                 </div>
 
+                <!-- ===================================== -->
+                <!-- FLIK: MANUAL (Iframe)                 -->
+                <!-- ===================================== -->
                 <div id="tab-manual" class="tab-pane">
                     <div class="setting-card" style="padding: 0; overflow: hidden; height: 80vh; border:none; box-shadow:none; background:transparent;">
+                        <!-- Bäddar in manual.html inuti inställningarna -->
                         <iframe src="manual.html" style="width: 100%; height: 100%; border: none; border-radius: 8px; background: white; box-shadow: var(--shadow);"></iframe>
                     </div>
                 </div>
@@ -350,8 +421,14 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- 4. DOLDA KOMPONENTER (Modaler & Notiser)   -->
+    <!-- ========================================== -->
+    
+    <!-- Behållare för systemmeddelanden (Toast) -->
     <div id="toast-container"></div> 
     
+    <!-- Bekräftelseruta vid borttagning etc. (Styrs via utils.js) -->
     <div id="confirmModal" class="modal-overlay">
         <div class="modal-box">
             <h3 style="margin-top:0;">Bekräfta</h3>
@@ -362,5 +439,6 @@
             </div>
         </div>
     </div>
+
 </body>
 </html>

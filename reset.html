@@ -2,19 +2,30 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Anpassad för mobil/PWA (Förhindrar oönskad inzoomning vid dubbelklick) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>STRUL - Återställ Lösenord</title>
     
+    <!-- Typsnitt & Stilar -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">    
     <script type="module" src="js/main.js"></script>
     <link rel="stylesheet" href="css/base.css">
+    
+    <!-- Återanvänder designen från inloggningssidan -->
     <link rel="stylesheet" href="css/login.css">
 </head>
 <body class="login-view" id="page-reset">
+    
     <div class="login-wrapper">
         <div class="login-card">
             
+            <!-- ========================================== -->
+            <!-- 1. HUVUDRUBRIK & LOGOTYP                   -->
+            <!-- ========================================== -->
             <div class="login-header">
+                
+                <!-- STRUL-logotyp (SVG) -->
                 <div class="logo-container">
                     <svg class="strul-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3" fill="rgba(2, 119, 189, 0.1)"></circle>
@@ -27,28 +38,42 @@
                         <path d="M9.5 13.5l-3 3"></path><circle cx="5.5" cy="17.5" r="1.5"></circle>
                     </svg>
                 </div>
+                
                 <h1 class="strul-title">Välj nytt lösenord</h1>
                 <p class="strul-desc">Skriv in ett nytt lösenord för ditt konto.</p>
             </div>
             
+            <!-- ========================================== -->
+            <!-- 2. FORMULÄR: NYTT LÖSENORD                 -->
+            <!-- ========================================== -->
+            <!-- Logiken för verifiering av lösenorden ligger i auth.js (frontend) -->
             <div id="resetForm">
+                
                 <div class="input-group">
                     <input type="password" id="newPassInput" placeholder="Nytt lösenord">
                 </div>
+                
                 <div class="input-group">
                     <input type="password" id="confirmPassInput" placeholder="Bekräfta nytt lösenord">
                 </div>
                 
                 <button id="resetSubmitBtn" class="action-btn primary">Spara nytt lösenord</button>
                 
+                <!-- Avbryt och återgå till startsidan -->
                 <div style="margin-top: 20px; text-align: center;">
                     <a href="index.html" class="link-text">Avbryt och gå till inloggning</a>
                 </div>
+                
             </div>
 
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- 3. DOLDA KOMPONENTER (Notiser)             -->
+    <!-- ========================================== -->
+    <!-- Behållare för flytande notiser (Toast) t.ex. "Lösenorden matchar inte" -->
     <div id="toast-container"></div>
+    
 </body>
 </html>

@@ -1,5 +1,32 @@
-export const APP_VERSION = "v3.12"; // Ändra bara här i framtiden!
+/**
+ * ============================================================================
+ * CONFIG.JS
+ * Central konfigurationsfil för applikationen.
+ * Innehåller globala konstanter och inställningar som används över hela systemet.
+ * ============================================================================
+ */
 
-// Vi kan ta bort DEFAULT_STATIONS eftersom stationer nu hämtas 
-// från den riktiga databasen för varje arbetsplats.
-export const DAYS = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"];
+/**
+ * Applikationens aktuella versionsnummer.
+ * Uppdatera denna sträng vid nya releaser. Denna variabel ritas automatiskt ut
+ * på alla sidor i gränssnittet (oftast i sidfoten) via main.js.
+ * @constant {string}
+ */
+export const APP_VERSION = "v3.13";
+
+/**
+ * Svenska namn för veckans dagar.
+ * Används konsekvent i hela gränssnittet (t.ex. i veckovyn och på TV-skärmen)
+ * för att översätta JavaScripts inbyggda (engelska/sifferbaserade) datumformat.
+ * Obs: Arrayen börjar på Måndag (index 0) enligt svensk kalenderstandard (ISO 8601).
+ * @constant {Array<string>}
+ */
+export const DAYS = [
+    "Måndag", 
+    "Tisdag", 
+    "Onsdag", 
+    "Torsdag", 
+    "Fredag", 
+    "Lördag", 
+    "Söndag"
+];

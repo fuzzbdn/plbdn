@@ -1,11 +1,23 @@
-// Fil: js/settings/absences.js
+/**
+ * ============================================================================
+ * ABSENCES.JS (Admin/Inställningar)
+ * Hanterar fliken "Frånvaro" under Inställningar.
+ * Låter administratören registrera Sjukdom, VAB och Semester. 
+ * Integrerar med backend för att automatiskt radera eventuella krockande 
+ * arbetspass för personen under den valda perioden.
+ * ============================================================================
+ */
 
 import { fetchData, apiAction } from '../service.js';
 import { showToast, showConfirm, escapeHTML } from '../utils.js';
 import { getUsers, getAbsences, setAbsences } from '../store.js';
 
+/** @type {string|number|null} Håller ID:t för den frånvaro som redigeras just nu. Null = Skapa ny. */
 let editingAbsenceId = null;
 
+/**
+ * Startar upp frånvarofliken, bygger formuläret och laddar in aktuell frånvarodata.
+ */
 export function initAbsencesTab() {
     const saveBtn = document.getElementById('saveAbsenceBtn');
     const userSelect = document.getElementById('absUser');
@@ -15,12 +27,20 @@ export function initAbsencesTab() {
 
     if (!saveBtn || !userSelect) return;
 
+    /**
+     * Hämtar dagens datum i lokalt svenskt format (YYYY-MM-DD)
+     * med hänsyn till tidszoner.
+     * @returns {string} Dagens datum.
+     */
     const getToday = () => {
         const now = new Date();
         return new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
     };
 
-    // Skapa en Avbryt-knapp dynamiskt
+    // ==========================================
+    // 1. DYNAMISKT UI (Avbryt-knapp)
+    // ==========================================
+    // Skapa en Avbryt-knapp dynamiskt om den inte redan finns i HTML:en
     let cancelBtn = document.getElementById('cancelAbsenceEditBtn');
     if (!cancelBtn) {
         cancelBtn = document.createElement('button');
@@ -33,24 +53,31 @@ export function initAbsencesTab() {
         const btnContainer = document.createElement('div');
         btnContainer.style.display = 'flex';
         btnContainer.style.gap = '10px';
+        
         saveBtn.parentNode.insertBefore(btnContainer, saveBtn);
         btnContainer.appendChild(saveBtn);
         btnContainer.appendChild(cancelBtn);
         saveBtn.style.flex = '1';
     }
 
+    // Fyll dropdown-listan med alla användare från Store
     userSelect.innerHTML = getUsers().map(u =>
         `<option value="${escapeHTML(String(u.id))}">${escapeHTML(u.display_name || u.first_name || u.username)}</option>`
     ).join('');
 
+    // Sätt defaultvärden
     startInput.value = getToday();
     endInput.value = getToday();
 
+    /**
+     * Återställer formuläret till "Skapa Ny"-läge.
+     */
     const resetForm = () => {
         editingAbsenceId = null;
         startInput.value = getToday();
         endInput.value = getToday();
-        userSelect.disabled = false;
+        userSelect.disabled = false; // Lås upp användarvalet igen
+        
         saveBtn.innerText = 'Spara Frånvaro';
         saveBtn.style.backgroundColor = '#0277bd';
         cancelBtn.style.display = 'none';
@@ -58,24 +85,37 @@ export function initAbsencesTab() {
 
     cancelBtn.onclick = resetForm;
 
+    // ==========================================
+    // 2. HANTERA REDIGERING & RADERING
+    // ==========================================
+    
+    /**
+     * Startar redigeringsläget för en befintlig frånvaro.
+     * @param {string|number} id - Frånvarons ID.
+     */
     const startEditAbsence = (id) => {
         const abs = getAbsences().find(a => String(a.id) === String(id));
         if (!abs) return;
 
         editingAbsenceId = abs.id;
         userSelect.value = abs.user_id;
-        userSelect.disabled = true;
+        userSelect.disabled = true; // Man kan inte byta person på en befintlig frånvaro
         typeSelect.value = abs.type;
         startInput.value = abs.start_date.split('T')[0];
         endInput.value = abs.end_date.split('T')[0];
 
         saveBtn.innerText = 'Spara Ändringar';
-        saveBtn.style.backgroundColor = '#2e7d32';
+        saveBtn.style.backgroundColor = '#2e7d32'; // Grön färg för att markera redigering
         cancelBtn.style.display = 'inline-flex';
 
+        // Scrolla mjukt upp till formuläret
         document.getElementById('tab-absences').scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
+    /**
+     * Raderar en frånvaro efter bekräftelse.
+     * @param {string|number} id - Frånvarons ID.
+     */
     const deleteAbsence = async (id) => {
         if (await showConfirm("Radera denna frånvaro?")) {
             const res = await apiAction('delete_absence', { id });
@@ -83,7 +123,8 @@ export function initAbsencesTab() {
                 showToast(res.error || 'Kunde inte radera frånvaron', 'error');
                 return;
             }
-            // FIX: Felhantering om fetchData misslyckas
+            
+            // Hämta om hela frånvarolistan för att säkerställa att vi är synkade
             const fetched = await fetchData('absences');
             if (fetched?.success) {
                 setAbsences(fetched.data);
@@ -95,6 +136,12 @@ export function initAbsencesTab() {
         }
     };
 
+    // ==========================================
+    // 3. RENDERING AV LISTAN
+    // ==========================================
+    /**
+     * Ritar ut alla sparade frånvaroposter i gränssnittet.
+     */
     const renderAbsences = () => {
         const absences = getAbsences();
         const cont = document.getElementById('absenceListContainer');
@@ -116,7 +163,7 @@ export function initAbsencesTab() {
                 ? a.start_date.split('T')[0]
                 : `${a.start_date.split('T')[0]} till ${a.end_date.split('T')[0]}`;
 
-            // FIX: Inga inline onclick — använder data-attribut och event listeners istället
+            // Modern DOM-eventhantering via klasser och data-attribut (säkrare mot XSS)
             html += `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #ddd; background:#fff; margin-bottom:5px; border-radius:4px;">
                 <div>
@@ -132,7 +179,7 @@ export function initAbsencesTab() {
 
         cont.innerHTML = html;
 
-        // FIX: Event listeners sätts efter att innerHTML är uppdaterat
+        // Koppla knapparna med EventListeners efter att HTML:en injicerats
         cont.querySelectorAll('.edit-absence-btn').forEach(btn => {
             btn.onclick = () => startEditAbsence(btn.dataset.id);
         });
@@ -141,6 +188,9 @@ export function initAbsencesTab() {
         });
     };
 
+    // ==========================================
+    // 4. SPARA FRÅNVARO (CRUD)
+    // ==========================================
     saveBtn.onclick = async () => {
         const user_id = userSelect.value;
         const type = typeSelect.value;
@@ -153,6 +203,7 @@ export function initAbsencesTab() {
         const u = getUsers().find(x => String(x.id) === String(user_id));
         const name = u ? (u.display_name || u.first_name) : "Personen";
 
+        // Tydliga varningstexter för administratören, eftersom backend kommer att ta bort krockande pass
         const msg = editingAbsenceId
             ? `Du ändrar nu frånvaron för ${name} till att gälla mellan ${start_date} och ${end_date}.\n\n⚠️ Eventuella inbokade pass under denna NYA period kommer att rensas. Vill du fortsätta?`
             : `Detta markerar ${name} som ${type} mellan ${start_date} och ${end_date}.\n\n⚠️ Eventuella inbokade pass under denna period kommer att rensas automatiskt. Vill du fortsätta?`;
@@ -162,22 +213,25 @@ export function initAbsencesTab() {
             if (editingAbsenceId) payload.id = editingAbsenceId;
 
             const res = await apiAction('save_absence', payload);
+            
             if (res.success) {
                 showToast(editingAbsenceId ? "Frånvaro uppdaterad!" : "Frånvaro sparad!", "success");
                 resetForm();
-                // FIX: Felhantering om fetchData misslyckas
-            const fetched = await fetchData('absences');
-            if (fetched?.success) {
-                setAbsences(fetched.data);
-                renderAbsences();
-            } else {
-                showToast('Kunde inte ladda om frånvarolistan', 'error');
-            }
+                
+                // Uppdatera listan efter lyckat sparande
+                const fetched = await fetchData('absences');
+                if (fetched?.success) {
+                    setAbsences(fetched.data);
+                    renderAbsences();
+                } else {
+                    showToast('Kunde inte ladda om frånvarolistan', 'error');
+                }
             } else {
                 showToast(res.error || "Ett fel uppstod", "error");
             }
         }
     };
 
+    // Initial rendering vid sidladdning
     renderAbsences();
 }

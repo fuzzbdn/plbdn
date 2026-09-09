@@ -1,11 +1,29 @@
+/**
+ * ============================================================================
+ * EXPORT.JS
+ * Hanterar fliken "Dela & Exportera" under Inställningar.
+ * Ansvarar för att generera fysiska utskrifter (Pappers-scheman) via 
+ * fönstrets print()-dialog, samt att generera bildfiler (PNG) av scheman 
+ * som kan zippas ihop och laddas ner lokalt (via html2canvas och JSZip).
+ * ============================================================================
+ */
+
 import { fetchData } from '../service.js';
 import { showToast, isLight, escapeHTML, getISOWeek } from '../utils.js';
 import { DAYS } from '../config.js';
 import { getCustomThemes } from '../store.js';
 
 // ==========================================
-// Hjälpfunktioner (top-level för att undvika djup nästling)
+// HJÄLPFUNKTIONER (Bygger innehåll)
 // ==========================================
+
+/**
+ * Formaterar innehållet i en "schemacell" med personalens namn och eventuella
+ * tilläggsnoteringar.
+ * 
+ * @param {Array} assignedRows - Array med pass för en specifik station och tid.
+ * @returns {string} Färdig HTML-sträng separerad med '/'.
+ */
 function buildShiftCellContent(assignedRows) {
     return assignedRows.map(a => {
         const name = escapeHTML(a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim());
@@ -14,6 +32,20 @@ function buildShiftCellContent(assignedRows) {
     }).join(' / ');
 }
 
+// ==========================================
+// UTSKRIFTSGENERATOR (Pappersutskrift)
+// ==========================================
+
+/**
+ * Genererar HTML-koden för ett snyggt pappersschema för en (1) specifik dag.
+ * Optimerat för skrivare via "@media print" i CSS.
+ * 
+ * @param {Date} dateObj - Datumet som ska skrivas ut.
+ * @param {Array} stations - Alla arbetsstationer.
+ * @param {Array} shifts - Alla arbetspass.
+ * @param {Array} schedule - Rådata för aktuella schemapass.
+ * @returns {string} En komplett HTML-sträng.
+ */
 function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
     const iso = getISOWeek(dateObj);
     const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1;
@@ -37,9 +69,12 @@ function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
             </div>`;
 
     stations.forEach(st => {
+        // Om det är ett "mellanrum", rita bara ut ett grått streck på pappret
         if (st.is_spacer) { html += `<div class="print-spacer"></div>`; return; }
+        
         const bg = escapeHTML(st.color);
         const fg = isLight(st.color) ? '#000' : '#fff';
+        
         const shiftCells = shifts.map(sh => {
             const assignedRows = schedule.filter(r =>
                 r.is_published &&
@@ -49,6 +84,7 @@ function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
             );
             return `<div class="print-shift-cell">${buildShiftCellContent(assignedRows)}</div>`;
         }).join('');
+        
         html += `
         <div class="print-grid-row print-data-row" style="grid-template-columns: 200px repeat(${shifts.length}, 1fr);">
             <div class="print-station-cell" style="background:${bg}; color:${fg};">${escapeHTML(st.name)}</div>
@@ -59,7 +95,15 @@ function generateSingleDayPrintHtml(dateObj, stations, shifts, schedule) {
     return html;
 }
 
-// Bygger iframe-innehållet via DOM-manipulation — ingen innerHTML med användardata
+// ==========================================
+// BILDGENERATOR (DOM för html2canvas)
+// ==========================================
+
+/**
+ * Bygger en ren HTML DOM (objektträd) att injicera i en osynlig iframe.
+ * Görs via document.createElement() istället för innerHTML för ökad 
+ * prestanda och säkerhet. Bygger upp en visuell TV-skärm att fota av.
+ */
 function buildDisplayDomForImage(doc, dateObj, stations, shifts, schedule) {
     const iso = getISOWeek(dateObj);
     const dayIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1;
@@ -84,6 +128,7 @@ function buildDisplayDomForImage(doc, dateObj, stations, shifts, schedule) {
     const headerRow = doc.createElement('div');
     headerRow.className = 'time-header-row';
     headerRow.appendChild(doc.createElement('div'));
+    
     shifts.forEach(sh => {
         const th = doc.createElement('div');
         th.className = 'time-header';
@@ -118,16 +163,19 @@ function buildDisplayDomForImage(doc, dateObj, stations, shifts, schedule) {
                 r.station_id === st.id &&
                 r.shift_id === sh.id
             );
+            
             const card = doc.createElement('div');
             card.className = `shift-card${assignedRows.length === 0 ? ' empty' : ''}`;
             card.dataset.label = sh.label;
 
             assignedRows.forEach((a, i) => {
                 if (i > 0) card.appendChild(doc.createTextNode(' / '));
+                
                 const nameSpan = doc.createElement('span');
                 nameSpan.style.fontWeight = '700';
                 nameSpan.textContent = a.display_name || `${a.first_name || ''} ${a.last_name || ''}`.trim();
                 card.appendChild(nameSpan);
+                
                 if (a.note) {
                     const noteSpan = doc.createElement('span');
                     noteSpan.style.cssText = 'color:#888; font-size:0.8em; font-weight:400;';
@@ -145,6 +193,10 @@ function buildDisplayDomForImage(doc, dateObj, stations, shifts, schedule) {
     return wrapper;
 }
 
+/**
+ * Hämtar det aktiva CSS-temat för att säkerställa att bildexporten
+ * ser ut precis som TV-skärmen (t.ex. Dark Mode).
+ */
 function getCustomCss() {
     const themeSelect = document.getElementById('themeSelect');
     if (!themeSelect?.value || themeSelect.value === 'light') return '';
@@ -152,6 +204,14 @@ function getCustomCss() {
     return t ? t.css : '';
 }
 
+// ==========================================
+// EXEKVERING (Utskrift & Bildgenerering)
+// ==========================================
+
+/**
+ * Bygger en osynlig div på sidan, fyller den med pappers-versionen av schemat,
+ * och triggar webbläsarens utskriftsdialog.
+ */
 async function runPrintExport(sDate, eDate, stations, shifts, schedule) {
     const pc = document.getElementById('print-container') || document.createElement('div');
     pc.id = 'print-container';
@@ -159,15 +219,23 @@ async function runPrintExport(sDate, eDate, stations, shifts, schedule) {
 
     let html = '';
     let loopDate = new Date(sDate);
+    // Iterera genom datumspannet dag för dag
     while (loopDate <= eDate) {
         html += generateSingleDayPrintHtml(new Date(loopDate), stations, shifts, schedule);
-        loopDate = new Date(loopDate.getTime() + 86400000);
+        loopDate = new Date(loopDate.getTime() + 86400000); // Lägg till 24 timmar
     }
+    
     pc.innerHTML = html;
     window.print();
+    
+    // Rensa upp efter att utskriftsdialogen har hanterats
     setTimeout(() => { pc.innerHTML = ''; }, 1000);
 }
 
+/**
+ * Genererar skärmdumpar (PNG) inuti en dold 1080p iframe via html2canvas.
+ * Vid fler än 1 bild paketeras de automatiskt till en ZIP-fil.
+ */
 async function runImageExport(sDate, eDate, stations, shifts, schedule, customCss) {
     if (typeof html2canvas === 'undefined') return showToast("html2canvas saknas.", "error");
     if (typeof JSZip === 'undefined') return showToast("JSZip saknas.", "error");
@@ -176,12 +244,14 @@ async function runImageExport(sDate, eDate, stations, shifts, schedule, customCs
     const txt = btn.innerText;
     btn.innerText = "Genererar...";
 
+    // Hämta och baka in systemets CSS så html2canvas kan rendera det korrekt
     const [baseCssText, displayCssText] = await Promise.all([
         fetch('css/base.css').then(r => r.text()).catch(() => ''),
         fetch('css/display.css').then(r => r.text()).catch(() => '')
     ]);
     const inlinedCss = `${baseCssText}\n${displayCssText}\n* { transition: none !important; animation: none !important; } body { margin: 0; overflow: hidden; background-color: var(--bg-color, #f0f2f5); } ::-webkit-scrollbar { display: none; }`;
 
+    // Skapa en dold "skärm" (Iframe)
     const iframe = document.createElement('iframe');
     iframe.style.cssText = "position:absolute; top:-9999px; left:0; width:1920px; height:1080px; border:none;";
     document.body.appendChild(iframe);
@@ -193,6 +263,7 @@ async function runImageExport(sDate, eDate, stations, shifts, schedule, customCs
         let singleImageBase64 = null;
         let singleImageName = "";
 
+        // Gå igenom valt datumintervall dag för dag
         while (loopDate <= eDate) {
             const iframeDoc = iframe.contentDocument;
             const iframeLoaded = new Promise(resolve => { iframe.onload = resolve; });
@@ -203,19 +274,23 @@ async function runImageExport(sDate, eDate, stations, shifts, schedule, customCs
             iframeDoc.body.className = 'display-view';
             iframeDoc.body.id = 'page-display';
 
+            // Importera typsnitt
             const fontLink = iframeDoc.createElement('link');
             fontLink.rel = 'stylesheet';
             fontLink.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap';
             iframeDoc.head.appendChild(fontLink);
 
+            // Injicera grund-CSS
             const styleEl = iframeDoc.createElement('style');
             styleEl.textContent = inlinedCss;
             iframeDoc.head.appendChild(styleEl);
 
+            // Montera dagens layout i iframen
             iframeDoc.body.appendChild(
                 buildDisplayDomForImage(iframeDoc, new Date(loopDate), stations, shifts, schedule)
             );
 
+            // Injicera eventuellt custom-tema (t.ex. Dark Mode)
             if (customCss) {
                 const customStyleEl = iframeDoc.createElement('style');
                 customStyleEl.textContent = customCss;
@@ -223,30 +298,38 @@ async function runImageExport(sDate, eDate, stations, shifts, schedule, customCs
             }
 
             await iframeLoaded;
+            
+            // Vänta en "frame" (ca 16ms) så webbläsaren hinner rita upp färgerna korrekt
             await new Promise(r => requestAnimationFrame(r));
 
             try {
+                // Ta skärmdump!
                 const canvas = await html2canvas(iframeDoc.body, {
-                    scale: 2, useCORS: true, backgroundColor: iframeDoc.body.style.backgroundColor || '#f0f2f5'
+                    scale: 2, // Retina/High-Res
+                    useCORS: true, 
+                    backgroundColor: iframeDoc.body.style.backgroundColor || '#f0f2f5'
                 });
 
                 const lDateStr = new Date(loopDate.getTime() - (loopDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
                 const base64Img = canvas.toDataURL('image/png');
 
+                // Spara för nedladdning (om det bara är en fil)
                 if (count === 0) {
                     singleImageBase64 = base64Img;
                     singleImageName = `Schema-${lDateStr}.png`;
                 }
 
+                // Stoppa filen inuti ZIP-arkivet (ta bort "data:image/png;base64," från strängen först)
                 zip.file(`Schema-${lDateStr}.png`, base64Img.split('base64,')[1], { base64: true });
                 count++;
             } catch (e) {
                 console.error("Kunde inte skapa bild:", e);
             }
 
-            loopDate = new Date(loopDate.getTime() + 86400000);
+            loopDate = new Date(loopDate.getTime() + 86400000); // Nästa dag
         }
 
+        // Nedladdningslogik (Enkel fil vs ZIP)
         if (count === 1 && singleImageBase64) {
             const link = document.createElement('a');
             link.download = singleImageName;
@@ -259,11 +342,14 @@ async function runImageExport(sDate, eDate, stations, shifts, schedule, customCs
                 const startInp = document.getElementById('printStartDate');
                 const endInp = document.getElementById('printEndDate');
                 const content = await zip.generateAsync({ type: "blob" });
+                
                 const link = document.createElement('a');
                 link.download = `Scheman_${startInp.value}_till_${endInp.value}.zip`;
+                
                 const url = URL.createObjectURL(content);
                 link.href = url;
                 link.click();
+                
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
                 showToast(`Klar! ${count} bilder sparade i en ZIP.`, "success");
             } catch (e) {
@@ -277,6 +363,10 @@ async function runImageExport(sDate, eDate, stations, shifts, schedule, customCs
     }
 }
 
+// ==========================================
+// HUVUD-FUNKTION (Initiering av fliken)
+// ==========================================
+
 export function initExportTab(currentSettings) {
     const btnToday    = document.getElementById('btnSetToday');
     const btnWeek     = document.getElementById('btnSetWeek');
@@ -288,27 +378,39 @@ export function initExportTab(currentSettings) {
 
     if (!startInp || !endInp) return;
 
+    /**
+     * Ställer in start- och slutdatumfälten (hanterar tidzoner).
+     */
     const setDates = (start, end) => {
         const tz = start.getTimezoneOffset() * 60000;
         startInp.value = new Date(start.getTime() - tz).toISOString().split('T')[0];
         endInp.value   = new Date(end.getTime() - tz).toISOString().split('T')[0];
     };
 
+    /**
+     * Hämtar standardantal dagar för export från databasen och applicerar
+     * dessa på kalenderfälten.
+     */
     const applyDefaultDates = async () => {
         const res = await fetchData('settings');
         const days = Number.parseInt(res?.success ? res.data?.exportDefaultDays : currentSettings?.exportDefaultDays) || 1;
+        
         const now = new Date();
         const dStart = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
         const dEnd = new Date(dStart);
         dEnd.setDate(dStart.getDate() + days - 1);
+        
         setDates(dStart, dEnd);
     };
 
+    // Ställ in standarddatum vid laddning
     applyDefaultDates();
 
+    // Återställ standarddatum om användaren klickar på "Export"-fliken i menyn igen
     const exportTabBtn = document.querySelector('button[onclick="openTab(\'tab-export\')"]');
     if (exportTabBtn) exportTabBtn.addEventListener('click', () => applyDefaultDates());
 
+    // Snabbalternativ-knappar (Idag, Denna vecka, Nästa vecka)
     if (btnToday) btnToday.onclick = () => { const d = new Date(); setDates(d, d); };
     if (btnWeek) btnWeek.onclick = () => {
         const d = new Date();
@@ -325,13 +427,19 @@ export function initExportTab(currentSettings) {
         setDates(start, end);
     };
 
+    /**
+     * Samlar ihop all data och exekverar antingen pappersutskrift eller bildexport.
+     * @param {string} mode - 'print' eller 'image'
+     */
     const runExport = async (mode) => {
         const sDate = new Date(startInp.value);
         const eDate = new Date(endInp.value);
+        
         if (sDate > eDate) return showToast("Startdatum måste vara före slutdatum", "error");
 
         showToast("Hämtar data för export...", "info");
 
+        // För att garantera att vi skriver ut dagsfärsk data hämtar vi nytt från databasen (ignorerar cache)
         const results = await Promise.allSettled([
             fetchData('stations'),
             fetchData('shifts'),
@@ -353,6 +461,7 @@ export function initExportTab(currentSettings) {
         }
     };
 
+    // Koppla huvudknapparna
     if (printBtn) printBtn.onclick = () => runExport('print');
     if (imgBtn)   imgBtn.onclick   = () => runExport('image');
 }

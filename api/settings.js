@@ -1,21 +1,34 @@
-// ============================================================================
-// API/SETTINGS.JS - Hanterar stationer, pass, arbetsplatser och inställningar
-// ============================================================================
+/**
+ * ============================================================================
+ * API / SETTINGS.JS (Backend)
+ * Hanterar serverlogiken för systemets kärninställningar.
+ * Detta inkluderar Arbetsplatser (Workplaces), Stationer, Arbetspass (Shifts),
+ * samt det dynamiska JSON-lagringsutrymmet (app_storage) för teman, 
+ * väderkonfiguration och globala rullande meddelanden.
+ * ============================================================================
+ */
 
 import { pool, handleDatabaseError, setupCors, authenticate, JWT_SECRET } from './_shared.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 
 // ==========================================
-// GET-HANTERARE
+// 1. GET-HANTERARE (Hämta data)
 // ==========================================
 
+/**
+ * Hämtar alla tillgängliga arbetsplatser i systemet.
+ * BEHÖRIGHET: Endast Super-Admins får lista eller byta arbetsplatser.
+ */
 async function handleGetWorkplaces(auth) {
-    if (auth.role !== 'superadmin') return { status: 403, body: { success: false, error: "Endast superadmin" } };
+    if (auth.role !== 'superadmin') {
+        return { status: 403, body: { success: false, error: "Endast superadmin" } };
+    }
     const wpRes = await pool.query('SELECT id, name FROM workplaces ORDER BY name ASC');
     return { status: 200, body: { success: true, data: wpRes.rows } };
 }
 
+/** Hämtar alla stationer för den inloggades arbetsplats. */
 async function handleGetStations(auth) {
     const stRes = await pool.query(
         'SELECT * FROM stations WHERE workplace_id = $1 ORDER BY sort_order ASC',
@@ -24,6 +37,7 @@ async function handleGetStations(auth) {
     return { status: 200, body: { success: true, data: stRes.rows } };
 }
 
+/** Hämtar alla arbetspass för den inloggades arbetsplats. */
 async function handleGetShifts(auth) {
     const shRes = await pool.query(
         'SELECT * FROM shifts WHERE workplace_id = $1 ORDER BY sort_order ASC',
@@ -32,11 +46,18 @@ async function handleGetShifts(auth) {
     return { status: 200, body: { success: true, data: shRes.rows } };
 }
 
+/**
+ * Huvudrutin för TV-skärmarna (display.html).
+ * Samlar all nödvändig data för att kunna rita upp ett dagsfärsk schema i 
+ * ETT ENDA databasanrop via Promise.allSettled för maximal prestanda.
+ */
 async function handleGetDisplayBundle(auth, query) {
     const { start_date, end_date, include_config } = query;
     if (!start_date || !end_date) {
         return { status: 400, body: { success: false, error: "Saknar start_date eller end_date" } };
     }
+
+    // Bygg upp de obligatoriska frågorna
     const queries = [
         pool.query('SELECT * FROM stations WHERE workplace_id = $1 ORDER BY sort_order ASC', [auth.workplace]),
         pool.query('SELECT * FROM shifts WHERE workplace_id = $1 ORDER BY sort_order ASC', [auth.workplace]),
@@ -51,6 +72,7 @@ async function handleGetDisplayBundle(auth, query) {
         `, [auth.workplace, start_date, end_date])
     ];
 
+    // Om klienten begärde konfigurationsdata (T.ex. vid nystart av TV-skärmen)
     if (include_config === 'true') {
         queries.push(
             pool.query('SELECT data FROM app_storage WHERE key = $1 AND workplace_id = $2', ['settings', auth.workplace]),
@@ -60,34 +82,53 @@ async function handleGetDisplayBundle(auth, query) {
     }
 
     const results = await Promise.allSettled(queries);
+    
+    // Extrahera resultaten säkert (Fallback till tomma arrayer/objekt om ett query fallerade)
     const getRows = (idx) => results[idx]?.status === 'fulfilled' ? results[idx].value.rows : [];
     const getSingleData = (idx) =>
         results[idx]?.status === 'fulfilled' && results[idx].value.rows[0]
             ? results[idx].value.rows[0].data : {};
 
-    const responseData = { stations: getRows(0), shifts: getRows(1), schedule: getRows(2) };
+    const responseData = { 
+        stations: getRows(0), 
+        shifts: getRows(1), 
+        schedule: getRows(2) 
+    };
+
     if (include_config === 'true') {
         responseData.settings       = getSingleData(3);
         responseData.message        = getSingleData(4);
         responseData.weather_config = getSingleData(5);
     }
+    
     return { status: 200, body: { success: true, data: responseData } };
 }
 
+/**
+ * Hämtar valfri JSON-data från den dynamiska 'app_storage'-tabellen.
+ */
 async function handleGetStorage(auth, type) {
     const allowedGetTypes = ['settings', 'message', 'custom_themes', 'weather_config'];
-    if (!allowedGetTypes.includes(type)) return { status: 400, body: { success: false, error: "Ogiltig typ" } };
+    if (!allowedGetTypes.includes(type)) {
+        return { status: 400, body: { success: false, error: "Ogiltig typ" } };
+    }
+    
     const storeRes = await pool.query(
         'SELECT data FROM app_storage WHERE key = $1 AND workplace_id = $2',
         [type, auth.workplace]
     );
+    
     return { status: 200, body: { success: true, data: storeRes.rows[0]?.data || {} } };
 }
 
 // ==========================================
-// POST-HANTERARE
+// 2. POST-HANTERARE (Skriva data)
 // ==========================================
 
+/**
+ * Genererar en JWT-nyckel (Giltig i 1 år) för att en TV-skärm ska kunna
+ * logga in automatiskt utan lösenord, men enbart i "display"-syfte.
+ */
 function handleGenerateDisplayLink(auth) {
     const token = jwt.sign(
         { purpose: 'display', workplaceId: auth.workplace },
@@ -97,9 +138,11 @@ function handleGenerateDisplayLink(auth) {
     return { status: 200, body: { success: true, token } };
 }
 
+/** Skapar eller uppdaterar en Arbetsplats (Super-Admins). */
 async function handleSaveWorkplace(auth, payload) {
     if (auth.role !== 'superadmin') return { status: 403, body: { success: false, error: "Endast superadmin" } };
     if (!payload?.name?.trim()) return { status: 400, body: { success: false, error: "Namn krävs" } };
+    
     if (payload.id) {
         await pool.query('UPDATE workplaces SET name = $1 WHERE id = $2', [payload.name.trim(), payload.id]);
     } else {
@@ -109,8 +152,10 @@ async function handleSaveWorkplace(auth, payload) {
     return { status: 200, body: { success: true } };
 }
 
+/** Skapar eller uppdaterar en Station (Arbetsplats/Position). */
 async function handleSaveStation(auth, payload) {
     if (!payload?.name?.trim()) return { status: 400, body: { success: false, error: "Namn krävs" } };
+    
     if (payload.id) {
         await pool.query(
             'UPDATE stations SET name = $1, color = $2, is_spacer = $3 WHERE id = $4 AND workplace_id = $5',
@@ -129,8 +174,10 @@ async function handleSaveStation(auth, payload) {
     return { status: 200, body: { success: true } };
 }
 
+/** Skapar eller uppdaterar ett Arbetspass (Tidsblock). */
 async function handleSaveShift(auth, payload) {
     if (!payload?.label?.trim()) return { status: 400, body: { success: false, error: "Etikett krävs" } };
+    
     if (payload.id) {
         await pool.query(
             'UPDATE shifts SET label = $1, time_range = $2 WHERE id = $3 AND workplace_id = $4',
@@ -161,6 +208,7 @@ async function handleDeleteShift(auth, payload) {
     return { status: 200, body: { success: true } };
 }
 
+/** Uppdaterar sorteringsordningen för alla stationer efter Drag & Drop. */
 async function handleReorderStations(auth, payload) {
     if (!Array.isArray(payload)) return { status: 400, body: { success: false, error: "Payload måste vara en array" } };
     await Promise.all(payload.map(item =>
@@ -169,6 +217,7 @@ async function handleReorderStations(auth, payload) {
     return { status: 200, body: { success: true } };
 }
 
+/** Uppdaterar sorteringsordningen för alla arbetspass efter Drag & Drop. */
 async function handleReorderShifts(auth, payload) {
     if (!Array.isArray(payload)) return { status: 400, body: { success: false, error: "Payload måste vara en array" } };
     await Promise.all(payload.map(item =>
@@ -177,46 +226,59 @@ async function handleReorderShifts(auth, payload) {
     return { status: 200, body: { success: true } };
 }
 
+/** Sparar konfigurations-data (JSON) till app_storage. */
 async function handleSaveStorage(auth, type, data) {
     const allowedPostTypes = ['settings', 'message', 'custom_themes', 'weather_config'];
-    if (!allowedPostTypes.includes(type)) return { status: 400, body: { success: false, error: "Ogiltig lagringstyp" } };
+    if (!allowedPostTypes.includes(type)) {
+        return { status: 400, body: { success: false, error: "Ogiltig lagringstyp" } };
+    }
+    
+    // Uppdaterar befintligt värde om nyckeln (key + workplace_id) redan finns, annars skapas en ny
     await pool.query(`
         INSERT INTO app_storage (key, data, workplace_id) VALUES ($1, $2, $3)
         ON CONFLICT (key, workplace_id) DO UPDATE SET data = EXCLUDED.data
     `, [type, JSON.stringify(data), auth.workplace]);
+    
     return { status: 200, body: { success: true } };
 }
 
 // ==========================================
-// HUVUD-HANDLER
+// 3. HUVUDROUTER (Serverless Handler)
 // ==========================================
 
 export default async function handler(req, res) {
     setupCors(req, res);
+    
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     const auth = authenticate(req);
     if (!auth.isAuthorized) return res.status(401).json({ success: false, error: "Obehörig" });
 
     try {
+        // --- GET RUTNING ---
         if (req.method === 'GET') {
             res.setHeader('Cache-Control', 'no-store, max-age=0');
             const { type, ...rest } = req.query;
             let result;
-            if (type === 'workplaces')     result = await handleGetWorkplaces(auth);
-            else if (type === 'stations')  result = await handleGetStations(auth);
-            else if (type === 'shifts')    result = await handleGetShifts(auth);
+            
+            if (type === 'workplaces')          result = await handleGetWorkplaces(auth);
+            else if (type === 'stations')       result = await handleGetStations(auth);
+            else if (type === 'shifts')         result = await handleGetShifts(auth);
             else if (type === 'display_bundle') result = await handleGetDisplayBundle(auth, req.query);
-            else                           result = await handleGetStorage(auth, type);
+            else                                result = await handleGetStorage(auth, type);
+            
             return res.status(result.status).json(result.body);
         }
 
+        // --- POST RUTNING ---
         if (req.method === 'POST') {
             if (!['admin', 'superadmin'].includes(auth.role)) {
                 return res.status(403).json({ success: false, error: "Endast admin kan ändra inställningar" });
             }
+            
             const { action, payload, type, data } = req.body;
 
+            // Om anropet innehåller en namngiven "action"
             if (action) {
                 const actions = {
                     generate_display_link: () => handleGenerateDisplayLink(auth),
@@ -228,11 +290,14 @@ export default async function handler(req, res) {
                     reorder_stations:      () => handleReorderStations(auth, payload),
                     reorder_shifts:        () => handleReorderShifts(auth, payload),
                 };
+                
                 if (!actions[action]) return res.status(400).json({ success: false, error: "Okänd action" });
+                
                 const result = await actions[action]();
                 return res.status(result.status).json(result.body);
             }
 
+            // Om anropet ämnar spara JSON till app_storage
             if (type && data !== undefined) {
                 const result = await handleSaveStorage(auth, type, data);
                 return res.status(result.status).json(result.body);

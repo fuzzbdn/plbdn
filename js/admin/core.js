@@ -1,3 +1,12 @@
+/**
+ * ============================================================================
+ * CORE.JS (Admin/Planering - Huvudfil)
+ * Dirigenten för administratörens planeringsvy (admin.html).
+ * Ansvarar för uppstart, säkerhetskontroller, grunddata-hämtning via Promise.allSettled,
+ * samt att styra datumbyten, publicering och vyn-växlingar (dag vs vecka).
+ * ============================================================================
+ */
+
 import { fetchData, apiAction } from '../service.js';
 import { showToast, showConfirm, getISOWeek, escapeHTML } from '../utils.js';
 import { DAYS } from '../config.js';
@@ -6,6 +15,10 @@ import { adminState, getDatesOfWeek, getCurrentPickerDate } from './state.js';
 import { renderViews } from './render.js';
 import { setupDragAndDrop, setupSidebarAddUser } from './dragdrop.js';
 
+/**
+ * Huvudfunktion som startar upp hela adminvyn (admin.html).
+ * Utför säkerhetskoll, hämtar data med felhantering och sätter upp eventlyssnare.
+ */
 export async function initAdmin() {
     // ------------------------------------------------------------------------
     // 1. SÄKERHET OCH UPPSTART
@@ -22,10 +35,9 @@ export async function initAdmin() {
 
     document.getElementById('currentUserDisplay').innerText = 'Inloggad: ' + (localStorage.getItem('adminName') || 'Admin');
 
-// ------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
     // 2. LADDNING AV GRUNDDATA (Nyanserad felhantering med fallbacks)
     // ------------------------------------------------------------------------
-    
     try {
         const fetchPromises = [
             fetchData('users'),    // Index 0 (Kritisk)
@@ -34,18 +46,22 @@ export async function initAdmin() {
             fetchData('absences')  // Index 3 (Icke-kritisk)
         ];
 
+        // Super-admins får även ladda listan över alla arbetsplatser
         if (localRole === 'superadmin') {
             fetchPromises.push(fetchData('workplaces')); // Index 4 (Icke-kritisk för grundvy)
         }
 
         const results = await Promise.allSettled(fetchPromises);
         
-        // Kontrollera om vi fick 401 Unauthorized från någon av dem (hanteras redan av service.js)
+        // Kontrollera om vi fick 401 Unauthorized från någon av dem (hanteras av service.js)
         if (results.some(r => r.status === 'fulfilled' && r.value?.status === 401)) {
             return; 
         }
 
-        // Hjälpfunktion för att plocka ut data och hantera fel per resurs
+        /**
+         * Hjälpfunktion för att plocka ut data och hantera fel per resurs.
+         * Skiljer på kritiska resurser (som kastar fel) och icke-kritiska (som tillåter tom array).
+         */
         const getResultData = (index, resourceName, isCritical) => {
             const res = results[index];
             if (!res || res.status === 'rejected' || !res.value?.success) {
@@ -56,13 +72,13 @@ export async function initAdmin() {
                     throw new Error(`Kritisk resurs saknas: ${resourceName}`);
                 } else {
                     showToast(`Varning: Kunde inte ladda ${resourceName}. Viss data saknas.`, 'info');
-                    return []; // Returnera tom array så systemet inte kraschar senare
+                    return []; // Returnera tom array så systemet inte kraschar
                 }
             }
             return res.value.data;
         };
 
-        // Utvärdera varje anrop
+        // Utvärdera anropen
         const users = getResultData(0, 'personal', true);
         const stations = getResultData(1, 'stationer', true);
         const shifts = getResultData(2, 'arbetspass', true);
@@ -70,6 +86,7 @@ export async function initAdmin() {
         
         setAllInitialData({ users, stations, shifts, absences });
 
+        // Om Super-Admin, visa arbetsplats-väljaren i headern
         if (localRole === 'superadmin' && results[4]) {
             const workplaces = getResultData(4, 'arbetsplatser', false);
             const saContainer = document.getElementById('superAdminContainer');
@@ -81,7 +98,6 @@ export async function initAdmin() {
         console.error("Kritiskt fel vid initiering av admin:", e);
         showToast('Systemet kunde inte startas. Ladda om sidan.', 'error');
         
-        // Dölj laddande UI eller visa felmeddelande på skärmen här om nödvändigt
         const scheduleContainer = document.getElementById('scheduleContainer');
         if (scheduleContainer) {
             scheduleContainer.innerHTML = '<div style="padding: 20px; color: #d32f2f; font-weight: bold; text-align: center;">Ett kritiskt nätverksfel uppstod. Vänligen ladda om sidan.</div>';
@@ -100,6 +116,10 @@ export async function initAdmin() {
     document.getElementById('prevDayBtn').onclick = () => changeDate(-1);
     document.getElementById('nextDayBtn').onclick = () => changeDate(1);
 
+    /**
+     * Flyttar datumväljaren framåt eller bakåt i tiden med ett visst antal dagar.
+     * @param {number} days - Antal dagar att flytta (t.ex. -1 eller 1).
+     */
     function changeDate(days) {
         if (!picker.value) return;
         const d = new Date(picker.value);
@@ -110,6 +130,7 @@ export async function initAdmin() {
         updateGrid(picker.value);
     }
 
+    // Hantera publicering av schema till TV-skärmen
     document.getElementById('publishBtn').onclick = async () => {
         const currentDateStr = adminState.datesOfWeek[adminState.currentAdminDayIndex];
         let start = currentDateStr, end = currentDateStr;
@@ -132,38 +153,35 @@ export async function initAdmin() {
         }
     };
 
-    // FIX: Utloggning som faktiskt rensar HTTPOnly-cookies på servern!
+    // Utloggning som rensar HTTPOnly-cookies på servern samt localStorage
     document.getElementById('logoutBtn').onclick = async () => {
         await apiAction('logout', {});
         localStorage.clear(); 
         globalThis.location.href = "index.html";
     };
 
+    // Växla mellan Dagsvy och Veckovy
     const toggleBtn = document.getElementById('toggleViewBtn');
     if (toggleBtn) {
         toggleBtn.onclick = () => {
             adminState.isWeeklyView = !adminState.isWeeklyView;
             
-            // FIX: Använder nu CSS-klasser/dataset istället för hårdkodade styles för bättre maintainability.
-            // (Kräver att du lägger till dessa i admin.css vid tillfälle, men detta är strukturellt renare).
             const container = document.querySelector('.schedule-card');
             if (container) {
                 container.dataset.view = adminState.isWeeklyView ? 'weekly' : 'daily';
             }
 
-            // Fallback tills du uppdaterat CSS
             const dayCont = document.getElementById('scheduleContainer');
             const weekCont = document.getElementById('weeklyContainer');
 
             if (adminState.isWeeklyView) {
-                if(dayCont) dayCont.style.display = 'none';
-                if(weekCont) weekCont.style.display = 'block';
+                if (dayCont) dayCont.style.display = 'none';
+                if (weekCont) weekCont.style.display = 'block';
                 toggleBtn.innerText = '📆 Byt till Dagsvy';
-                // Undvik inline-styles, men behålls här för bakåtkompatibilitet tills CSS uppdateras
                 toggleBtn.style.backgroundColor = '#455a64'; 
             } else {
-                if(dayCont) dayCont.style.display = 'grid';
-                if(weekCont) weekCont.style.display = 'none';
+                if (dayCont) dayCont.style.display = 'grid';
+                if (weekCont) weekCont.style.display = 'none';
                 toggleBtn.innerText = '📅 Byt till Veckovy';
                 toggleBtn.style.backgroundColor = '#0277bd';
             }
@@ -173,19 +191,21 @@ export async function initAdmin() {
         };
     }
 
+    // Initiera drag-and-drop och sidopanelens snabb-lägg-till
     setupDragAndDrop();
     setupSidebarAddUser();
 
-    // Starta den initiala renderingen
+    // Starta den initiala renderingen av schemat
     updateGrid(picker.value);
 }
 
-// ------------------------------------------------------------------------
-// FRISTÅENDE FUNKTIONER
-// ------------------------------------------------------------------------
+// ============================================================================
+// FRISTÅENDE HJÄLPFUNKTIONER
+// ============================================================================
 
 /**
- * Bygger och hanterar dropdownen för Super-Admins för att byta anläggning.
+ * Bygger och hanterar dropdownen för Super-Admins för att byta anläggning/arbetsplats.
+ * @param {Array} workplaces - Lista över tillgängliga arbetsplatser.
  */
 function setupWorkplaceDropdown(workplaces) {
     const select = document.getElementById('workplaceSelect');
@@ -196,10 +216,9 @@ function setupWorkplaceDropdown(workplaces) {
     select.value = active;
 
     select.onchange = async (e) => {
-        // Nytt säkert anrop till servern för att byta arbetsplats via cookie
         const res = await apiAction('switch_workplace', { workplace_id: e.target.value });
         if (res.success) {
-            localStorage.setItem('activeWorkplace', e.target.value); // Ligger kvar visuellt
+            localStorage.setItem('activeWorkplace', e.target.value);
             window.location.reload();
         } else {
             showToast(res.error || "Kunde inte byta arbetsplats", "error");
@@ -207,6 +226,12 @@ function setupWorkplaceDropdown(workplaces) {
     };
 }
 
+/**
+ * Uppdaterar det lokala tillståndet för veckan, hämtar schemadata för den 
+ * aktuella perioden från databasen och triggar omritning av vyerna.
+ * 
+ * @param {string} dateStr - Datum att utgå ifrån (YYYY-MM-DD).
+ */
 export async function updateGrid(dateStr) {
     const d = new Date(dateStr);
     const iso = getISOWeek(d);
@@ -218,7 +243,7 @@ export async function updateGrid(dateStr) {
 
     document.getElementById('currentDateDisplay').innerText = `${DAYS[adminState.currentAdminDayIndex]} v.${adminState.selectedWeek}, ${adminState.selectedYear}`;
 
-    // FIX: Extrahera strukturerad data och lägg till felhantering
+    // Hämta schemadata för hela veckan (så både dag- och veckovyn har det de behöver)
     const res = await fetchData('schedule', { 
         start_date: adminState.datesOfWeek[0], 
         end_date: adminState.datesOfWeek[6] 
@@ -229,13 +254,18 @@ export async function updateGrid(dateStr) {
         renderViews();
         updatePublishBanner();
     } else {
-        // Avbryt tyst om vi blev utkastade (hanteras av service.js) eller visa ett fel.
         if (res && res.status !== 401) {
             showToast(res?.error || 'Kunde inte ladda schemat', 'error');
         }
     }
 }
 
+/**
+ * Kontrollerar om det finns icke-publicerade ändringar i schemat för den 
+ * aktiva perioden, och visar eller döljer publicerings-bannern därefter.
+ * 
+ * @returns {boolean} True om det finns opublicerat material.
+ */
 export function updatePublishBanner() {
     let hasUnpublished = false;
     const currentDateStr = adminState.datesOfWeek[adminState.currentAdminDayIndex];

@@ -1,19 +1,18 @@
-/* =========================================
-   CSS/USER.CSS
-   Stilar för user.html (Mitt schema).
-   Kräver: css/base.css + css/admin.css
-   ========================================= */
+/* ============================================================================
+   CSS / USER.CSS
+   Stilmall för personalens vy (user.html - "Mitt schema").
+   
+   ARKITEKTUR: "Mobile First"
+   Grundstilarna i denna fil är anpassade för mobiler (< 769px).
+   I botten av filen används @media (min-width: 769px) för att skriva över
+   layouten för datorskärmar. På så sätt slipper vi använda !important.
+   
+   Kräver: css/base.css och css/admin.css
+   ============================================================================ */
 
-/*
-   Mobilvyn för user.html är skriven med
-   mobil-first-principen: grundstilar gäller
-   på mobil, @media (min-width: 769px) lägger
-   till desktopstilarna ovanpå.
-   Ingen !important behövs.
-*/
 
 /* =========================================
-   GRUNDSTIL (mobil, < 769px)
+   1. GRUNDSTILAR & RENSNING (Mobil < 769px)
    ========================================= */
 
 /* Dölj spök-text från ::before/::after som
@@ -24,18 +23,24 @@
     content: none;
 }
 
-/* Dölj namn-etiketten i "Visa endast mitt"-knappen */
+/* Dölj namn-etiketten i "Visa endast mitt schema"-knappen på små skärmar */
 #page-user #toggleMyScheduleBtn .user-name-label {
     display: none;
 }
 
-/* --- HEADER (mobil) --- */
+
+/* =========================================
+   2. HEADER (Mobil layout)
+   ========================================= */
+
 #page-user .admin-header {
     padding: 20px 15px;
     position: relative;
     height: auto;
 }
 
+/* CSS-TRICK: Vi använder CSS Grid för att helt möblera om elementen
+   i headern (rubrik, logga ut, knappar) i tre rader på mobilen. */
 #page-user .header-content {
     display: grid;
     grid-template-columns: 50px 1fr 1fr 50px;
@@ -44,20 +49,21 @@
     padding: 0;
 }
 
+/* Plocka bort onödiga wrappers ur Grid-flödet */
 #page-user .header-content > div,
 #page-user .header-datepicker,
 #page-user .date-navigation {
     display: contents;
 }
 
-/* Dölj element som tar onödig plats på mobil */
+/* Dölj element som tar onödig plats på mobilen */
 #page-user #currentUserDisplay,
 #page-user .header-datepicker label,
 #page-user .date-navigation > *:not(button) {
     display: none;
 }
 
-/* Rad 1: Rubrik (vänster) + Logga ut (höger) */
+/* RAD 1: Rubrik (vänster) + Logga ut (höger) */
 #page-user h1 {
     grid-column: 1 / 4;
     grid-row: 1;
@@ -85,7 +91,7 @@
     align-self: center;
 }
 
-/* Rad 2: Vänsterpil, Datumväljare, Högerpil */
+/* RAD 2: Vänsterpil, Datumväljare, Högerpil */
 #page-user .date-navigation button:first-of-type {
     grid-column: 1 / 2;
     grid-row: 2;
@@ -114,7 +120,7 @@
     text-align: center;
     background: #ffffff;
     box-sizing: border-box;
-    color: #333;
+    color: #333333;
     font-family: inherit;
     font-weight: 700;
     margin: 0;
@@ -136,7 +142,7 @@
     justify-content: center;
 }
 
-/* Rad 3: Veckovy-knapp + Visa mitt-knapp */
+/* RAD 3: Veckovy-knapp + Visa mitt-knapp */
 #page-user #toggleViewBtn {
     grid-column: 1 / 3;
     grid-row: 3;
@@ -170,8 +176,14 @@
     text-align: center;
 }
 
-/* --- SCHEMA (mobil veckovy) --- */
-#page-user .weekly-header-row { display: none; }
+
+/* =========================================
+   3. SCHEMA & VECKOVY (Mobil layout)
+   ========================================= */
+
+#page-user .weekly-header-row { 
+    display: none; 
+}
 
 #page-user .weekly-grid {
     display: flex;
@@ -193,10 +205,11 @@
     overflow: hidden;
 }
 
-/* Visa/dölj namnrutan baserat på data-attribut */
+/* Visa/dölj namnrutan baserat på data-attribut ("Endast mitt schema") */
 #page-user #userWeeklyContainer[data-only-me="true"] .weekly-user-name {
     display: none;
 }
+
 #page-user #userWeeklyContainer[data-only-me="false"] .weekly-user-name,
 #page-user .weekly-user-name {
     display: block;
@@ -222,7 +235,10 @@
     min-height: auto;
     gap: 15px;
 }
-#page-user .weekly-cell:last-child { border-bottom: none; }
+
+#page-user .weekly-cell:last-child { 
+    border-bottom: none; 
+}
 
 #page-user .mobile-date-label {
     display: block;
@@ -248,6 +264,7 @@
     gap: 8px;
 }
 
+/* Etikett för arbetsstation */
 #page-user .weekly-badge {
     margin: 0;
     font-size: 0.85rem;
@@ -261,6 +278,7 @@
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
+/* Fallback-text (Obemannat/Ledig) */
 #page-user .free-text {
     margin: 0;
     color: #64748b;
@@ -276,12 +294,12 @@
 }
 
 
-/* =========================================
-   DESKTOP-OVERRIDES (≥ 769px)
-   ========================================= */
+/* ============================================================================
+   4. DESKTOP-OVERRIDES (Återställ layout för större skärmar)
+   ============================================================================ */
 @media (min-width: 769px) {
 
-    /* Återställ header till flex-rad */
+    /* --- Återställ Header till standard flex-rad --- */
     #page-user .header-content {
         display: flex;
         grid-template-columns: none;
@@ -294,7 +312,7 @@
         display: flex;
     }
 
-    /* Visa dolda element */
+    /* Visa element som var dolda på mobilen */
     #page-user #currentUserDisplay,
     #page-user .header-datepicker label {
         display: block;
@@ -304,30 +322,150 @@
         display: block;
     }
 
-    /* Återställ header-element till normal layout */
-    #page-user h1                                  { grid-column: unset; grid-row: unset; font-size: 1.8rem; color: var(--header-text); }
-    #page-user #logoutBtn                          { grid-column: unset; grid-row: unset; background: #ffebee; color: #c62828; border-radius: 4px; padding: 8px 16px; font-size: 0.9rem; font-weight: bold; width: auto; }
+    /* Av-styla grid-positioneringarna för knapparna i headern */
+    #page-user h1 { 
+        grid-column: unset; 
+        grid-row: unset; 
+        font-size: 1.8rem; 
+        color: var(--header-text); 
+    }
+    
+    #page-user #logoutBtn { 
+        grid-column: unset; 
+        grid-row: unset; 
+        background: #ffebee; 
+        color: #c62828; 
+        border-radius: 4px; 
+        padding: 8px 16px; 
+        font-size: 0.9rem; 
+        font-weight: bold; 
+        width: auto; 
+    }
+    
     #page-user .date-navigation button:first-of-type,
-    #page-user .date-navigation button:last-of-type { grid-column: unset; grid-row: unset; background: none; border: none; height: auto; width: auto; font-size: 1.5rem; border-radius: 0; }
-    #page-user #userDatePicker                     { grid-column: unset; grid-row: unset; height: auto; border-radius: 4px; font-size: 1rem; font-weight: normal; width: auto; }
+    #page-user .date-navigation button:last-of-type { 
+        grid-column: unset; 
+        grid-row: unset; 
+        background: none; 
+        border: none; 
+        height: auto; 
+        width: auto; 
+        font-size: 1.5rem; 
+        border-radius: 0; 
+    }
+    
+    #page-user #userDatePicker { 
+        grid-column: unset; 
+        grid-row: unset; 
+        height: auto; 
+        border-radius: 4px; 
+        font-size: 1rem; 
+        font-weight: normal; 
+        width: auto; 
+    }
+    
     #page-user #toggleViewBtn,
-    #page-user #toggleMyScheduleBtn                { grid-column: unset; grid-row: unset; width: auto; padding: 8px 16px; border-radius: 4px; font-size: 0.9rem; }
-    #page-user #toggleMyScheduleBtn .user-name-label { display: inline; }
+    #page-user #toggleMyScheduleBtn { 
+        grid-column: unset; 
+        grid-row: unset; 
+        width: auto; 
+        padding: 8px 16px; 
+        border-radius: 4px; 
+        font-size: 0.9rem; 
+    }
+    
+    #page-user #toggleMyScheduleBtn .user-name-label { 
+        display: inline; 
+    }
 
-    /* Återställ veckovy till desktop-grid */
-    #page-user .weekly-grid                 { min-width: 900px; flex-direction: unset; gap: unset; }
-    #page-user .weekly-header-row           { display: grid; }
-    #page-user .weekly-user-row             { display: grid; flex-direction: unset; background: transparent; border-radius: 0; box-shadow: none; border: none; border-bottom: 1px solid var(--border-color); overflow: visible; }
-    #page-user .weekly-user-row:hover       { background-color: rgba(0,0,0,0.02); }
-    #page-user .weekly-user-name            { background: transparent; color: var(--text-color); padding: 0 0 0 10px; font-size: 1rem; font-weight: 700; letter-spacing: 0; border: none; }
-    #page-user .weekly-cell                 { flex-direction: column; justify-content: center; align-items: center; padding: 6px; min-height: 45px; background: var(--input-bg); border: 1px dashed var(--border-color); border-radius: 6px; }
-    #page-user .weekly-cell:last-child      { border-bottom: 1px dashed var(--border-color); }
-    #page-user .mobile-date-label           { display: none; }
-    #page-user .weekly-cell-content         { flex-direction: column; justify-content: center; align-items: stretch; width: 100%; }
-    #page-user .weekly-badge                { font-size: 0.8rem; padding: 4px 8px; width: 100%; border-radius: 4px; }
-    #page-user .free-text                   { background: none; border: none; padding: 0; color: #767676; font-size: 0.85rem; border-radius: 0; }
+    /* --- Återställ Veckovy till det klassiska rutnätet --- */
+    #page-user .weekly-grid { 
+        min-width: 900px; 
+        flex-direction: unset; 
+        gap: unset; 
+    }
+    
+    #page-user .weekly-header-row { 
+        display: grid; 
+    }
+    
+    #page-user .weekly-user-row { 
+        display: grid; 
+        flex-direction: unset; 
+        background: transparent; 
+        border-radius: 0; 
+        box-shadow: none; 
+        border: none; 
+        border-bottom: 1px solid var(--border-color); 
+        overflow: visible; 
+    }
+    
+    #page-user .weekly-user-row:hover { 
+        background-color: rgba(0,0,0,0.02); 
+    }
+    
+    #page-user .weekly-user-name { 
+        background: transparent; 
+        color: var(--text-color); 
+        padding: 0 0 0 10px; 
+        font-size: 1rem; 
+        font-weight: 700; 
+        letter-spacing: 0; 
+        border: none; 
+    }
+    
+    #page-user .weekly-cell { 
+        flex-direction: column; 
+        justify-content: center; 
+        align-items: center; 
+        padding: 6px; 
+        min-height: 45px; 
+        background: var(--input-bg); 
+        border: 1px dashed var(--border-color); 
+        border-radius: 6px; 
+    }
+    
+    #page-user .weekly-cell:last-child { 
+        border-bottom: 1px dashed var(--border-color); 
+    }
+    
+    #page-user .mobile-date-label { 
+        display: none; 
+    }
+    
+    #page-user .weekly-cell-content { 
+        flex-direction: column; 
+        justify-content: center; 
+        align-items: stretch; 
+        width: 100%; 
+    }
+    
+    #page-user .weekly-badge { 
+        font-size: 0.8rem; 
+        padding: 4px 8px; 
+        width: 100%; 
+        border-radius: 4px; 
+    }
+    
+    #page-user .free-text { 
+        background: none; 
+        border: none; 
+        padding: 0; 
+        color: #767676; 
+        font-size: 0.85rem; 
+        border-radius: 0; 
+    }
 
-    /* Återställ data-only-me-styrning */
-    #page-user #userWeeklyContainer[data-only-me="true"] .weekly-user-name  { display: none; }
-    #page-user #userWeeklyContainer[data-only-me="false"] .weekly-user-name { display: block; background: transparent; color: var(--text-color); padding: 0 0 0 10px; font-size: 1rem; }
+    /* Återställ data-only-me-styrning för Desktop */
+    #page-user #userWeeklyContainer[data-only-me="true"] .weekly-user-name { 
+        display: none; 
+    }
+    
+    #page-user #userWeeklyContainer[data-only-me="false"] .weekly-user-name { 
+        display: block; 
+        background: transparent; 
+        color: var(--text-color); 
+        padding: 0 0 0 10px; 
+        font-size: 1rem; 
+    }
 }
