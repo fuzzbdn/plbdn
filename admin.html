@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Bemanningsplanering</title>
     
+    <!-- Typsnitt -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">    
+    
+    <!-- Externa bibliotek för PDF/Utskrift -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous"></script>
+    
+    <!-- Systemets kärnfiler -->
     <script type="module" src="js/main.js"></script>
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/admin.css">
@@ -14,9 +19,14 @@
 <body class="admin-view" id="page-admin">
 
 <div class="admin-wrapper">
+    
+    <!-- ========================================== -->
+    <!-- 1. HEADER & NAVIGATION                     -->
+    <!-- ========================================== -->
     <header class="admin-header">
         <div class="header-content">
             
+            <!-- Vänster: Logga, Datumväljare och Vy-knapp -->
             <div style="display:flex; align-items:center; gap:20px;">
                 <h1>Adminpanel</h1>
                 <div class="header-datepicker" style="display:flex; align-items:center; gap:10px;">
@@ -26,13 +36,18 @@
                 </div>
             </div>
 
+            <!-- Mitten: Bläddra fram/bak i tiden -->
             <div class="date-navigation">
                 <button id="prevDayBtn" class="nav-arrow" title="Föregående dag">◀</button>
+                <!-- Fylls av updateGrid() i core.js -->
                 <div id="currentDateDisplay"></div>
                 <button id="nextDayBtn" class="nav-arrow" title="Nästa dag">▶</button>
             </div>
             
+            <!-- Höger: SuperAdmin-meny och Användarinfo -->
             <div style="display:flex; align-items:center; gap:15px;">
+                
+                <!-- Arbetsplatsväljare (Fylls dynamiskt i core.js och syns endast för SuperAdmin) -->
                 <div id="superAdminContainer" style="display:none; align-items:center; gap:10px; background:#e3f2fd; padding:5px 10px; border-radius:6px; border:1px solid #90caf9;">
                     <label for="workplaceSelect" style="font-size:0.85rem; font-weight:bold; color:#0277bd;">🏢 Arbetsplats:</label>
                     <select id="workplaceSelect" style="padding:4px; border-radius:4px; border:1px solid #ccc; font-size:0.9rem;"></select>
@@ -45,29 +60,45 @@
         </div>
     </header>
 
+    <!-- ========================================== -->
+    <!-- 2. HUVUDYTA (Roster & Schema)              -->
+    <!-- ========================================== -->
     <div class="admin-layout" style="margin-top: 20px;">
+        
+        <!-- VÄNSTER: Personallistan (Rostern) -->
         <aside class="sidebar-roster">
             <div class="roster-card">
                 <h3>Personal</h3>
+                
+                <!-- Snabblägg till ny personal i databasen -->
                 <div class="sidebar-add-row">
                     <input type="text" id="sidebarNewName" placeholder="Nytt namn..." class="sidebar-input">
                     <button id="sidebarAddBtn" class="sidebar-add-btn">+</button>
                 </div>
+                
+                <!-- Behållare för drag & drop-personer. Fylls av renderRoster() i render.js -->
                 <div id="draggableUserList" class="roster-list"></div>
             </div>
         </aside>
 
+        <!-- HÖGER: Själva Schemat -->
         <main class="schedule-card-wrapper">
+            
+            <!-- Varningsbanner om opublicerade ändringar (Styrs av updatePublishBanner() i core.js) -->
             <div id="publishReminderBanner" class="publish-banner hidden">
                 <span style="font-size:1.2rem; margin-right: 10px;">⚠️</span>
                 <span>Det finns ändringar i utkastet som inte har publicerats till displayen än.</span>
             </div>
 
             <div class="schedule-card">
+                <!-- DAGSVY: Fylls dynamiskt av renderAdminGrid() i render.js -->
                 <div class="grid-container" id="scheduleContainer"></div>
+                
+                <!-- VECKOVY: Fylls dynamiskt av renderWeeklyView() i render.js -->
                 <div id="weeklyContainer" style="display:none; overflow-x: auto;"></div>
             </div>
             
+            <!-- Bottenmeny: Inställningar och Publicera-knapp -->
             <footer class="export-container">
                 <div class="left-actions">
                     <a href="settings.html" class="export-button" style="text-decoration:none; background:#555;">⚙️ Inställningar</a>
@@ -76,13 +107,22 @@
                     <button id="publishBtn" class="export-button" style="background-color: #2e7d32;">📡 Publicera</button>
                 </div>
             </footer>
+            
         </main>
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- 3. DOLDA KOMPONENTER & MODALER             -->
+<!-- ========================================== -->
+
+<!-- Behållare för osynlig generering av PDF/Bilder (används av html2canvas) -->
 <div id="print-container"></div>
+
+<!-- Behållare för flytande notiser (Toast) -->
 <div id="toast-container"></div> 
 
+<!-- Global Modal: Bekräftelseruta (Styrs av showConfirm() i utils.js) -->
 <div id="confirmModal" class="modal-overlay">
     <div class="modal-box">
         <h3 style="margin-top:0;">Bekräfta</h3>
