@@ -2,25 +2,36 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <!-- Anpassad för mobil/PWA (Förhindrar inzoomning) -->
+    
+    <!-- Anpassad för mobil/PWA (Förhindrar oönskad inzoomning vid dubbelklick/inmatning) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>STRUL - Logga in</title>
     
-    <!-- PWA / App Manifest och färgtema -->
+    <!-- ========================================== -->
+    <!-- PWA (Progressive Web App) KONFIGURATION    -->
+    <!-- ========================================== -->
     <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
     <meta name="theme-color" content="#0277bd">
+    
+    <!-- iOS / Apple-specifika inställningar -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Typsnitt & Stilar -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">    
     <script type="module" src="js/main.js"></script>
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/login.css">
 </head>
 <body class="login-view" id="page-login">
+    
     <div class="login-wrapper">
         <div class="login-card">
             
+            <!-- ========================================== -->
+            <!-- 1. HUVUDRUBRIK & LOGOTYP                   -->
+            <!-- ========================================== -->
             <div class="login-header">
                 <div class="logo-container">
                     <svg class="strul-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -38,6 +49,7 @@
                 <h1 class="strul-title">
                     <span class="title-text-wrapper">
                         STRUL
+                        <!-- Versionsnummer hämtas och fylls i dynamiskt av main.js -->
                         <span class="version-tag" id="appVersionDisplay"></span>
                     </span>
                 </h1>
@@ -45,6 +57,9 @@
                 <p class="strul-desc">Strategisk Tidsplanering & Resurs-Utnyttjande i Ledningscentralen</p>
             </div>
             
+            <!-- ========================================== -->
+            <!-- 2. FORMULÄR: LOGGA IN                      -->
+            <!-- ========================================== -->
             <div id="loginForm">
                 <div class="input-group">
                     <!-- autocapitalize="none" gör att mobilen inte automatiskt sätter stor första bokstav -->
@@ -58,12 +73,16 @@
                 <a href="#" id="forgotPassLink" class="link-text">Glömt lösenord?</a>
             </div>
 
+            <!-- ========================================== -->
+            <!-- 3. FORMULÄR: ÅTERSTÄLL LÖSENORD            -->
+            <!-- ========================================== -->
+            <!-- Visas enbart när man klickar på "Glömt lösenord?" ovan -->
             <div id="forgotForm" style="display:none;">
                 <h3 style="margin-top:0; color:#333;">Återställ Lösenord</h3>
                 <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">Ange din e-postadress så skickar vi en återställningslänk.</p>
                 
                 <div class="input-group">
-                    <!-- Samma mobilfix för e-post -->
+                    <!-- Samma mobilfix för e-post (stänger av auto-versaler och rättstavning) -->
                     <input type="email" id="resetEmailInput" placeholder="Din e-postadress" autocapitalize="none" autocorrect="off">
                 </div>
                 
@@ -75,9 +94,15 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- 4. DOLDA KOMPONENTER & SKRIPT              -->
+    <!-- ========================================== -->
+    
+    <!-- Behållare för flytande notiser (Toast) -->
     <div id="toast"></div>
 
-    <!-- Skript som fångar upp "Gå"- eller "Enter"-knappen på mobiltangentbordet och loggar in dig -->
+    <!-- Skript som fångar upp "Gå"- eller "Enter"-knappen på mobiltangentbordet 
+         när man står i lösenordsfältet och loggar in -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const passInput = document.getElementById('passwordInput');
@@ -93,7 +118,8 @@
             }
         });
     </script>
-    <!-- Registrera Service Worker för Android Chrome -->
+    
+    <!-- Registrera Service Worker för PWA-stöd (Offline-stöd & "Lägg till på hemskärmen") -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -101,5 +127,6 @@
             });
         }
     </script>
+    
 </body>
 </html>
